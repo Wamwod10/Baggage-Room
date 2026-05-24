@@ -1,0 +1,32 @@
+.notification-bell {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-soft);
+  color: var(--text-muted);
+  position: relative;
+
+  &:hover {
+    color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  span {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--danger);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+  }
+}

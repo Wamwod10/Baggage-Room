@@ -1,0 +1,26 @@
+.status-badge {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--active,
+  &--completed {
+    background: var(--success-soft);
+    color: var(--success);
+  }
+
+  &--pending {
+    background: var(--warning-soft);
+    color: var(--warning);
+  }
+
+  &--overdue {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+}
