@@ -18,6 +18,7 @@ import StateBlock from "../../components/StateBlock/StateBlock";
 import { StatSkeleton } from "../../components/Skeleton/Skeleton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
+import { animateButtonIcon } from "../../utils/animateButtonIcon";
 
 const emptyDashboardData = {
   stats: {
@@ -127,7 +128,10 @@ export default function Dashboard() {
 
         <button
           className="dashboard-filter"
-          onClick={() => setRefreshKey((prev) => prev + 1)}
+          onClick={(event) => {
+            animateButtonIcon(event);
+            setRefreshKey((prev) => prev + 1);
+          }}
         >
           <RefreshCcw size={16} />
           {t("Refresh")}

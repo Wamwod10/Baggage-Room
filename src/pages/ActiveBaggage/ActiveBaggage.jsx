@@ -16,6 +16,7 @@ import StateBlock from "../../components/StateBlock/StateBlock";
 import { TableSkeleton } from "../../components/Skeleton/Skeleton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
+import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import "./activeBaggage.scss";
 
 export default function ActiveBaggage() {
@@ -94,7 +95,8 @@ export default function ActiveBaggage() {
     (!effectiveBranch && branch !== "Barcha filiallar");
   const isFilterEmpty = hasActiveFilters && rawActiveOrders.length > 0;
 
-  const handleRefresh = () => {
+  const handleRefresh = (event) => {
+    animateButtonIcon(event);
     setRefreshKey((value) => value + 1);
   };
 

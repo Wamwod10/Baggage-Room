@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, ChevronDown, Menu, Search, SunMoon } from "lucide-react";
+import {
+  Bell,
+  CalendarClock,
+  ChevronDown,
+  Menu,
+  Search,
+  SunMoon,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/AuthContext";
 import baggageService from "../services/baggageService";
@@ -19,11 +26,20 @@ export default function Header({ onMenuClick }) {
   const [search, setSearch] = useState("");
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [alertRefreshKey, setAlertRefreshKey] = useState(0);
+  const [currentDate, setCurrentDate] = useState(() => new Date());
 
   useEffect(() => {
     const interval = setInterval(() => {
       setAlertRefreshKey((value) => value + 1);
     }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -37,6 +53,17 @@ export default function Header({ onMenuClick }) {
   );
 
   const alertCount = headerAlerts.length;
+  const liveDate = useMemo(() => {
+    const pad = (value) => String(value).padStart(2, "0");
+
+    return {
+      date: `${pad(currentDate.getDate())}.${pad(
+        currentDate.getMonth() + 1,
+      )}.${currentDate.getFullYear()}`,
+      time: `${pad(currentDate.getHours())}:${pad(currentDate.getMinutes())}`,
+    };
+  }, [currentDate]);
+
   const results = useMemo(() => {
     if (!search.trim()) return [];
 
@@ -158,7 +185,18 @@ export default function Header({ onMenuClick }) {
           </div>
         )}
 
-        <button onClick={toggleTheme} className="header-icon-btn">
+        <div className="header-datetime" aria-label={t("Joriy sana va vaqt")}>
+          <CalendarClock size={17} />
+          <div>
+            <b>{liveDate.time}</b>
+            <span>{liveDate.date}</span>
+          </div>
+        </div>
+
+        <button
+          onClick={toggleTheme}
+          className="header-icon-btn header-theme-btn"
+        >
           <SunMoon size={18} />
         </button>
 

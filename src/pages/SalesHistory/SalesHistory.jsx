@@ -9,6 +9,7 @@ import StateBlock from "../../components/StateBlock/StateBlock";
 import { TableSkeleton } from "../../components/Skeleton/Skeleton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
+import { animateButtonIcon } from "../../utils/animateButtonIcon";
 
 export default function SalesHistory() {
   const { t, formatMoney, formatDateTime } = useTranslation();
@@ -84,7 +85,8 @@ export default function SalesHistory() {
     status !== "Status" ||
     (!effectiveBranch && branch !== "Barcha filiallar");
 
-  const handleRefresh = () => {
+  const handleRefresh = (event) => {
+    animateButtonIcon(event);
     setRefreshKey((value) => value + 1);
   };
 

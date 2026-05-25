@@ -17,6 +17,7 @@ import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
+import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import "./shifts.scss";
 
 const emptyShiftData = {
@@ -81,7 +82,11 @@ export default function Shifts() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [reportShift]);
 
-  const refreshData = () => {
+  const refreshData = (event) => {
+    if (event) {
+      animateButtonIcon(event);
+    }
+
     setRefreshKey((value) => value + 1);
   };
 

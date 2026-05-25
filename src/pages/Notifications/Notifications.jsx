@@ -14,6 +14,7 @@ import StateBlock from "../../components/StateBlock/StateBlock";
 import { StatSkeleton } from "../../components/Skeleton/Skeleton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
+import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import "./notifications.scss";
 
 const emptyPageData = {
@@ -75,7 +76,10 @@ export default function Notifications() {
 
         <button
           className="notification-refresh"
-          onClick={() => setRefreshKey((value) => value + 1)}
+          onClick={(event) => {
+            animateButtonIcon(event);
+            setRefreshKey((value) => value + 1);
+          }}
         >
           <RefreshCcw size={16} />
           {t("Refresh")}

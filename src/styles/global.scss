@@ -114,6 +114,21 @@ svg {
   flex-shrink: 0;
 }
 
+.icon-spin-once {
+  animation: icon-spin-once 0.46s ease-in-out;
+  transform-origin: center;
+}
+
+@keyframes icon-spin-once {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 button {
   line-height: 1;
 }

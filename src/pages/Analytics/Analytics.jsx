@@ -41,6 +41,7 @@ import StateBlock from "../../components/StateBlock/StateBlock";
 import { ChartSkeleton, StatSkeleton } from "../../components/Skeleton/Skeleton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
+import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import "./analytics.scss";
 
 const emptyAnalyticsData = {
@@ -277,7 +278,10 @@ export default function Analytics() {
           <button
             className="analytics-refresh-btn"
             type="button"
-            onClick={() => setRefreshKey((prev) => prev + 1)}
+            onClick={(event) => {
+              animateButtonIcon(event);
+              setRefreshKey((prev) => prev + 1);
+            }}
           >
             <RefreshCcw size={16} />
             {t("Refresh")}
