@@ -325,6 +325,12 @@
     max-width: calc(100% - 104px);
   }
 
+  .header-branch-menu {
+    left: auto;
+    right: 0;
+    width: min(100%, calc(100vw - 32px));
+  }
+
   .header-icon-btn {
     width: 44px;
     height: 44px;
@@ -556,12 +562,20 @@
 
   .header-actions {
     align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .header-branch-select {
     flex-basis: 100%;
     max-width: none;
     order: 3;
+  }
+
+  .header-branch-menu {
+    left: 0;
+    right: auto;
+    width: 100%;
+    max-width: 100%;
   }
 
   .header-notification-wrap {

@@ -52,6 +52,7 @@
 .sidebar-menu {
   display: grid;
   gap: 8px;
+  padding-bottom: 12px;
 }
 
 .sidebar-link {
@@ -105,8 +106,10 @@
 
 .sidebar-footer {
   margin-top: auto;
+  padding-top: 14px;
   display: grid;
   gap: 12px;
+  border-top: 1px solid var(--border-soft);
 }
 
 .sidebar-user {
@@ -209,7 +212,7 @@
     width: min(320px, calc(100vw - 42px));
     max-width: 88vw;
     height: 100dvh;
-    padding: 20px 16px;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-105%);
     border-right: 1px solid var(--border);
     box-shadow: 0 28px 80px rgba(2, 6, 23, 0.28);
@@ -286,6 +289,10 @@
 
   .sidebar-menu {
     gap: 6px;
+  }
+
+  .sidebar-footer {
+    padding-top: 12px;
   }
 
   .sidebar-link {
