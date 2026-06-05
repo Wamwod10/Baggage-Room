@@ -2,9 +2,9 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(5, 6, 10, 0.42);
-  backdrop-filter: blur(46px) saturate(175%);
-  -webkit-backdrop-filter: blur(46px) saturate(175%);
+  background: rgba(5, 6, 10, 0.52);
+  backdrop-filter: blur(54px) saturate(190%);
+  -webkit-backdrop-filter: blur(54px) saturate(190%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -24,7 +24,7 @@
       color-mix(in srgb, var(--glass-highlight) 12%, transparent),
       transparent 44%
     ),
-    color-mix(in srgb, var(--surface-strong) 70%, #020617);
+    color-mix(in srgb, var(--surface-strong) 84%, #020617);
   border: 1px solid color-mix(in srgb, var(--glass-edge) 72%, transparent);
   box-shadow: var(--shadow-panel);
   padding: 12px;
@@ -44,7 +44,7 @@
   align-items: stretch;
   gap: 8px;
   padding: 0 0 10px;
-  background: color-mix(in srgb, var(--surface-strong) 58%, #020617);
+  background: color-mix(in srgb, var(--surface-strong) 82%, #020617);
   backdrop-filter: var(--glass-blur-strong);
   -webkit-backdrop-filter: var(--glass-blur-strong);
 }

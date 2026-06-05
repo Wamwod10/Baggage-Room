@@ -2,7 +2,7 @@
   min-width: 150px;
   padding: 12px 16px;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--surface-strong) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 84%, transparent);
   border: 1px solid color-mix(in srgb, var(--glass-edge) 26%, transparent);
   box-shadow: var(--shadow-card);
   text-align: right;
@@ -81,7 +81,7 @@
       border-radius: 16px;
       font-size: 15px;
       border-color: color-mix(in srgb, var(--glass-edge) 30%, transparent);
-      background-color: color-mix(in srgb, var(--surface-muted) 78%, transparent);
+      background-color: color-mix(in srgb, var(--surface-muted) 94%, transparent);
     }
 
     input,
@@ -124,7 +124,7 @@
     min-height: 44px;
     padding: 10px 13px;
     border-radius: 16px;
-    background: color-mix(in srgb, var(--surface-muted) 62%, transparent);
+    background: color-mix(in srgb, var(--surface-muted) 86%, transparent);
     border: 1px solid transparent;
     display: flex;
     align-items: center;
@@ -627,9 +627,9 @@
   inset: 0;
   z-index: 60;
   padding: 24px;
-  background: rgba(2, 6, 23, 0.3);
-  backdrop-filter: blur(30px) saturate(155%);
-  -webkit-backdrop-filter: blur(30px) saturate(155%);
+  background: rgba(2, 6, 23, 0.46);
+  backdrop-filter: blur(52px) saturate(190%);
+  -webkit-backdrop-filter: blur(52px) saturate(190%);
   display: grid;
   place-items: center;
   overflow-y: auto;
@@ -788,7 +788,7 @@
   bottom: 0;
   margin: 16px -18px 0;
   padding: 12px 18px;
-  background: color-mix(in srgb, var(--surface-strong) 62%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 84%, transparent);
   border-top: 0;
   backdrop-filter: var(--glass-blur-strong);
   -webkit-backdrop-filter: var(--glass-blur-strong);
@@ -1035,7 +1035,7 @@
   min-height: 76px;
   padding: 16px 18px;
   border-bottom: 0;
-  background: color-mix(in srgb, var(--surface-strong) 28%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 76%, transparent);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   display: flex;
@@ -1246,9 +1246,9 @@
   inset: 0;
   z-index: 120;
   padding: 20px;
-  background: rgba(5, 6, 10, 0.34);
-  backdrop-filter: blur(42px) saturate(170%);
-  -webkit-backdrop-filter: blur(42px) saturate(170%);
+  background: rgba(5, 6, 10, 0.46);
+  backdrop-filter: blur(52px) saturate(190%);
+  -webkit-backdrop-filter: blur(52px) saturate(190%);
   display: grid;
   place-items: center;
 }
@@ -1406,7 +1406,7 @@
   position: sticky;
   bottom: 0;
   padding: 13px 14px 14px;
-  background: color-mix(in srgb, var(--surface-strong) 48%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
   border-top: 0;
   backdrop-filter: var(--glass-blur-strong);
   -webkit-backdrop-filter: var(--glass-blur-strong);
@@ -1518,5 +1518,14 @@
   .locker-pos-layout .locker-grid,
   .panel-save-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .locker-modal-backdrop,
+  .locker-service-backdrop {
+    background: rgba(5, 6, 10, 0.58);
+    backdrop-filter: blur(58px) saturate(200%);
+    -webkit-backdrop-filter: blur(58px) saturate(200%);
   }
 }

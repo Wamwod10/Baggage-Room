@@ -27,7 +27,7 @@
   border-radius: inherit;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent),
-    color-mix(in srgb, var(--surface-muted) 92%, transparent);
+    color-mix(in srgb, var(--surface-muted) 96%, transparent);
   border: 1px solid color-mix(in srgb, var(--glass-edge) 78%, transparent);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 18%, transparent);
   backdrop-filter: var(--glass-blur);
@@ -66,7 +66,7 @@
   border-color: color-mix(in srgb, var(--primary) 22%, var(--glass-edge));
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 20%, transparent), transparent),
-    color-mix(in srgb, var(--surface-strong) 86%, transparent);
+    color-mix(in srgb, var(--surface-strong) 94%, transparent);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 24%, transparent),
     var(--focus-ring);
@@ -97,7 +97,7 @@
   overflow-y: auto;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent 44%),
-    color-mix(in srgb, var(--dropdown-bg) 96%, var(--surface-strong));
+    color-mix(in srgb, var(--dropdown-bg) 98%, var(--surface-strong));
   border: 1px solid color-mix(in srgb, var(--glass-edge) 82%, transparent);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 22%, transparent),

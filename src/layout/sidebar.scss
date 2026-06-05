@@ -82,7 +82,7 @@
   }
 
   &:hover {
-    background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
+    background: color-mix(in srgb, var(--surface-muted) 88%, transparent);
     color: var(--text-main);
     transform: translateX(2px);
   }
@@ -90,7 +90,7 @@
   &.active {
     background:
       linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 12%, transparent), transparent),
-      color-mix(in srgb, var(--surface-strong) 58%, transparent);
+      color-mix(in srgb, var(--surface-strong) 78%, transparent);
     color: var(--text-main);
     border: 1px solid color-mix(in srgb, var(--glass-edge) 24%, transparent);
     box-shadow:
@@ -102,11 +102,11 @@
   &.locked {
     cursor: not-allowed;
     opacity: 0.58;
-    background: color-mix(in srgb, var(--surface-muted) 78%, transparent);
+    background: color-mix(in srgb, var(--surface-muted) 90%, transparent);
     color: var(--text-muted);
 
     &:hover {
-      background: color-mix(in srgb, var(--surface-muted) 78%, transparent);
+      background: color-mix(in srgb, var(--surface-muted) 90%, transparent);
       color: var(--text-muted);
       transform: none;
     }
@@ -129,7 +129,7 @@
 .sidebar-user {
   padding: 12px;
   border-radius: 22px;
-  background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 90%, transparent);
   border: 1px solid transparent;
   display: flex;
   align-items: center;
