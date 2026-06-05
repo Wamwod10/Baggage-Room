@@ -2,9 +2,31 @@ import baggageService from "./baggageService";
 import expenseService from "./expenseService";
 import shiftService from "./shiftService";
 import { getBranchNames } from "../utils/branches";
+import {
+  CURRENCIES,
+  getCashMovements,
+  getCustomerHistory,
+  getLockers,
+} from "../utils/storage";
 
 const getOrderTotal = (order) =>
-  Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+  order.realPaidAmount !== undefined && order.realPaidAmount !== null
+    ? Number(order.realPaidAmount || 0)
+    : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+
+const hasAmount = (value) =>
+  value !== undefined &&
+  value !== null &&
+  value !== "" &&
+  Number.isFinite(Number(value));
+
+const getLockerAnalyticsAmount = (order, locker) => {
+  if (hasAmount(locker.price)) return Number(locker.price);
+
+  const lockerCount = order.lockers?.length || order.count || 1;
+
+  return getOrderTotal(order) / lockerCount;
+};
 
 const formatDateKey = (date) => {
   if (Number.isNaN(date.getTime())) return "";
@@ -76,7 +98,7 @@ const filterByPeriod = (items, period) => {
   });
 };
 
-const paymentTypes = ["Naqd", "Karta", "Click/Payme", "O'tkazma"];
+const paymentTypes = ["Naqd", "Karta", "Click/Payme", "O'tkazma", "Qarz"];
 
 const matchesPayment = (order, payment) => {
   if (payment === "O'tkazma") {
@@ -91,13 +113,21 @@ const analyticsService = {
     const allOrders = baggageService.getAll(branchName);
     const allExpenses = expenseService.getAll(branchName);
     const allShifts = shiftService.getAll(branchName);
+    const allCashMovements = getCashMovements(branchName);
+    const allLockers = getLockers(branchName);
 
     const orders = filterByPeriod(allOrders, period);
     const expenses = filterByPeriod(allExpenses, period);
     const shifts = filterByPeriod(allShifts, period);
+    const cashMovements = filterByPeriod(allCashMovements, period);
 
-    const revenue = orders.reduce(
+    const paidOrders = orders.filter((order) => order.payment !== "Qarz" || order.debtClosedAt);
+    const revenue = paidOrders.reduce(
       (sum, order) => sum + getOrderTotal(order),
+      0,
+    );
+    const debtAmount = orders.reduce(
+      (sum, order) => sum + Number(order.debtAmount || 0),
       0,
     );
 
@@ -248,7 +278,7 @@ const analyticsService = {
           matchesPayment(order, payment),
         );
         const amount = paymentOrders.reduce(
-          (sum, order) => sum + getOrderTotal(order),
+          (sum, order) => sum + (payment === "Qarz" ? Number(order.debtAmount || 0) : getOrderTotal(order)),
           0,
         );
 
@@ -261,25 +291,48 @@ const analyticsService = {
       },
     );
 
-    const baggageSizeAnalytics = ["Small", "Medium", "Large", "XL"].map(
-      (size) => {
-        const sizeOrders = orders.filter((order) => order.size === size);
-        const amount = sizeOrders.reduce(
-          (sum, order) => sum + getOrderTotal(order),
-          0,
-        );
+    const baggageSizeAnalytics = ["S", "M", "L"].map((size) => {
+      const sizeOrders = orders.filter((order) => {
+        const orderLockers = Array.isArray(order.lockers) ? order.lockers : [];
 
-        return {
-          size,
-          orders: sizeOrders.length,
-          count: sizeOrders.reduce(
-            (sum, order) => sum + Number(order.count || 0),
-            0,
-          ),
-          amount,
-        };
-      },
-    );
+        if (orderLockers.length) {
+          return orderLockers.some((locker) => locker.size === size);
+        }
+
+        return String(order.size || "").includes(size);
+      });
+      const amount = sizeOrders.reduce((sum, order) => {
+        const orderLockers = Array.isArray(order.lockers) ? order.lockers : [];
+
+        if (!orderLockers.length) {
+          return sum + getOrderTotal(order);
+        }
+
+        return (
+          sum +
+          orderLockers
+            .filter((locker) => locker.size === size)
+            .reduce(
+              (lockerSum, locker) => lockerSum + getLockerAnalyticsAmount(order, locker),
+              0,
+            )
+        );
+      }, 0);
+      const count = sizeOrders.reduce((sum, order) => {
+        const orderLockers = Array.isArray(order.lockers) ? order.lockers : [];
+
+        if (!orderLockers.length) return sum + Number(order.count || 1);
+
+        return sum + orderLockers.filter((locker) => locker.size === size).length;
+      }, 0);
+
+      return {
+        size,
+        orders: sizeOrders.length,
+        count,
+        amount,
+      };
+    });
 
     const peakHours = Array.from({ length: 24 }, (_, hour) => {
       const hourOrders = orders.filter((order) => {
@@ -466,6 +519,50 @@ const analyticsService = {
       (sum, order) => sum + Number(order.overtimeAmount || 0),
       0,
     );
+    const currencyAnalytics = CURRENCIES.map((currency) => {
+      const currencyOrders = orders.filter((order) => order.currency === currency);
+      const amount = currencyOrders.reduce((sum, order) => sum + getOrderTotal(order), 0);
+
+      return {
+        currency,
+        amount,
+        orders: currencyOrders.length,
+      };
+    });
+
+    const lockerUsage = ["Bosh", "Band", "Kechikkan", "Servisda"].map((status) => ({
+      status,
+      count: allLockers.filter((locker) => locker.status === status).length,
+    }));
+
+    const debtAnalytics = {
+      orders: orders.filter((order) => Number(order.debtAmount || 0) > 0).length,
+      amount: debtAmount,
+      closed: orders.filter((order) => order.debtClosedAt).length,
+    };
+
+    const cashMovementAnalytics = {
+      in: cashMovements
+        .filter((item) => item.type === "IN")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0),
+      out: cashMovements
+        .filter((item) => item.type === "OUT")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0),
+      count: cashMovements.length,
+    };
+
+    const customerKeys = [
+      ...new Set(orders.map((order) => order.phone || order.passport).filter(Boolean)),
+    ];
+    const customerAnalytics = {
+      unique: customerKeys.length,
+      repeat: customerKeys.filter(
+        (key) => getCustomerHistory({ phone: key, passport: key, branchName }).orders.length > 1,
+      ).length,
+      activeWarnings: orders.filter(
+        (order) => order.status === "Aktiv" || order.status === "Kechikdi",
+      ).length,
+    };
 
     const openShifts = shifts.filter((shift) => shift.status === "OPEN");
 
@@ -559,6 +656,7 @@ const analyticsService = {
         activeOrders: activeOrders.length,
         delayedOrders: delayedOrders.length,
         cancelledOrders: cancelledOrders.length,
+        debtAmount,
         totalShifts: shifts.length,
         averageOrder: orders.length > 0 ? revenue / orders.length : 0,
         profitMargin:
@@ -579,6 +677,11 @@ const analyticsService = {
       bestHour,
       problemAnalytics,
       financeAnalytics,
+      currencyAnalytics,
+      lockerUsage,
+      customerAnalytics,
+      debtAnalytics,
+      cashMovementAnalytics,
       branchRanking,
       shiftAnalytics,
     };

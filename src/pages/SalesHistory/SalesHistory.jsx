@@ -2,14 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarDays, Eye, Search } from "lucide-react";
 import baggageService from "../../services/baggageService";
+import telegramService from "../../services/telegramService";
 import { useAuth } from "../../store/AuthContext";
 import "./salesHistory.scss";
 import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { TableSkeleton } from "../../components/Skeleton/Skeleton";
+import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
+import { formatMoneyByCurrency } from "../../utils/currency";
+
+const hasLockerPrice = (locker) =>
+  locker?.price !== undefined &&
+  locker?.price !== null &&
+  locker?.price !== "" &&
+  Number.isFinite(Number(locker.price));
 
 export default function SalesHistory() {
   const { t, formatMoney, formatDateTime } = useTranslation();
@@ -23,6 +32,7 @@ export default function SalesHistory() {
   const [payment, setPayment] = useState("Payment");
   const [status, setStatus] = useState("Status");
   const [manualSelectedOrder, setSelectedOrder] = useState(null);
+  const [statusMessage, setStatusMessage] = useState("");
 
   const {
     data: orders = [],
@@ -71,7 +81,10 @@ export default function SalesHistory() {
         ? order.branch === effectiveBranch
         : branch === "Barcha filiallar" || order.branch === branch;
 
-      const matchPayment = payment === "Payment" || order.payment === payment;
+      const matchPayment =
+        payment === "Payment" ||
+        order.payment === payment ||
+        (payment === "Qarz" && Number(order.debtAmount || 0) > 0);
 
       const matchStatus = status === "Status" || order.status === status;
 
@@ -91,7 +104,51 @@ export default function SalesHistory() {
   };
 
   const getTotalPrice = (order) => {
-    return Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+    return order.realPaidAmount !== undefined && order.realPaidAmount !== null
+      ? Number(order.realPaidAmount || 0)
+      : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+  };
+
+  const lockerLabel = (order) =>
+    (order.lockers || []).map((locker) => `#${locker.number} ${locker.size}`).join(", ") ||
+    `${order.size} / ${order.count} ${t("ta")}`;
+
+  const formatCurrency = (order, amount) =>
+    order.currency ? formatMoneyByCurrency(amount, order.currency) : formatMoney(amount);
+
+  const lockerPriceLabel = (order) => {
+    const lockers = Array.isArray(order.lockers) ? order.lockers : [];
+
+    if (!lockers.length) return "-";
+
+    return lockers
+      .map((locker) => {
+        const price = hasLockerPrice(locker)
+          ? formatMoneyByCurrency(locker.price, locker.currency || order.currency)
+          : "Narx topilmadi";
+
+        return `#${locker.number} / ${locker.size}: ${price}`;
+      })
+      .join("; ");
+  };
+
+  const handleCloseDebt = async (order) => {
+    const updatedOrders = baggageService.closeDebt(order.id, {
+      amount: order.debtAmount,
+      admin: "Admin",
+      note: "Debt closed from sales history",
+    });
+    const updatedOrder = updatedOrders.find((item) => item.id === order.id) || order;
+
+    setSelectedOrder(updatedOrder);
+    setRefreshKey((value) => value + 1);
+
+    try {
+      await telegramService.sendDebtClosed(updatedOrder);
+      setStatusMessage(t("Qarz yopildi"));
+    } catch {
+      setStatusMessage(t("Qarz yopildi. Telegram yuborilmadi"));
+    }
   };
 
   return (
@@ -111,6 +168,8 @@ export default function SalesHistory() {
           {t("Refresh local data")}
         </button>
       </div>
+
+      {statusMessage && <div className="history-status-message">{statusMessage}</div>}
 
       {selectedOrder && (
         <div
@@ -159,7 +218,12 @@ export default function SalesHistory() {
 
               <div>
                 <span>{t("Size")}</span>
-                <b>{t(selectedOrder.size)}</b>
+                <b>{lockerLabel(selectedOrder)}</b>
+              </div>
+
+              <div>
+                <span>{t("Yacheyka narxlari")}</span>
+                <b>{lockerPriceLabel(selectedOrder)}</b>
               </div>
 
               <div>
@@ -169,7 +233,7 @@ export default function SalesHistory() {
 
               <div>
                 <span>{t("Payment")}</span>
-                <b>{t(selectedOrder.payment)}</b>
+                <b>{t(selectedOrder.payment)} / {selectedOrder.currency || "UZS"}</b>
               </div>
 
               <div>
@@ -189,7 +253,22 @@ export default function SalesHistory() {
 
               <div>
                 <span>{t("Base price")}</span>
-                <b>{formatMoney(selectedOrder.finalPrice)}</b>
+                <b>{formatCurrency(selectedOrder, selectedOrder.calculatedAmount || selectedOrder.originalPrice || selectedOrder.finalPrice)}</b>
+              </div>
+
+              <div>
+                <span>{t("Real paid")}</span>
+                <b>{formatCurrency(selectedOrder, selectedOrder.realPaidAmount || selectedOrder.finalPrice)}</b>
+              </div>
+
+              <div>
+                <span>{t("Difference")}</span>
+                <b>{formatCurrency(selectedOrder, selectedOrder.difference)}</b>
+              </div>
+
+              <div>
+                <span>{t("Qarz")}</span>
+                <b>{formatCurrency(selectedOrder, selectedOrder.debtAmount)}</b>
               </div>
 
               <div>
@@ -244,6 +323,16 @@ export default function SalesHistory() {
                 <p>{selectedOrder.note}</p>
               </div>
             )}
+
+            {Number(selectedOrder.debtAmount || 0) > 0 && (
+              <button
+                type="button"
+                className="history-debt-close"
+                onClick={() => handleCloseDebt(selectedOrder)}
+              >
+                {t("Qarz yopish")}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -259,7 +348,7 @@ export default function SalesHistory() {
         </div>
 
         <div className="history-filters">
-          <select
+          <GlassSelect
             value={branch}
             onChange={(e) => setBranch(e.target.value)}
             disabled={Boolean(effectiveBranch)}
@@ -270,23 +359,24 @@ export default function SalesHistory() {
                 {t(item)}
               </option>
             ))}
-          </select>
+          </GlassSelect>
 
-          <select value={payment} onChange={(e) => setPayment(e.target.value)}>
+          <GlassSelect value={payment} onChange={(e) => setPayment(e.target.value)}>
             <option value="Payment">{t("Payment")}</option>
             <option value="Naqd">{t("Naqd")}</option>
             <option value="Karta">{t("Karta")}</option>
             <option value="Click/Payme">Click/Payme</option>
             <option>O‘tkazma</option>
-          </select>
+            <option value="Qarz">{t("Qarz")}</option>
+          </GlassSelect>
 
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <GlassSelect value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="Status">{t("Status")}</option>
             <option value="Aktiv">{t("Aktiv")}</option>
             <option value="Olib ketildi">{t("Olib ketildi")}</option>
             <option value="Kechikdi">{t("Kechikdi")}</option>
             <option value="Bekor qilindi">{t("Bekor qilindi")}</option>
-          </select>
+          </GlassSelect>
         </div>
       </div>
 
@@ -350,12 +440,15 @@ export default function SalesHistory() {
 
               <div>
                 <span>
-                  {t(item.size)} / {item.count} {t("ta")}
+                  {lockerLabel(item)}
                 </span>
                 <small>{formatDateTime(item.checkOut)}</small>
               </div>
 
-              <b>{formatMoney(getTotalPrice(item))}</b>
+              <div>
+                <b>{formatCurrency(item, getTotalPrice(item))}</b>
+                <small>{t(item.payment)}</small>
+              </div>
 
               <div>
                 <span>

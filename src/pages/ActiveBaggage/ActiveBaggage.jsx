@@ -3,25 +3,67 @@ import {
   CheckCircle,
   Clock3,
   Eye,
+  MoveRight,
   Printer,
   Search,
   XCircle,
 } from "lucide-react";
 import baggageService from "../../services/baggageService";
+import lockerService from "../../services/lockerService";
 import telegramService from "../../services/telegramService";
-import { printReceipt } from "../../utils/printReceipt";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { TableSkeleton } from "../../components/Skeleton/Skeleton";
+import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
+import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
+import { formatMoneyByCurrency } from "../../utils/currency";
 import "./activeBaggage.scss";
 
+const formatCurrency = (value, currency) =>
+  formatMoneyByCurrency(value, currency);
+
+const hasLockerPrice = (locker) =>
+  locker?.price !== undefined &&
+  locker?.price !== null &&
+  locker?.price !== "" &&
+  Number.isFinite(Number(locker.price));
+
+const lockerPriceLabel = (order) => {
+  const lockers = Array.isArray(order.lockers) ? order.lockers : [];
+
+  if (!lockers.length) return "-";
+
+  return lockers
+    .map((locker) => {
+      const price = hasLockerPrice(locker)
+        ? formatCurrency(locker.price, locker.currency || order.currency)
+        : "Narx topilmadi";
+
+      return `#${locker.number} / ${locker.size}: ${price}`;
+    })
+    .join("; ");
+};
+
+const getPickupExpectedTotal = (order = {}) => {
+  const basePayable = Number(
+    order.finalAmount ??
+      order.finalPrice ??
+      order.realPaidAmount ??
+      order.calculatedAmount ??
+      0,
+  );
+  const previousPaid = order.payment === "Qarz" ? 0 : Number(order.realPaidAmount || basePayable);
+
+  return previousPaid + Number(order.overtimeAmount || 0);
+};
+
 export default function ActiveBaggage() {
-  const { t, formatMoney, formatDateTime } = useTranslation();
-  const { effectiveBranch } = useAuth();
+  const { t, formatDateTime } = useTranslation();
+  const { effectiveBranch, user } = useAuth();
   const branchNames = getBranchNames();
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
@@ -31,93 +73,164 @@ export default function ActiveBaggage() {
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
-  const [cancelError, setCancelError] = useState("");
+  const [pickupOrder, setPickupOrder] = useState(null);
+  const [pickupForm, setPickupForm] = useState({
+    payment: "Naqd",
+    currency: "UZS",
+    realPaidAmount: "",
+    paymentReason: "",
+  });
+  const [transferOrder, setTransferOrder] = useState(null);
+  const [transferForm, setTransferForm] = useState({
+    fromNumber: "",
+    toNumber: "",
+    reason: "",
+  });
+  const [formError, setFormError] = useState("");
 
   const {
-    data: orders = [],
+    data: pageData = { orders: [], lockers: [] },
     isLoading,
     error,
     retry,
   } = usePageResource(
-    () => baggageService.getAll(effectiveBranch),
+    () => ({
+      orders: baggageService.getAll(effectiveBranch),
+      lockers: lockerService.getAll(effectiveBranch),
+    }),
     [effectiveBranch, refreshKey],
-    [],
+    { orders: [], lockers: [] },
   );
 
   useEffect(() => {
-    if (!selectedOrder && !receiptOrder && !cancelOrder) return;
+    if (!selectedOrder && !receiptOrder && !cancelOrder && !pickupOrder && !transferOrder) return;
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setSelectedOrder(null);
         setReceiptOrder(null);
         setCancelOrder(null);
+        setPickupOrder(null);
+        setTransferOrder(null);
       }
     };
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [selectedOrder, receiptOrder, cancelOrder]);
+  }, [selectedOrder, receiptOrder, cancelOrder, pickupOrder, transferOrder]);
 
   const rawActiveOrders = useMemo(() => {
-    return orders.filter(
-      (order) => order.status === "Aktiv" || order.status === "Kechikdi",
+    return pageData.orders.filter(
+      (order) =>
+        order.status === "Aktiv" ||
+        order.status === "Kechikdi" ||
+        Number(order.debtAmount || 0) > 0,
     );
-  }, [orders]);
+  }, [pageData.orders]);
 
   const activeOrders = useMemo(() => {
-    return orders
-      .filter(
-        (order) => order.status === "Aktiv" || order.status === "Kechikdi",
-      )
-      .filter((order) => {
-        const query = search.toLowerCase();
+    return rawActiveOrders.filter((order) => {
+      const query = search.toLowerCase();
+      const lockerText = (order.lockers || []).map((locker) => locker.number).join(" ");
 
-        const matchSearch =
-          String(order.id || "").toLowerCase().includes(query) ||
-          String(order.client || "").toLowerCase().includes(query) ||
-          String(order.phone || "").toLowerCase().includes(query);
+      const matchSearch =
+        String(order.id || "").toLowerCase().includes(query) ||
+        String(order.client || "").toLowerCase().includes(query) ||
+        String(order.phone || "").toLowerCase().includes(query) ||
+        lockerText.includes(query);
 
-        const matchBranch = effectiveBranch
-          ? order.branch === effectiveBranch
-          : branch === "Barcha filiallar" || order.branch === branch;
+      const matchBranch = effectiveBranch
+        ? order.branch === effectiveBranch
+        : branch === "Barcha filiallar" || order.branch === branch;
 
-        const matchStatus =
-          status === "Barcha statuslar" || order.status === status;
+      const matchStatus =
+        status === "Barcha statuslar" ||
+        order.status === status ||
+        (status === "Qarz" && Number(order.debtAmount || 0) > 0);
 
-        return matchSearch && matchBranch && matchStatus;
-      });
-  }, [orders, search, branch, status, effectiveBranch]);
-
-  const hasActiveFilters =
-    Boolean(search.trim()) ||
-    status !== "Barcha statuslar" ||
-    (!effectiveBranch && branch !== "Barcha filiallar");
-  const isFilterEmpty = hasActiveFilters && rawActiveOrders.length > 0;
+      return matchSearch && matchBranch && matchStatus;
+    });
+  }, [rawActiveOrders, search, branch, status, effectiveBranch]);
 
   const handleRefresh = (event) => {
     animateButtonIcon(event);
     setRefreshKey((value) => value + 1);
   };
 
-  const handlePickup = (orderId) => {
-    baggageService.pickup(orderId);
+  const openPickup = (order) => {
+    setPickupOrder(order);
+    setPickupForm({
+      payment: order.payment === "Qarz" ? "Naqd" : order.payment || "Naqd",
+      currency: order.currency || "UZS",
+      realPaidAmount: String(getPickupExpectedTotal(order)),
+      paymentReason: "",
+    });
+    setFormError("");
+  };
+
+  const handlePickup = async () => {
+    if (!pickupOrder) return;
+
+    if (Number(pickupForm.realPaidAmount || 0) < 0) {
+      setFormError(t("Summa manfiy bo'lishi mumkin emas."));
+      return;
+    }
+
+    if (
+      Number(pickupForm.realPaidAmount || 0) !==
+        getPickupExpectedTotal(pickupOrder) &&
+      !pickupForm.paymentReason.trim()
+    ) {
+      setFormError(t("Summani o'zgartirish sababini kiriting."));
+      return;
+    }
+
+    const updatedOrders = baggageService.pickup(pickupOrder.id, {
+      ...pickupForm,
+      admin: user?.fullName,
+    });
+    const updatedOrder = updatedOrders.find((order) => order.id === pickupOrder.id) || pickupOrder;
 
     setRefreshKey((value) => value + 1);
+    setPickupOrder(null);
     setSelectedOrder(null);
+
+    try {
+      if (updatedOrder.overtimeAmount > 0) {
+        await telegramService.sendOvertimePayment(updatedOrder);
+      }
+    } catch {
+      // Best-effort Telegram notification.
+    }
+  };
+
+  const handleCloseDebt = async (order) => {
+    const updatedOrders = baggageService.closeDebt(order.id, {
+      amount: order.debtAmount,
+      admin: user?.fullName,
+      note: "Debt closed from active baggage",
+    });
+    const updatedOrder = updatedOrders.find((item) => item.id === order.id) || order;
+    setRefreshKey((value) => value + 1);
+
+    try {
+      await telegramService.sendDebtClosed(updatedOrder);
+    } catch {
+      // Best-effort Telegram notification.
+    }
   };
 
   const handleCancel = (order) => {
     setCancelOrder(order);
     setCancelReason("");
-    setCancelError("");
+    setFormError("");
   };
 
   const handleConfirmCancel = async () => {
     if (!cancelOrder) return;
 
     if (!cancelReason.trim()) {
-      setCancelError(t("Bekor qilish sababini kiriting."));
+      setFormError(t("Bekor qilish sababini kiriting."));
       return;
     }
 
@@ -134,16 +247,11 @@ export default function ActiveBaggage() {
     setSelectedOrder(null);
     setCancelOrder(null);
     setCancelReason("");
-    setCancelError("");
 
     try {
       await telegramService.sendOrderCancelled(cancelledOrder);
     } catch (error) {
-      setCancelError(
-        `${t("Telegram yuborilmadi")}: ${
-          error.message || t("xatolik yuz berdi")
-        }.`,
-      );
+      setFormError(`${t("Telegram yuborilmadi")}: ${error.message || t("xatolik yuz berdi")}.`);
     }
   };
 
@@ -155,16 +263,74 @@ export default function ActiveBaggage() {
     setReceiptOrder(order);
   };
 
-  const getTotalPrice = (order) => {
-    return Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+  const openTransfer = (order) => {
+    setTransferOrder(order);
+    setTransferForm({
+      fromNumber: String(order.lockers?.[0]?.number || ""),
+      toNumber: "",
+      reason: "",
+    });
+    setFormError("");
   };
+
+  const transferTargets = useMemo(() => {
+    if (!transferOrder) return [];
+    const fromLocker = transferOrder.lockers?.find(
+      (locker) => Number(locker.number) === Number(transferForm.fromNumber),
+    );
+
+    return pageData.lockers.filter(
+      (locker) =>
+        locker.branch === transferOrder.branch &&
+        locker.status === "Bosh" &&
+        (!fromLocker || locker.size === fromLocker.size),
+    );
+  }, [pageData.lockers, transferForm.fromNumber, transferOrder]);
+
+  const handleTransfer = async () => {
+    if (!transferOrder) return;
+
+    if (!transferForm.fromNumber || !transferForm.toNumber || !transferForm.reason.trim()) {
+      setFormError(t("Old, New va sabab maydonlarini to'ldiring."));
+      return;
+    }
+
+    const updatedOrders = baggageService.transfer(transferOrder.id, {
+      ...transferForm,
+      admin: user?.fullName || "Admin",
+    });
+    const updatedOrder = updatedOrders.find((order) => order.id === transferOrder.id) || transferOrder;
+    const transfer = updatedOrder.transferHistory?.at(-1);
+
+    setRefreshKey((value) => value + 1);
+    setTransferOrder(null);
+
+    try {
+      if (transfer) {
+        await telegramService.sendLockerTransfer(updatedOrder, transfer);
+      }
+    } catch {
+      // Best-effort Telegram notification.
+    }
+  };
+
+  const getTotalPrice = (order) =>
+    order.status === "Aktiv" || order.status === "Kechikdi"
+      ? getPickupExpectedTotal(order)
+      : order.realPaidAmount !== undefined && order.realPaidAmount !== null
+      ? Number(order.realPaidAmount || 0)
+      : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+
+  const lockerLabel = (order) =>
+    (order.lockers || []).map((locker) => `#${locker.number} ${locker.size}`).join(", ") ||
+    `${order.size} / ${order.count} ${t("ta")}`;
 
   return (
     <section className="page active-baggage-page">
       <div className="page-header compact-header">
         <div>
           <h1>{t("Aktiv baggage")}</h1>
-          <p>{t("Hozir saqlanayotgan va pickup kutilayotgan orderlar")}</p>
+          <p>{t("Aktiv, kechikkan va qarzdor orderlar nazorati")}</p>
         </div>
 
         <button className="page-action-btn" onClick={handleRefresh}>
@@ -173,35 +339,34 @@ export default function ActiveBaggage() {
         </button>
       </div>
 
+      {formError && <div className="form-error active-form-error">{formError}</div>}
+
       <div className="active-toolbar card">
         <div className="active-search">
           <Search size={17} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("Order ID, ism yoki telefon orqali qidirish...")}
+            placeholder={t("Order ID, ism, telefon yoki yacheyka...")}
           />
         </div>
 
         <div className="active-filters">
-          <select
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            disabled={Boolean(effectiveBranch)}
-          >
+          <GlassSelect value={branch} onChange={(e) => setBranch(e.target.value)} disabled={Boolean(effectiveBranch)}>
             <option value="Barcha filiallar">{t("Barcha filiallar")}</option>
             {(effectiveBranch ? [effectiveBranch] : branchNames).map((item) => (
               <option key={item} value={item}>
                 {t(item)}
               </option>
             ))}
-          </select>
+          </GlassSelect>
 
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <GlassSelect value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="Barcha statuslar">{t("Barcha statuslar")}</option>
             <option value="Aktiv">{t("Aktiv")}</option>
             <option value="Kechikdi">{t("Kechikdi")}</option>
-          </select>
+            <option value="Qarz">{t("Qarz")}</option>
+          </GlassSelect>
         </div>
       </div>
 
@@ -210,8 +375,8 @@ export default function ActiveBaggage() {
           <span>{t("Order")}</span>
           <span>{t("Client")}</span>
           <span>{t("Filial")}</span>
-          <span>{t("Bagaj")}</span>
-          <span>{t("Check-out")}</span>
+          <span>{t("Yacheykalar")}</span>
+          <span>{t("Tarif tugashi")}</span>
           <span>{t("Narx")}</span>
           <span>{t("Status")}</span>
           <span>{t("Action")}</span>
@@ -232,114 +397,102 @@ export default function ActiveBaggage() {
 
           {!isLoading && !error && activeOrders.length === 0 && (
             <StateBlock
-              type={isFilterEmpty ? "search" : "baggage"}
-              title={
-                isFilterEmpty
-                  ? t("Filter bo'yicha aktiv baggage topilmadi")
-                  : t("Aktiv baggage yo'q")
-              }
+              type={rawActiveOrders.length > 0 ? "search" : "baggage"}
+              title={rawActiveOrders.length > 0 ? t("Filter bo'yicha aktiv baggage topilmadi") : t("Aktiv baggage yo'q")}
               description={
-                isFilterEmpty
+                rawActiveOrders.length > 0
                   ? t("Qidiruv, filial yoki status filterlarini yengillashtirib ko'ring.")
                   : t("Hozircha saqlanayotgan yoki pickup kutilayotgan order mavjud emas.")
               }
             />
           )}
 
-          {!isLoading && !error && activeOrders.map((order) => (
-            <div className="active-table-row" key={order.id}>
-              <div>
-                <b>{order.id}</b>
-                <small>{formatDateTime(order.checkIn)}</small>
+          {!isLoading &&
+            !error &&
+            activeOrders.map((order) => (
+              <div className="active-table-row" key={order.id}>
+                <div>
+                  <b>{order.id}</b>
+                  <small>{formatDateTime(order.checkIn)}</small>
+                </div>
+
+                <div>
+                  <b>{order.client}</b>
+                  <small>{order.phone}</small>
+                </div>
+
+                <div>
+                  <span>{t(order.branch)}</span>
+                </div>
+
+                <div>
+                  <span>{lockerLabel(order)}</span>
+                  <small>
+                    {order.lockers?.length || order.count || 1} {t("ta")}
+                  </small>
+                </div>
+
+                <div>
+                  <span>{formatDateTime(order.checkOut)}</span>
+                </div>
+
+                <div>
+                  <b>{formatCurrency(getTotalPrice(order), order.currency)}</b>
+                  <small>
+                    {t("Overtime")}: {formatCurrency(order.overtimeAmount, order.currency)}
+                  </small>
+                  {Number(order.debtAmount || 0) > 0 && (
+                    <small className="debt-line">
+                      {t("Qarz")}: {formatCurrency(order.debtAmount, order.currency)}
+                    </small>
+                  )}
+                </div>
+
+                <div>
+                  <span className={order.status === "Kechikdi" ? "status-pill danger" : "status-pill success"}>
+                    {Number(order.debtAmount || 0) > 0 ? t("Qarz") : t(order.status)}
+                  </span>
+                </div>
+
+                <div className="row-actions">
+                  <button type="button" className="icon-action view" onClick={() => setSelectedOrder(order)}>
+                    <Eye size={16} />
+                  </button>
+                  <button type="button" className="icon-action print" onClick={() => handleReprint(order.id)}>
+                    <Printer size={16} />
+                  </button>
+                  {(order.status === "Aktiv" || order.status === "Kechikdi") && (
+                    <>
+                      <button type="button" className="icon-action transfer" onClick={() => openTransfer(order)}>
+                        <MoveRight size={16} />
+                      </button>
+                      <button type="button" className="icon-action pickup" onClick={() => openPickup(order)}>
+                        <CheckCircle size={16} />
+                      </button>
+                      <button type="button" className="icon-action cancel" onClick={() => handleCancel(order)}>
+                        <XCircle size={16} />
+                      </button>
+                    </>
+                  )}
+                  {Number(order.debtAmount || 0) > 0 && (
+                    <button type="button" className="debt-close-btn" onClick={() => handleCloseDebt(order)}>
+                      {t("Qarz yopish")}
+                    </button>
+                  )}
+                </div>
               </div>
-
-              <div>
-                <b>{order.client}</b>
-                <small>{order.phone}</small>
-              </div>
-
-              <div>
-                <span>{t(order.branch)}</span>
-              </div>
-
-              <div>
-                <span>
-                  {t(order.size)} / {order.count} {t("ta")}
-                </span>
-              </div>
-
-              <div>
-                <span>{formatDateTime(order.checkOut)}</span>
-              </div>
-
-              <div>
-                <b>{formatMoney(getTotalPrice(order))}</b>
-                <small>
-                  {t("Overtime")}: {formatMoney(order.overtimeAmount)}
-                </small>
-              </div>
-
-              <div>
-                <span
-                  className={
-                    order.status === "Kechikdi"
-                      ? "status-pill danger"
-                      : "status-pill success"
-                  }
-                >
-                  {t(order.status)}
-                </span>
-              </div>
-
-              <div className="row-actions">
-                <button
-                  type="button"
-                  className="icon-action view"
-                  onClick={() => setSelectedOrder(order)}
-                >
-                  <Eye size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  className="icon-action print"
-                  onClick={() => handleReprint(order.id)}
-                >
-                  <Printer size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  className="icon-action pickup"
-                  onClick={() => handlePickup(order.id)}
-                >
-                  <CheckCircle size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  className="icon-action cancel"
-                  onClick={() => handleCancel(order)}
-                >
-                  <XCircle size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
       {selectedOrder && (
-        <div
-          className="active-modal-backdrop"
-          onClick={() => setSelectedOrder(null)}
-        >
+        <div className="active-modal-backdrop" onClick={() => setSelectedOrder(null)}>
           <div className="active-modal card" onClick={(event) => event.stopPropagation()}>
             <div className="active-modal-head">
               <div>
                 <h2>{selectedOrder.id}</h2>
                 <p>
-                  {selectedOrder.client} · {selectedOrder.phone}
+                  {selectedOrder.client} - {selectedOrder.phone}
                 </p>
               </div>
 
@@ -349,70 +502,21 @@ export default function ActiveBaggage() {
             </div>
 
             <div className="active-modal-grid">
-              <div>
-                <span>{t("Filial")}</span>
-                <b>{t(selectedOrder.branch)}</b>
-              </div>
-              <div>
-                <span>{t("Passport")}</span>
-                <b>{selectedOrder.passport || "-"}</b>
-              </div>
-              <div>
-                <span>{t("Size")}</span>
-                <b>{t(selectedOrder.size)}</b>
-              </div>
-              <div>
-                <span>{t("Count")}</span>
-                <b>{selectedOrder.count} {t("ta")}</b>
-              </div>
-              <div>
-                <span>{t("Payment")}</span>
-                <b>{t(selectedOrder.payment)}</b>
-              </div>
-              <div>
-                <span>{t("Status")}</span>
-                <b>{t(selectedOrder.status)}</b>
-              </div>
-              <div>
-                <span>{t("Check-in")}</span>
-                <b>{selectedOrder.checkIn || "-"}</b>
-              </div>
-              <div>
-                <span>{t("Check-out")}</span>
-                <b>{selectedOrder.checkOut || "-"}</b>
-              </div>
-              <div>
-                <span>{t("Base price")}</span>
-                <b>{formatMoney(selectedOrder.finalPrice)}</b>
-              </div>
-              <div>
-                <span>{t("Overtime")}</span>
-                <b>{formatMoney(selectedOrder.overtimeAmount)}</b>
-              </div>
-              <div>
-                <span>{t("Total")}</span>
-                <b>{formatMoney(getTotalPrice(selectedOrder))}</b>
-              </div>
-              <div>
-                <span>{t("Reprint")}</span>
-                <b>{selectedOrder.reprintCount || 0} marta</b>
-              </div>
-              <div>
-                <span>{t("Created")}</span>
-                <b>{selectedOrder.createdAt?.slice(0, 19) || "-"}</b>
-              </div>
-              <div>
-                <span>{t("Cancel reason")}</span>
-                <b>{selectedOrder.cancelReason || "-"}</b>
-              </div>
-              <div>
-                <span>{t("Cancelled")}</span>
-                <b>
-                  {selectedOrder.cancelledAt
-                    ? formatDateTime(selectedOrder.cancelledAt)
-                    : "-"}
-                </b>
-              </div>
+              <div><span>{t("Filial")}</span><b>{t(selectedOrder.branch)}</b></div>
+              <div><span>{t("Passport")}</span><b>{selectedOrder.passport || "-"}</b></div>
+              <div><span>{t("Yacheykalar")}</span><b>{lockerLabel(selectedOrder)}</b></div>
+              <div><span>{t("Yacheyka narxlari")}</span><b>{lockerPriceLabel(selectedOrder)}</b></div>
+              <div><span>{t("Payment")}</span><b>{t(selectedOrder.payment)}</b></div>
+              <div><span>{t("Currency")}</span><b>{selectedOrder.currency}</b></div>
+              <div><span>{t("Status")}</span><b>{t(selectedOrder.status)}</b></div>
+              <div><span>{t("Check-in")}</span><b>{formatDateTime(selectedOrder.checkIn)}</b></div>
+              <div><span>{t("Check-out")}</span><b>{formatDateTime(selectedOrder.checkOut)}</b></div>
+              <div><span>{t("Original price")}</span><b>{formatCurrency(selectedOrder.originalPrice || selectedOrder.calculatedAmount, selectedOrder.currency)}</b></div>
+              <div><span>{t("Discount")}</span><b>{formatCurrency(selectedOrder.discount, selectedOrder.currency)}</b></div>
+              <div><span>{t("Real paid")}</span><b>{formatCurrency(selectedOrder.realPaidAmount, selectedOrder.currency)}</b></div>
+              <div><span>{t("Difference")}</span><b>{formatCurrency(selectedOrder.difference, selectedOrder.currency)}</b></div>
+              <div><span>{t("Qarz")}</span><b>{formatCurrency(selectedOrder.debtAmount, selectedOrder.currency)}</b></div>
+              <div><span>{t("Pickup time")}</span><b>{formatDateTime(selectedOrder.realPickupTime)}</b></div>
             </div>
 
             {selectedOrder.note && (
@@ -425,117 +529,142 @@ export default function ActiveBaggage() {
         </div>
       )}
 
+      {pickupOrder && (
+        <div className="active-modal-backdrop" onClick={() => setPickupOrder(null)}>
+          <div className="active-modal card pickup-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="active-modal-head">
+              <div>
+                <h2>{t("Pickup payment")}</h2>
+                <p>{pickupOrder.id} - {lockerLabel(pickupOrder)}</p>
+              </div>
+              <button type="button" onClick={() => setPickupOrder(null)}>{t("Close")}</button>
+            </div>
+
+            <div className="pickup-summary">
+              <div>
+                <span>{t("Calculated")}</span>
+                <b>{formatCurrency(Number(pickupOrder.calculatedAmount || pickupOrder.finalPrice || 0), pickupOrder.currency)}</b>
+              </div>
+              <div>
+                <span>{t("Overtime")}</span>
+                <b>{formatCurrency(pickupOrder.overtimeAmount, pickupOrder.currency)}</b>
+              </div>
+              <div>
+                <span>{t("Overtime soat")}</span>
+                <b>{pickupOrder.overtimeHours || 0}</b>
+              </div>
+            </div>
+
+            <div className="pickup-form">
+              <label>
+                <span>{t("To'lov turi")}</span>
+                <GlassSelect value={pickupForm.payment} onChange={(event) => setPickupForm((prev) => ({ ...prev, payment: event.target.value }))}>
+                  <option value="Naqd">{t("Naqd")}</option>
+                  <option value="Karta">{t("Karta")}</option>
+                  <option value="Click/Payme">Click/Payme</option>
+                  <option value="O'tkazma">{t("O'tkazma")}</option>
+                  <option value="Qarz">{t("Qarz")}</option>
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Currency")}</span>
+                <GlassSelect value={pickupForm.currency} onChange={(event) => setPickupForm((prev) => ({ ...prev, currency: event.target.value }))}>
+                  <option value="UZS">UZS</option>
+                  <option value="USD">USD</option>
+                  <option value="RUB">RUB</option>
+                  <option value="EUR">EUR</option>
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Real olingan summa")}</span>
+                <input type="number" min="0" value={pickupForm.realPaidAmount} onChange={(event) => setPickupForm((prev) => ({ ...prev, realPaidAmount: event.target.value }))} />
+              </label>
+              <label className="full">
+                <span>{t("Sabab")}</span>
+                <input value={pickupForm.paymentReason} onChange={(event) => setPickupForm((prev) => ({ ...prev, paymentReason: event.target.value }))} />
+              </label>
+            </div>
+
+            <button type="button" className="pickup-confirm-btn" onClick={handlePickup}>
+              <CheckCircle size={17} />
+              {t("Pickup tasdiqlash")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {transferOrder && (
+        <div className="active-modal-backdrop" onClick={() => setTransferOrder(null)}>
+          <div className="active-modal card transfer-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="active-modal-head">
+              <div>
+                <h2>{t("Yacheyka transfer")}</h2>
+                <p>{transferOrder.id}</p>
+              </div>
+              <button type="button" onClick={() => setTransferOrder(null)}>{t("Close")}</button>
+            </div>
+
+            <div className="pickup-form">
+              <label>
+                <span>{t("Old")}</span>
+                <GlassSelect value={transferForm.fromNumber} onChange={(event) => setTransferForm((prev) => ({ ...prev, fromNumber: event.target.value, toNumber: "" }))}>
+                  {(transferOrder.lockers || []).map((locker) => (
+                    <option key={locker.number} value={locker.number}>
+                      #{locker.number} {locker.size}
+                    </option>
+                  ))}
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("New")}</span>
+                <GlassSelect value={transferForm.toNumber} onChange={(event) => setTransferForm((prev) => ({ ...prev, toNumber: event.target.value }))}>
+                  <option value="">{t("Tanlang")}</option>
+                  {transferTargets.map((locker) => (
+                    <option key={locker.id} value={locker.number}>
+                      #{locker.number} {locker.size}
+                    </option>
+                  ))}
+                </GlassSelect>
+              </label>
+              <label className="full">
+                <span>{t("Sabab")}</span>
+                <input value={transferForm.reason} onChange={(event) => setTransferForm((prev) => ({ ...prev, reason: event.target.value }))} />
+              </label>
+            </div>
+
+            <button type="button" className="pickup-confirm-btn" onClick={handleTransfer}>
+              <MoveRight size={17} />
+              {t("Transfer saqlash")}
+            </button>
+          </div>
+        </div>
+      )}
+
       {cancelOrder && (
         <div className="active-modal-backdrop" onClick={() => setCancelOrder(null)}>
-          <div
-            className="active-modal card cancel-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <div className="active-modal card cancel-modal" onClick={(event) => event.stopPropagation()}>
             <div className="active-modal-head">
               <div>
                 <h2>{t("Orderni bekor qilish")}</h2>
-                <p>
-                  {cancelOrder.id} - {cancelOrder.client}
-                </p>
+                <p>{cancelOrder.id} - {cancelOrder.client}</p>
               </div>
 
-              <button type="button" onClick={() => setCancelOrder(null)}>
-                {t("Close")}
-              </button>
+              <button type="button" onClick={() => setCancelOrder(null)}>{t("Close")}</button>
             </div>
 
             <label className="cancel-reason-field">
               <span>{t("Bekor qilish sababi")}</span>
-              <textarea
-                value={cancelReason}
-                onChange={(event) => setCancelReason(event.target.value)}
-                placeholder={t("Masalan: mijoz orderni bekor qildi")}
-              />
+              <textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
             </label>
 
-            {cancelError && <div className="form-error">{cancelError}</div>}
-
-            <button
-              type="button"
-              className="cancel-confirm-btn"
-              onClick={handleConfirmCancel}
-            >
+            <button type="button" className="cancel-confirm-btn" onClick={handleConfirmCancel}>
               {t("Bekor qilishni tasdiqlash")}
             </button>
           </div>
         </div>
       )}
 
-      {receiptOrder && (
-        <div className="receipt-backdrop" onClick={() => setReceiptOrder(null)}>
-          <div className="receipt-modal" onClick={(event) => event.stopPropagation()}>
-            <div className="receipt-head">
-              <h2>{t("Receipt preview")}</h2>
-              <button type="button" onClick={() => setReceiptOrder(null)}>
-                {t("Close")}
-              </button>
-            </div>
-
-            <div className="receipt-paper">
-              <h3>BAGGAGE ROOM</h3>
-              <p>{t(receiptOrder.branch)}</p>
-
-              <div className="receipt-line" />
-
-              <div className="receipt-row">
-                <span>{t("Order ID")}</span>
-                <b>{receiptOrder.id}</b>
-              </div>
-              <div className="receipt-row">
-                <span>{t("Client")}</span>
-                <b>{receiptOrder.client}</b>
-              </div>
-              <div className="receipt-row">
-                <span>{t("Phone")}</span>
-                <b>{receiptOrder.phone}</b>
-              </div>
-              <div className="receipt-row">
-                <span>{t("Baggage")}</span>
-                <b>
-                  {t(receiptOrder.size)} / {receiptOrder.count} {t("ta")}
-                </b>
-              </div>
-              <div className="receipt-row">
-                <span>{t("Check-in")}</span>
-                <b>{receiptOrder.checkIn || "-"}</b>
-              </div>
-              <div className="receipt-row">
-                <span>{t("Check-out")}</span>
-                <b>{receiptOrder.checkOut || "-"}</b>
-              </div>
-              <div className="receipt-row">
-                <span>{t("Payment")}</span>
-                <b>{t(receiptOrder.payment)}</b>
-              </div>
-
-              <div className="receipt-line" />
-
-              <div className="receipt-total">
-                <span>{t("Total")}</span>
-                <b>{formatMoney(getTotalPrice(receiptOrder))}</b>
-              </div>
-
-              <div className="receipt-line" />
-
-              <p className="receipt-thanks">{t("Thank you!")}</p>
-              <small>{t("Reprint")}: {receiptOrder.reprintCount || 0}</small>
-            </div>
-
-            <button
-              type="button"
-              className="receipt-print-btn"
-              onClick={() => printReceipt()}
-            >
-              {t("Print")}
-            </button>
-          </div>
-        </div>
-      )}
+      {receiptOrder && <ReceiptPreview order={receiptOrder} onClose={() => setReceiptOrder(null)} />}
     </section>
   );
 }

@@ -42,6 +42,7 @@ html {
 body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg-main);
+  background-attachment: fixed;
   color: var(--text-main);
   overflow-x: clip;
   line-height: 1.5;
@@ -49,6 +50,24 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(75, 181, 255, 0.12), transparent 32%),
+    radial-gradient(circle at 86% 4%, rgba(71, 220, 205, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 36%);
+}
+
+body.dark::before {
+  background:
+    radial-gradient(circle at 50% -8%, rgba(255, 255, 255, 0.06), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 30%);
 }
 
 body.mobile-nav-open {
@@ -92,20 +111,24 @@ input,
 select,
 textarea {
   min-width: 0;
-  border: 1px solid var(--border);
-  background-color: var(--bg-soft);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 82%, transparent);
+  background-color: color-mix(in srgb, var(--surface-muted) 92%, transparent);
   color: var(--text-main);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease,
-    background-color 0.15s ease;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition: border-color var(--transition), box-shadow var(--transition),
+    background-color var(--transition), transform var(--transition);
 
   &::placeholder {
     color: color-mix(in srgb, var(--text-muted) 76%, transparent);
   }
 
   &:focus {
-    border-color: transparent;
-    background-color: var(--bg-card);
-    box-shadow: var(--focus-ring);
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--glass-edge));
+    background-color: color-mix(in srgb, var(--surface-strong) 86%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 26%, transparent),
+      var(--focus-ring);
   }
 }
 
@@ -134,18 +157,26 @@ button {
 }
 
 select {
-  appearance: none;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   cursor: pointer;
   color-scheme: light;
   padding-right: 36px !important;
-  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
-    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
-  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
+  border-radius: 16px;
+  background-color: color-mix(in srgb, var(--surface-muted) 92%, transparent) !important;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%),
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent) !important;
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%, 0 0 !important;
+  background-size: 5px 5px, 5px 5px, 100% 100% !important;
+  background-repeat: no-repeat !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 18%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 
   option {
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.96);
     color: var(--text-main);
     font-size: 14px;
   }
@@ -155,23 +186,109 @@ select {
     color: var(--text-muted);
     opacity: 0.72;
   }
+
+}
+
+select::-ms-expand {
+  display: none;
 }
 
 body.dark select {
   color-scheme: dark;
+
+  option {
+    background: rgba(20, 20, 25, 0.96);
+    color: rgba(255, 255, 255, 0.92);
+  }
 }
 
 textarea {
   line-height: 1.5;
 }
 
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+input[type="date"],
+input[type="datetime-local"] {
+  color-scheme: light;
+}
+
+body.dark input[type="date"],
+body.dark input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0.72;
+  cursor: pointer;
+  filter: saturate(0.5);
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0;
+  border-radius: 7px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent),
+    color-mix(in srgb, var(--surface-muted) 86%, transparent);
+
+  &::before {
+    content: "";
+    width: 9px;
+    height: 5px;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    opacity: 0;
+    transform: rotate(-45deg) translateY(-1px);
+    transition: opacity var(--transition);
+  }
+
+  &:checked {
+    border-color: transparent;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent),
+      var(--primary);
+  }
+
+  &:checked::before {
+    opacity: 1;
+  }
+}
+
 button {
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-    color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: background-color var(--transition), border-color var(--transition),
+    color var(--transition), transform var(--transition),
+    box-shadow var(--transition), filter var(--transition);
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.65;
+  }
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
   }
 }
 
@@ -182,10 +299,16 @@ button {
 
 .page-header {
   margin-bottom: 24px;
+  padding: 2px 0 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 
   h1 {
     font-size: 32px;
-    font-weight: 600;
+    font-weight: 580;
     letter-spacing: -0.01em;
     line-height: 1.16;
     color: var(--text-main);
@@ -201,14 +324,77 @@ button {
 }
 
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 13%, transparent), transparent 42%),
+    var(--bg-card);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 82%, transparent);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 body.dark .card {
-  border-color: color-mix(in srgb, var(--border) 78%, #ffffff 4%);
+  border-color: color-mix(in srgb, var(--glass-edge) 72%, transparent);
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--glass-edge) 92%, var(--primary-soft));
+  transform: translateY(-1px);
+}
+
+.glass-surface,
+.empty-row,
+.form-error {
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.search-bar input,
+.header-search input,
+.active-search input,
+.history-search input,
+.locker-search input,
+.login-input input {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.header-branch-menu,
+.header-search-results,
+.header-notification-dropdown {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 13%, transparent), transparent 44%),
+    var(--dropdown-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 82%, transparent) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 22%, transparent),
+    var(--dropdown-shadow) !important;
+  backdrop-filter: var(--dropdown-blur) !important;
+  -webkit-backdrop-filter: var(--dropdown-blur) !important;
+  animation: dropdown-float-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: top center;
+}
+
+.header-branch-menu button:hover,
+.header-search-results button:hover,
+.notification-dropdown-item:hover {
+  background: var(--dropdown-item-hover) !important;
+}
+
+@keyframes dropdown-float-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .compact-header {
@@ -228,11 +414,12 @@ body.dark .card {
 .form-error {
   padding: 11px 12px;
   border-radius: 12px;
-  background: var(--danger-soft);
+  background: color-mix(in srgb, var(--danger-soft) 78%, var(--surface-strong));
   color: var(--danger);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.45;
+  border: 1px solid color-mix(in srgb, var(--danger) 18%, var(--border-soft));
 }
 
 @media (max-width: 768px) {
@@ -281,18 +468,22 @@ body.dark .card {
 
 .app-error-boundary {
   align-items: center;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--bg-main);
+  color: var(--text-main);
   display: flex;
   min-height: 100vh;
   padding: 24px;
 }
 
 .app-error-boundary section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 13%, transparent), transparent 42%),
+    var(--bg-card);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 82%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
   margin: 0 auto;
   max-width: 560px;
   padding: 24px;
@@ -305,15 +496,17 @@ body.dark .card {
 }
 
 .app-error-boundary p {
-  color: #475569;
+  color: var(--text-muted);
   margin: 0 0 18px;
   overflow-wrap: anywhere;
 }
 
 .app-error-boundary button {
-  background: #2563eb;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent),
+    color-mix(in srgb, var(--primary) 58%, var(--surface-strong));
   border: 0;
-  border-radius: 8px;
+  border-radius: 16px;
   color: #ffffff;
   cursor: pointer;
   font-weight: 700;

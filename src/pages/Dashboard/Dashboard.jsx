@@ -8,6 +8,8 @@ import {
   Users,
   Clock3,
   Wallet,
+  Archive,
+  AlertTriangle,
 } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
 import notificationService from "../../services/notificationService";
@@ -19,6 +21,7 @@ import { StatSkeleton } from "../../components/Skeleton/Skeleton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
+import { formatMoneyByCurrency } from "../../utils/currency";
 
 const emptyDashboardData = {
   stats: {
@@ -30,6 +33,13 @@ const emptyDashboardData = {
     card: 0,
     clickPayme: 0,
     transfer: 0,
+    debt: 0,
+    activeLockers: 0,
+    freeLockers: 0,
+    delayedLockers: 0,
+    inkassa: 0,
+    cashMovementIn: 0,
+    cashMovementOut: 0,
   },
   orders: [],
   expenses: [],
@@ -74,15 +84,24 @@ export default function Dashboard() {
       const branchOrders = data.orders.filter((order) => order.branch === branch);
       const revenue = branchOrders.reduce(
         (sum, order) =>
-          sum + Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0),
+          sum +
+          (order.realPaidAmount !== undefined && order.realPaidAmount !== null
+            ? Number(order.realPaidAmount || 0)
+            : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0)),
         0,
       );
       const active = branchOrders.filter((order) => order.status === "Aktiv").length;
+      const delayed = branchOrders.filter((order) => order.status === "Kechikdi").length;
+      const freeLockers = (data.lockers || []).filter(
+        (locker) => locker.branch === branch && locker.status === "Bosh",
+      ).length;
 
       return {
         name: branch,
         revenue,
         active,
+        delayed,
+        freeLockers,
       };
     },
   );
@@ -115,6 +134,30 @@ export default function Dashboard() {
       value: formatMoney(data.stats.netProfit),
       icon: Wallet,
       action: () => navigate("/expenses"),
+    },
+    {
+      title: t("Qarz"),
+      value: formatMoney(data.stats.debt),
+      icon: AlertTriangle,
+      action: () => navigate("/active-baggage"),
+    },
+    {
+      title: t("Bosh yacheyka"),
+      value: `${data.stats.freeLockers} ${t("ta")}`,
+      icon: Archive,
+      action: () => navigate("/new-baggage"),
+    },
+    {
+      title: t("Kechikkan"),
+      value: `${data.stats.delayedLockers} ${t("ta")}`,
+      icon: Clock3,
+      action: () => navigate("/active-baggage"),
+    },
+    {
+      title: t("Inkassa"),
+      value: formatMoney(data.stats.inkassa),
+      icon: CreditCard,
+      action: () => navigate("/shifts"),
     },
   ];
 
@@ -218,9 +261,9 @@ export default function Dashboard() {
 
                     <div className="branch-meta">
                       <span>
-                        {branch.active} {t("Aktiv")}
+                        {branch.active} {t("Aktiv")} / {branch.freeLockers} {t("Bosh")}
                       </span>
-                      <b>{branch.revenue > 0 ? t("Active") : t("No data")}</b>
+                      <b>{branch.delayed > 0 ? `${branch.delayed} ${t("Kechikdi")}` : t("Active")}</b>
                     </div>
                   </div>
                 ))}
@@ -249,6 +292,28 @@ export default function Dashboard() {
                   <span>Click/Payme</span>
                   <b>{formatMoney(data.stats.clickPayme)}</b>
                 </div>
+                <div>
+                  <span>{t("Qarz")}</span>
+                  <b>{formatMoney(data.stats.debt)}</b>
+                </div>
+                <div>
+                  <span>{t("Inkassa")}</span>
+                  <b>{formatMoney(data.stats.inkassa)}</b>
+                </div>
+                <div>
+                  <span>{t("Cash in")}</span>
+                  <b>{formatMoney(data.stats.cashMovementIn)}</b>
+                </div>
+                <div>
+                  <span>{t("Cash out")}</span>
+                  <b>{formatMoney(data.stats.cashMovementOut)}</b>
+                </div>
+                {Object.entries(data.stats.currencyTotals || {}).map(([currency, amount]) => (
+                  <div key={currency}>
+                    <span>{currency}</span>
+                    <b>{formatMoneyByCurrency(amount, currency)}</b>
+                  </div>
+                ))}
                 <div>
                   <span>{t("O'tkazma")}</span>
                   <b>{formatMoney(data.stats.transfer)}</b>

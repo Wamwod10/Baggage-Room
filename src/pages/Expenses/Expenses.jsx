@@ -5,6 +5,7 @@ import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
+import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import "./expenses.scss";
@@ -12,6 +13,7 @@ import "./expenses.scss";
 const getInitialForm = (defaultBranch = getBranchNames()[0] || "") => ({
   category: "Printer qog'ozi",
   amount: "",
+  currency: "UZS",
   branch: defaultBranch,
   note: "",
 });
@@ -72,6 +74,7 @@ export default function Expenses() {
         ...form,
         branch,
         amount,
+        currency: form.currency || "UZS",
       });
     } catch {
       setFormError("Harajatni saqlashda xatolik yuz berdi.");
@@ -117,7 +120,7 @@ export default function Expenses() {
 
           <label>
             <span>{t("Kategoriya")}</span>
-            <select
+            <GlassSelect
               name="category"
               value={form.category}
               onChange={handleChange}
@@ -127,7 +130,7 @@ export default function Expenses() {
               <option>{t("Internet")}</option>
               <option>{t("Taxi")}</option>
               <option>{t("Other")}</option>
-            </select>
+            </GlassSelect>
           </label>
 
           <label>
@@ -143,8 +146,18 @@ export default function Expenses() {
           </label>
 
           <label>
+            <span>{t("Currency")}</span>
+            <GlassSelect name="currency" value={form.currency} onChange={handleChange}>
+              <option value="UZS">UZS</option>
+              <option value="USD">USD</option>
+              <option value="RUB">RUB</option>
+              <option value="EUR">EUR</option>
+            </GlassSelect>
+          </label>
+
+          <label>
             <span>{t("Filial")}</span>
-            <select
+            <GlassSelect
               name="branch"
               value={effectiveBranch || form.branch || defaultBranch}
               onChange={handleChange}
@@ -155,7 +168,7 @@ export default function Expenses() {
                   {t(branch)}
                 </option>
               ))}
-            </select>
+            </GlassSelect>
           </label>
 
           <label>
@@ -212,7 +225,9 @@ export default function Expenses() {
                 </div>
 
                 <div className="expense-right">
-                  <strong>{formatMoney(expense.amount)}</strong>
+                  <strong>
+                    {Number(expense.amount || 0).toLocaleString("uz-UZ")} {expense.currency || "UZS"}
+                  </strong>
                   <button
                     type="button"
                     onClick={() => handleDelete(expense.id)}

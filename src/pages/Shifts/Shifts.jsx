@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Banknote,
   Clock3,
@@ -10,21 +10,28 @@ import {
 import shiftService from "../../services/shiftService";
 import baggageService from "../../services/baggageService";
 import expenseService from "../../services/expenseService";
+import financeService from "../../services/financeService";
 import { useAuth } from "../../store/AuthContext";
 import telegramService from "../../services/telegramService";
 import { getBranchByName, getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
+import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
+import { formatMoneyByCurrency } from "../../utils/currency";
 import "./shifts.scss";
 
 const emptyShiftData = {
   shifts: [],
   currentShift: null,
 };
-const emptyShifts = [];
+
+const getOrderTotal = (order) =>
+  order.realPaidAmount !== undefined && order.realPaidAmount !== null
+    ? Number(order.realPaidAmount || 0)
+    : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
 
 export default function Shifts() {
   const { t, formatDateTime, formatMoney } = useTranslation();
@@ -33,7 +40,6 @@ export default function Shifts() {
   const [controlBranch, setControlBranch] = useState(
     effectiveBranch || branchNames[0] || "",
   );
-
   const branchName = effectiveBranch || controlBranch;
   const branchConfig = getBranchByName(branchName);
   const shiftOptions = branchConfig?.shifts || [];
@@ -42,7 +48,14 @@ export default function Shifts() {
   const [adminName, setAdminName] = useState("");
   const [shiftTime, setShiftTime] = useState(shiftOptions[0]?.label || "");
   const [openingCash, setOpeningCash] = useState("");
+  const [receivedFrom, setReceivedFrom] = useState("");
+  const [acceptedAmount, setAcceptedAmount] = useState("");
   const [closingCash, setClosingCash] = useState("");
+  const [handoverTo, setHandoverTo] = useState("");
+  const [inkassaRecipient, setInkassaRecipient] = useState("");
+  const [inkassaAmount, setInkassaAmount] = useState("");
+  const [closingInkassaRecipient, setClosingInkassaRecipient] = useState("");
+  const [closingInkassaAmount, setClosingInkassaAmount] = useState("");
   const [reportShift, setReportShift] = useState(null);
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
@@ -61,11 +74,9 @@ export default function Shifts() {
     emptyShiftData,
   );
 
-  const shifts = shiftData.shifts || emptyShifts;
+  const shifts = shiftData.shifts || [];
   const currentShift = shiftData.currentShift || null;
-  const selectedShiftTime = shiftOptions.some(
-    (item) => item.label === shiftTime,
-  )
+  const selectedShiftTime = shiftOptions.some((item) => item.label === shiftTime)
     ? shiftTime
     : shiftOptions[0]?.label || "";
 
@@ -91,7 +102,7 @@ export default function Shifts() {
   };
 
   const currentStats = useMemo(() => {
-    void shiftData;
+    void refreshKey;
 
     if (!currentShift) {
       return {
@@ -104,50 +115,65 @@ export default function Shifts() {
         card: 0,
         clickPayme: 0,
         transfer: 0,
+        debt: 0,
+        inkassa: 0,
+        cashLeft: 0,
       };
     }
 
     const openedTime = new Date(currentShift.openedAt).getTime();
-
-    const shiftOrders = baggageService
-      .getAll(branchName)
-      .filter((order) => new Date(order.createdAt).getTime() >= openedTime);
-
-    const shiftExpenses = expenseService
-      .getAll(branchName)
-      .filter((expense) => new Date(expense.createdAt).getTime() >= openedTime);
-
-    const getOrderTotal = (order) =>
-      Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
-
-    const revenue = shiftOrders.reduce(
-      (sum, order) => sum + getOrderTotal(order),
-      0,
-    );
-    const expenses = shiftExpenses.reduce(
-      (sum, expense) => sum + Number(expense.amount || 0),
-      0,
-    );
+    const isAfterOpen = (item) =>
+      new Date(item.createdAt || item.openedAt).getTime() >= openedTime;
+    const shiftOrders = baggageService.getAll(branchName).filter(isAfterOpen);
+    const shiftExpenses = expenseService.getAll(branchName).filter(isAfterOpen);
+    const shiftInkassa = financeService.getInkassa(branchName).filter(isAfterOpen);
+    const movements = financeService.getCashMovements(branchName).filter(isAfterOpen);
+    const paidOrders = shiftOrders.filter((order) => order.payment !== "Qarz");
+    const revenue = paidOrders.reduce((sum, order) => sum + getOrderTotal(order), 0);
+    const expenses = shiftExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    const debt = shiftOrders
+      .filter((order) => order.payment === "Qarz" && !order.debtClosedAt)
+      .reduce((sum, order) => sum + Number(order.debtAmount || 0), 0);
+    const inkassa = shiftInkassa.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const paymentTotal = (paymentType) =>
       shiftOrders
         .filter((order) => order.payment === paymentType)
         .reduce((sum, order) => sum + getOrderTotal(order), 0);
+    const normalizePayment = (payment) =>
+      String(payment || "")
+        .replace(/[^\u0020-\u007E]/g, "")
+        .toLowerCase();
+    const transferTotal = shiftOrders
+      .filter((order) => ["o'tkazma", "otkazma"].includes(normalizePayment(order.payment)))
+      .reduce((sum, order) => sum + getOrderTotal(order), 0);
+    const cashIn = movements
+      .filter((item) => item.type === "IN")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const cashOut = movements
+      .filter((item) => item.type === "OUT")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     return {
       orders: shiftOrders.length,
-      baggage: shiftOrders.reduce(
-        (sum, order) => sum + Number(order.count || 0),
-        0,
-      ),
+      baggage: shiftOrders.reduce((sum, order) => sum + Number(order.count || 0), 0),
       revenue,
       expenses,
       netProfit: revenue - expenses,
       cash: paymentTotal("Naqd"),
       card: paymentTotal("Karta"),
       clickPayme: paymentTotal("Click/Payme"),
-      transfer: paymentTotal("O'tkazma") + paymentTotal("O‘tkazma"),
+      transfer: transferTotal,
+      debt,
+      inkassa,
+      cashLeft: Number(currentShift.acceptedAmount || currentShift.openingCash || 0) + cashIn - cashOut,
     };
-  }, [branchName, currentShift, shiftData]);
+  }, [branchName, currentShift, refreshKey]);
+
+  const formatCurrencyMap = (items = {}) =>
+    Object.entries(items)
+      .filter(([, amount]) => Number(amount || 0) > 0)
+      .map(([currency, amount]) => formatMoneyByCurrency(amount, currency))
+      .join(" / ") || formatMoney(0);
 
   const handleOpenShift = async () => {
     if (!adminName.trim()) {
@@ -171,10 +197,14 @@ export default function Shifts() {
         admin: adminName.trim(),
         shiftTime: selectedShiftTime,
         openingCash,
+        receivedFrom: receivedFrom.trim(),
+        acceptedAmount: acceptedAmount || openingCash,
       });
 
       setAdminName("");
       setOpeningCash("");
+      setReceivedFrom("");
+      setAcceptedAmount("");
       setFormError("");
       refreshData();
 
@@ -186,15 +216,46 @@ export default function Shifts() {
             : `${t("Kassa ochildi")}. ${t("Telegram xabar yuborildi.")}`,
         );
       } catch (error) {
-        setStatusMessage(
-          `${t("Kassa ochildi")}. ${t("Telegram yuborilmadi")}: ${
-            error.message || t("xatolik yuz berdi")
-          }.`,
-        );
+        setStatusMessage(`${t("Kassa ochildi")}. ${t("Telegram yuborilmadi")}: ${error.message || t("xatolik yuz berdi")}.`);
       }
     } catch (error) {
       setFormError(error.message || t("Kassani ochishda xatolik yuz berdi."));
     }
+  };
+
+  const sendInkassaNotification = async (item) => {
+    try {
+      await telegramService.sendInkassa(item);
+    } catch {
+      // Telegram is best-effort.
+    }
+  };
+
+  const createInkassaRecord = async ({ recipient, amount }) => {
+    const item = financeService.createInkassa({
+      branch: branchName,
+      admin: currentShift?.admin || adminName || "Admin",
+      recipient: recipient.trim(),
+      amount,
+      currency: "UZS",
+    });
+
+    await sendInkassaNotification(item);
+    return item;
+  };
+
+  const validateInkassa = (recipient, amountValue) => {
+    const amount = Number(amountValue || 0);
+
+    if (!recipient.trim() || !Number.isFinite(amount) || amount <= 0) {
+      return t("Inkassa uchun kimga berildi va summa majburiy.");
+    }
+
+    if (amount > currentStats.cashLeft) {
+      return t("Inkassa summasi kassada qolgan puldan oshmasligi kerak.");
+    }
+
+    return "";
   };
 
   const handleCloseShift = async () => {
@@ -203,13 +264,42 @@ export default function Shifts() {
       return;
     }
 
+    const closeInkassaAmount = Number(closingInkassaAmount || 0);
+
+    if (closingInkassaAmount !== "" && (!Number.isFinite(closeInkassaAmount) || closeInkassaAmount < 0)) {
+      setFormError(t("Inkassa summasi manfiy bo'lishi mumkin emas."));
+      return;
+    }
+
+    if (closeInkassaAmount > 0) {
+      const inkassaError = validateInkassa(closingInkassaRecipient, closeInkassaAmount);
+
+      if (inkassaError) {
+        setFormError(inkassaError);
+        return;
+      }
+    }
+
     try {
-      const updatedShifts = shiftService.close(branchName, { closingCash });
+      if (closeInkassaAmount > 0) {
+        await createInkassaRecord({
+          recipient: closingInkassaRecipient,
+          amount: closeInkassaAmount,
+        });
+      }
+
+      const updatedShifts = shiftService.close(branchName, {
+        closingCash,
+        handoverTo: handoverTo.trim(),
+      });
       const closedShift = updatedShifts.find(
-        (shift) => shift.branch === branchName && shift.closedAt,
+        (shift) => shift.id === currentShift.id,
       );
 
       setClosingCash("");
+      setHandoverTo("");
+      setClosingInkassaRecipient("");
+      setClosingInkassaAmount("");
       setFormError("");
       refreshData();
       setReportShift(closedShift);
@@ -222,14 +312,40 @@ export default function Shifts() {
             : `${t("Kassa yopildi")}. ${t("Telegram xabar yuborildi.")}`,
         );
       } catch (error) {
-        setStatusMessage(
-          `${t("Kassa yopildi")}. ${t("Telegram yuborilmadi")}: ${
-            error.message || t("xatolik yuz berdi")
-          }.`,
-        );
+        setStatusMessage(`${t("Kassa yopildi")}. ${t("Telegram yuborilmadi")}: ${error.message || t("xatolik yuz berdi")}.`);
       }
     } catch (error) {
       setFormError(error.message || t("Kassani yopishda xatolik yuz berdi."));
+    }
+  };
+
+  const handleInkassa = async () => {
+    const amount = Number(inkassaAmount || 0);
+    const inkassaError = validateInkassa(inkassaRecipient, amount);
+
+    if (!currentShift) {
+      setFormError(t("Avval kassani oching. Ochiq shift topilmadi."));
+      return;
+    }
+
+    if (inkassaError) {
+      setFormError(inkassaError);
+      return;
+    }
+
+    try {
+      await createInkassaRecord({
+        recipient: inkassaRecipient,
+        amount,
+      });
+
+      setInkassaRecipient("");
+      setInkassaAmount("");
+      setFormError("");
+      setStatusMessage(`${t("Inkassa saqlandi")}: ${formatMoney(amount)}`);
+      refreshData();
+    } catch {
+      setFormError(t("Inkassa saqlashda xatolik yuz berdi."));
     }
   };
 
@@ -237,19 +353,19 @@ export default function Shifts() {
     if (!shift) return "";
 
     return `
-📊 ${t("Kassa yopildi")}
+${t("Smenani topshirdi")}:
+${shift.admin} -> ${shift.handoverTo || "-"}
 
-🏢 ${t("Filial")}: ${t(shift.branch)}
-👤 ${t("Admin")}: ${shift.admin}
-🕘 ${t("Shift")}: ${shift.shiftTime || "-"}
-🕒 ${t("Opened")}: ${formatDateTime(shift.openedAt)}
-🔒 ${t("Closed")}: ${formatDateTime(shift.closedAt)}
+${t("Bugungi")}:
+${t("Umumiy savdo")}: ${formatMoney(shift.totalRevenue)}
+Cash: ${formatCurrencyMap(shift.report?.cashByCurrency)}
+Terminal: ${formatCurrencyMap(shift.report?.terminalByCurrency)}
+${t("Qarz")}: ${formatCurrencyMap(shift.report?.debtByCurrency)}
 
-💰 ${t("Revenue")}: ${formatMoney(shift.totalRevenue)}
-📉 ${t("Expenses")}: ${formatMoney(shift.totalExpense)}
-✅ ${t("Net profit")}: ${formatMoney(shift.netProfit)}
-💵 ${t("Opening cash")}: ${formatMoney(shift.openingCash)}
-🏁 ${t("Closing cash")}: ${formatMoney(shift.closingCash)}
+${t("Oldingi smenadan qabul")}: ${formatMoney(shift.acceptedAmount)}
+${t("Rasxod")}: ${formatMoney(shift.totalExpense)}
+${t("Inkassa")}: ${formatMoney(shift.totalInkassa)}
+${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
 `.trim();
   };
 
@@ -267,7 +383,7 @@ export default function Shifts() {
       <div className="page-header compact-header">
         <div>
           <h1>{t("Kassa / Shift")}</h1>
-          <p>{t("Kassani ochish, yopish va daily reportlarni boshqarish")}</p>
+          <p>{t("Kassani ochish, yopish, inkassa va daily reportlarni boshqarish")}</p>
         </div>
 
         <button className="shift-refresh-btn" onClick={refreshData}>
@@ -291,13 +407,7 @@ export default function Shifts() {
       <div className="shift-top-grid">
         <div className="shift-status-card card">
           <div className="shift-status-left">
-            <div
-              className={
-                currentShift
-                  ? "shift-status-icon open"
-                  : "shift-status-icon closed"
-              }
-            >
+            <div className={currentShift ? "shift-status-icon open" : "shift-status-icon closed"}>
               {currentShift ? <Clock3 size={21} /> : <Lock size={21} />}
             </div>
 
@@ -305,9 +415,7 @@ export default function Shifts() {
               <h2>{currentShift ? t("Kassa ochiq") : t("Kassa yopiq")}</h2>
               <p>
                 {currentShift
-                  ? `${t(currentShift.branch)} · ${currentShift.admin} · ${
-                      currentShift.shiftTime || "-"
-                    }`
+                  ? `${t(currentShift.branch)} - ${currentShift.admin} - ${currentShift.shiftTime || "-"}`
                   : t("Hozir aktiv shift mavjud emas")}
               </p>
             </div>
@@ -325,17 +433,13 @@ export default function Shifts() {
           <span>{t("Revenue")}</span>
           <b>{formatMoney(currentStats.revenue)}</b>
         </div>
-
         <div className="shift-mini-stat card">
-          <span>{t("Net profit")}</span>
-          <b>{formatMoney(currentStats.netProfit)}</b>
+          <span>{t("Qarz")}</span>
+          <b>{formatMoney(currentStats.debt)}</b>
         </div>
-
         <div className="shift-mini-stat card">
-          <span>{t("Orders")}</span>
-          <b>
-            {currentStats.orders} {t("ta")}
-          </b>
+          <span>{t("Kassada qolgan")}</span>
+          <b>{formatMoney(currentStats.cashLeft)}</b>
         </div>
       </div>
 
@@ -352,60 +456,38 @@ export default function Shifts() {
             <div className="shift-form">
               <label>
                 <span>{t("Filial")}</span>
-                <select
-                  value={branchName}
-                  onChange={(event) => setControlBranch(event.target.value)}
-                  disabled={Boolean(effectiveBranch)}
-                >
-                  {(effectiveBranch ? [effectiveBranch] : branchNames).map(
-                    (branch) => (
-                      <option key={branch} value={branch}>
-                        {t(branch)}
-                      </option>
-                    ),
-                  )}
-                </select>
+                <GlassSelect value={branchName} onChange={(event) => setControlBranch(event.target.value)} disabled={Boolean(effectiveBranch)}>
+                  {(effectiveBranch ? [effectiveBranch] : branchNames).map((branch) => (
+                    <option key={branch} value={branch}>{t(branch)}</option>
+                  ))}
+                </GlassSelect>
               </label>
-
               <label>
                 <span>{t("Admin ismi")}</span>
-                <input
-                  value={adminName}
-                  onChange={(event) => setAdminName(event.target.value)}
-                  placeholder={t("Masalan: Aliyev Sardor")}
-                />
+                <input value={adminName} onChange={(event) => setAdminName(event.target.value)} placeholder={t("Masalan: Aliyev Sardor")} />
               </label>
-
               <label>
                 <span>{t("Shift vaqti")}</span>
-                <select
-                  value={selectedShiftTime}
-                  onChange={(event) => setShiftTime(event.target.value)}
-                  disabled={!shiftOptions.length}
-                >
+                <GlassSelect value={selectedShiftTime} onChange={(event) => setShiftTime(event.target.value)} disabled={!shiftOptions.length}>
                   {shiftOptions.length ? (
-                    shiftOptions.map((item) => (
-                      <option key={item.label} value={item.label}>
-                        {item.label}
-                      </option>
-                    ))
+                    shiftOptions.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)
                   ) : (
                     <option value="">{t("Shift vaqti topilmadi")}</option>
                   )}
-                </select>
+                </GlassSelect>
               </label>
-
+              <label>
+                <span>{t("Kimdan")}</span>
+                <input value={receivedFrom} onChange={(event) => setReceivedFrom(event.target.value)} placeholder={t("Oldingi admin")} />
+              </label>
+              <label>
+                <span>{t("Qabul qilingan summa")}</span>
+                <input type="number" min="0" value={acceptedAmount} onChange={(event) => setAcceptedAmount(event.target.value)} placeholder={t("Masalan: 200000")} />
+              </label>
               <label>
                 <span>{t("Opening cash")}</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={openingCash}
-                  onChange={(event) => setOpeningCash(event.target.value)}
-                  placeholder={t("Masalan: 200000")}
-                />
+                <input type="number" min="0" value={openingCash} onChange={(event) => setOpeningCash(event.target.value)} placeholder={t("Masalan: 200000")} />
               </label>
-
               <button className="open-shift-btn" onClick={handleOpenShift}>
                 <PlayCircle size={17} />
                 {t("Kassani ochish")}
@@ -414,40 +496,33 @@ export default function Shifts() {
           ) : (
             <div className="shift-form">
               <div className="shift-current-box">
-                <div>
-                  <span>{t("Admin")}</span>
-                  <b>{currentShift.admin}</b>
-                </div>
-
-                <div>
-                  <span>{t("Shift vaqti")}</span>
-                  <b>{currentShift.shiftTime || "-"}</b>
-                </div>
-
-                <div>
-                  <span>{t("Opening cash")}</span>
-                  <b>{formatMoney(currentShift.openingCash)}</b>
-                </div>
-
-                <div>
-                  <span>{t("Baggage count")}</span>
-                  <b>
-                    {currentStats.baggage} {t("ta")}
-                  </b>
-                </div>
+                <div><span>{t("Admin")}</span><b>{currentShift.admin}</b></div>
+                <div><span>{t("Kimdan")}</span><b>{currentShift.receivedFrom || "-"}</b></div>
+                <div><span>{t("Qabul")}</span><b>{formatMoney(currentShift.acceptedAmount)}</b></div>
+                <div><span>{t("Baggage count")}</span><b>{currentStats.baggage} {t("ta")}</b></div>
               </div>
-
+              <label>
+                <span>{t("Kimga")}</span>
+                <input value={handoverTo} onChange={(event) => setHandoverTo(event.target.value)} placeholder={t("Keyingi admin")} />
+              </label>
               <label>
                 <span>{t("Closing cash")}</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={closingCash}
-                  onChange={(event) => setClosingCash(event.target.value)}
-                  placeholder={t("Masalan: 1500000")}
-                />
+                <input type="number" min="0" value={closingCash} onChange={(event) => setClosingCash(event.target.value)} placeholder={t("Masalan: 1500000")} />
               </label>
-
+              <div className="close-inkassa-panel">
+                <div className="close-inkassa-title">
+                  <span>{t("Kassa yopishda inkassa")}</span>
+                  <small>{t("Ixtiyoriy")}</small>
+                </div>
+                <label>
+                  <span>{t("Inkassa kimga")}</span>
+                  <input value={closingInkassaRecipient} onChange={(event) => setClosingInkassaRecipient(event.target.value)} placeholder={t("Masalan: bosh kassir")} />
+                </label>
+                <label>
+                  <span>{t("Summa")}</span>
+                  <input type="number" min="0" value={closingInkassaAmount} onChange={(event) => setClosingInkassaAmount(event.target.value)} placeholder={t("Masalan: 500000")} />
+                </label>
+              </div>
               <button className="close-shift-btn" onClick={handleCloseShift}>
                 <Square size={16} />
                 {t("Kassani yopish")}
@@ -463,36 +538,43 @@ export default function Shifts() {
           </div>
 
           <div className="payment-breakdown-list">
-            <div>
-              <span>{t("Naqd")}</span>
-              <b>{formatMoney(currentStats.cash)}</b>
-            </div>
-            <div>
-              <span>{t("Karta")}</span>
-              <b>{formatMoney(currentStats.card)}</b>
-            </div>
-            <div>
-              <span>Click/Payme</span>
-              <b>{formatMoney(currentStats.clickPayme)}</b>
-            </div>
-            <div>
-              <span>{t("O'tkazma")}</span>
-              <b>{formatMoney(currentStats.transfer)}</b>
-            </div>
-            <div>
-              <span>{t("Expenses")}</span>
-              <b className="danger">{formatMoney(currentStats.expenses)}</b>
-            </div>
+            <div><span>{t("Naqd")}</span><b>{formatMoney(currentStats.cash)}</b></div>
+            <div><span>{t("Karta")}</span><b>{formatMoney(currentStats.card)}</b></div>
+            <div><span>Click/Payme</span><b>{formatMoney(currentStats.clickPayme)}</b></div>
+            <div><span>{t("O'tkazma")}</span><b>{formatMoney(currentStats.transfer)}</b></div>
+            <div><span>{t("Qarz")}</span><b className="danger">{formatMoney(currentStats.debt)}</b></div>
+            <div><span>{t("Expenses")}</span><b className="danger">{formatMoney(currentStats.expenses)}</b></div>
+            <div><span>{t("Inkassa")}</span><b className="danger">{formatMoney(currentStats.inkassa)}</b></div>
+            <div><span>{t("Kassada qolgan")}</span><b>{formatMoney(currentStats.cashLeft)}</b></div>
           </div>
+
+          {currentShift && (
+            <div className="inkassa-box standalone">
+              <div className="inkassa-box__head">
+                <div>
+                  <h3>{t("Inkassa")}</h3>
+                  <p>{t("Smena davomida kassadan pul chiqarish")}</p>
+                </div>
+                <b>{formatMoney(currentStats.cashLeft)}</b>
+              </div>
+              <label>
+                <span>{t("Inkassa kimga")}</span>
+                <input value={inkassaRecipient} onChange={(event) => setInkassaRecipient(event.target.value)} placeholder={t("Masalan: bosh kassir")} />
+              </label>
+              <label>
+                <span>{t("Summa")}</span>
+                <input type="number" min="0" value={inkassaAmount} onChange={(event) => setInkassaAmount(event.target.value)} placeholder={t("Masalan: 500000")} />
+              </label>
+              <button type="button" onClick={handleInkassa}>{t("Inkassa qilish")}</button>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="shift-history card">
         <div className="shift-history-head">
           <h2>{t("Shift history")}</h2>
-          <span>
-            {shifts.length} {t("ta")}
-          </span>
+          <span>{shifts.length} {t("ta")}</span>
         </div>
 
         <div className="shift-history-table">
@@ -503,6 +585,7 @@ export default function Shifts() {
             <span>{t("Closed")}</span>
             <span>{t("Revenue")}</span>
             <span>{t("Expense")}</span>
+            <span>{t("Qarz")}</span>
             <span>{t("Net profit")}</span>
             <span>{t("Status")}</span>
           </div>
@@ -513,90 +596,49 @@ export default function Shifts() {
             <StateBlock
               type="empty"
               title={t("Shift history yo'q")}
-              description={t(
-                "Kassa ochilib-yopilganda shift tarixi shu yerda ko'rinadi.",
-              )}
+              description={t("Kassa ochilib-yopilganda shift tarixi shu yerda ko'rinadi.")}
             />
           )}
 
-          {!isLoading &&
-            !error &&
-            shifts.map((shift) => (
-              <div className="shift-history-row" key={shift.id}>
-                <div>
-                  <b>{t(shift.branch)}</b>
-                  <small>{shift.admin}</small>
-                </div>
-
-                <div>
-                  <span>{shift.shiftTime || "-"}</span>
-                </div>
-
-                <div>
-                  <span>{formatDateTime(shift.openedAt)}</span>
-                </div>
-
-                <div>
-                  <span>
-                    {shift.closedAt ? formatDateTime(shift.closedAt) : "-"}
-                  </span>
-                </div>
-
-                <div>
-                  <b>{formatMoney(shift.totalRevenue)}</b>
-                </div>
-
-                <div>
-                  <b className="danger">{formatMoney(shift.totalExpense)}</b>
-                </div>
-
-                <div>
-                  <b>{formatMoney(shift.netProfit)}</b>
-                </div>
-
-                <div>
-                  <strong className={shift.status === "OPEN" ? "open" : "closed"}>
-                    {t(shift.status)}
-                  </strong>
-                </div>
-              </div>
-            ))}
+          {!isLoading && !error && shifts.map((shift) => (
+            <div className="shift-history-row" key={shift.id}>
+              <div><b>{t(shift.branch)}</b><small>{shift.admin}</small></div>
+              <div><span>{shift.shiftTime || "-"}</span></div>
+              <div><span>{formatDateTime(shift.openedAt)}</span></div>
+              <div><span>{shift.closedAt ? formatDateTime(shift.closedAt) : "-"}</span></div>
+              <div><b>{formatMoney(shift.totalRevenue)}</b></div>
+              <div><b className="danger">{formatMoney(shift.totalExpense)}</b></div>
+              <div><b className="danger">{formatMoney(shift.totalDebt)}</b></div>
+              <div><b>{formatMoney(shift.netProfit)}</b></div>
+              <div><strong className={shift.status === "OPEN" ? "open" : "closed"}>{t(shift.status)}</strong></div>
+            </div>
+          ))}
         </div>
       </div>
 
       {reportShift && (
-        <div
-          className="shift-report-backdrop"
-          onClick={() => setReportShift(null)}
-        >
-          <div
-            className="shift-report-modal card"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <div className="shift-report-backdrop" onClick={() => setReportShift(null)}>
+          <div className="shift-report-modal card" onClick={(event) => event.stopPropagation()}>
             <div className="shift-report-head">
               <div>
                 <h2>{t("Daily report preview")}</h2>
                 <p>{t("Telegramga yuboriladigan hisobot formati")}</p>
               </div>
-
               <button onClick={() => setReportShift(null)}>{t("Close")}</button>
             </div>
 
             <div className="telegram-report-box">
-              <h3>📊 {t("Kassa yopildi")}</h3>
-              <p>🏢 {t("Filial")}: {t(reportShift.branch)}</p>
-              <p>👤 {t("Admin")}: {reportShift.admin}</p>
-              <p>🕘 {t("Shift")}: {reportShift.shiftTime || "-"}</p>
-              <p>🕒 {t("Opened")}: {formatDateTime(reportShift.openedAt)}</p>
-              <p>🔒 {t("Closed")}: {formatDateTime(reportShift.closedAt)}</p>
-
+              <h3>{t("Smenani topshirdi")}:</h3>
+              <p>{reportShift.admin} {"->"} {reportShift.handoverTo || "-"}</p>
               <div className="report-line" />
-
-              <p>💰 {t("Revenue")}: {formatMoney(reportShift.totalRevenue)}</p>
-              <p>📉 {t("Expenses")}: {formatMoney(reportShift.totalExpense)}</p>
-              <p>✅ {t("Net profit")}: {formatMoney(reportShift.netProfit)}</p>
-              <p>💵 {t("Opening cash")}: {formatMoney(reportShift.openingCash)}</p>
-              <p>🏁 {t("Closing cash")}: {formatMoney(reportShift.closingCash)}</p>
+              <p>{t("Umumiy savdo")}: {formatMoney(reportShift.totalRevenue)}</p>
+              <p>Cash: {formatCurrencyMap(reportShift.report?.cashByCurrency)}</p>
+              <p>Terminal: {formatCurrencyMap(reportShift.report?.terminalByCurrency)}</p>
+              <p>{t("Qarz")}: {formatCurrencyMap(reportShift.report?.debtByCurrency)}</p>
+              <p>{t("Oldingi smenadan qabul")}: {formatMoney(reportShift.acceptedAmount)}</p>
+              <p>{t("Rasxod")}: {formatMoney(reportShift.totalExpense)}</p>
+              <p>{t("Inkassa")}: {formatMoney(reportShift.totalInkassa)}</p>
+              <p>{t("Kassada qolgan")}: {formatMoney(reportShift.cashLeft || reportShift.closingCash)}</p>
             </div>
 
             <button className="report-copy-btn" onClick={handleCopyReport}>
@@ -608,3 +650,4 @@ export default function Shifts() {
     </section>
   );
 }
+

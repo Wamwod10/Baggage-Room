@@ -39,9 +39,11 @@ import { useAuth } from "../../store/AuthContext";
 import { ALL_BRANCHES_LABEL, getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ChartSkeleton, StatSkeleton } from "../../components/Skeleton/Skeleton";
+import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
+import { formatMoneyByCurrency } from "../../utils/currency";
 import "./analytics.scss";
 
 const emptyAnalyticsData = {
@@ -64,6 +66,11 @@ const emptyAnalyticsData = {
   peakHours: [],
   problemAnalytics: [],
   financeAnalytics: {},
+  currencyAnalytics: [],
+  lockerUsage: [],
+  customerAnalytics: {},
+  debtAnalytics: {},
+  cashMovementAnalytics: {},
   branchRanking: [],
   shiftAnalytics: {},
 };
@@ -220,6 +227,16 @@ export default function Analytics() {
       icon: Clock3,
     },
     {
+      title: t("Qarz"),
+      value: formatMoney(data.debtAnalytics?.amount || overview.debtAmount || 0),
+      icon: AlertTriangle,
+    },
+    {
+      title: t("Unique customers"),
+      value: `${data.customerAnalytics?.unique || 0} ${t("ta")}`,
+      icon: UserCheck,
+    },
+    {
       title: t("Bekor qilingan"),
       value: `${overview.cancelledOrders} ${t("ta")}`,
       icon: XCircle,
@@ -256,14 +273,14 @@ export default function Analytics() {
             </button>
           </div>
 
-          <select value={period} onChange={(e) => setPeriod(e.target.value)}>
+          <GlassSelect value={period} onChange={(e) => setPeriod(e.target.value)}>
             <option value="all">{t("Hammasi")}</option>
             <option value="today">{t("Bugun")}</option>
             <option value="7d">{t("7 kun")}</option>
             <option value="30d">{t("30 kun")}</option>
-          </select>
+          </GlassSelect>
           {isSuperAdmin && (
-            <select
+            <GlassSelect
               value={activeBranch}
               onChange={(e) => setActiveBranch(e.target.value)}
             >
@@ -273,7 +290,7 @@ export default function Analytics() {
                   {t(branch)}
                 </option>
               ))}
-            </select>
+            </GlassSelect>
           )}
           <button
             className="analytics-refresh-btn"
@@ -870,6 +887,26 @@ export default function Analytics() {
 
           <div className="finance-analytics-grid">
             <div>
+              <span>{t("Qarz")}</span>
+              <b>{formatMoney(data.debtAnalytics?.amount)}</b>
+            </div>
+
+            <div>
+              <span>{t("Cash in")}</span>
+              <b>{formatMoney(data.cashMovementAnalytics?.in)}</b>
+            </div>
+
+            <div>
+              <span>{t("Cash out")}</span>
+              <b>{formatMoney(data.cashMovementAnalytics?.out)}</b>
+            </div>
+
+            <div>
+              <span>{t("Debt closed")}</span>
+              <b>{data.debtAnalytics?.closed || 0}</b>
+            </div>
+
+            <div>
               <span>{t("Revenue")}</span>
               <b>{formatMoney(data.financeAnalytics?.revenue)}</b>
             </div>
@@ -903,6 +940,46 @@ export default function Analytics() {
               <span>{t("Expense ratio")}</span>
               <b>{data.financeAnalytics?.expenseRatio || 0}%</b>
             </div>
+          </div>
+        </div>
+
+        <div className="analytics-panel card">
+          <div className="analytics-panel-head">
+            <div>
+              <h2>{t("Currency analytics")}</h2>
+              <p>{t("Valyutalar kesimida real paid amount")}</p>
+            </div>
+
+            <DollarSign size={20} />
+          </div>
+
+          <div className="finance-analytics-grid">
+            {(data.currencyAnalytics || []).map((item) => (
+              <div key={item.currency}>
+                <span>{item.currency}</span>
+                <b>{formatMoneyByCurrency(item.amount, item.currency)}</b>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="analytics-panel card">
+          <div className="analytics-panel-head">
+            <div>
+              <h2>{t("Yacheyka usage")}</h2>
+              <p>{t("Bosh, band, kechikkan va servis holati")}</p>
+            </div>
+
+            <Package size={20} />
+          </div>
+
+          <div className="finance-analytics-grid">
+            {(data.lockerUsage || []).map((item) => (
+              <div key={item.status}>
+                <span>{t(item.status)}</span>
+                <b>{item.count}</b>
+              </div>
+            ))}
           </div>
         </div>
 

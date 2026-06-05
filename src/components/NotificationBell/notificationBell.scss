@@ -1,16 +1,18 @@
 .notification-bell {
   width: 42px;
   height: 42px;
-  border-radius: 13px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
-  background: var(--bg-soft);
+  background: var(--surface-muted);
   color: var(--text-muted);
+  border: 1px solid var(--border-soft);
   position: relative;
 
   &:hover {
     color: var(--primary);
-    background: var(--primary-soft);
+    background: var(--surface-strong);
+    transform: translateY(-1px);
   }
 
   span {

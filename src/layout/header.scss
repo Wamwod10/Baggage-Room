@@ -2,30 +2,40 @@
 
 .header {
   height: var(--header-height);
-  padding: 0 28px;
+  padding: 10px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border-soft);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent 44%),
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--primary-soft) 26%, transparent), transparent 32%),
+    var(--bg-header);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 72%, transparent);
+  border-radius: 30px;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
   position: sticky;
-  top: 0;
+  top: 14px;
   z-index: 10;
   gap: 14px;
+  margin: 14px 18px 0;
 }
 
 .header-menu-btn {
   display: none;
   width: 44px;
   height: 44px;
-  border-radius: 14px;
-  background: var(--bg-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-muted) 84%, transparent);
   color: var(--text-main);
+  border: 1px solid var(--border-soft);
   place-items: center;
 
   &:hover {
-    background: var(--primary-soft);
+    background: var(--surface-strong);
     color: var(--primary);
+    transform: translateY(-1px);
   }
 }
 
@@ -33,13 +43,18 @@
   width: min(440px, 42vw);
   height: 44px;
   padding: 0 14px;
-  border-radius: 14px;
-  background: var(--bg-soft);
-  border: 1px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 12%, transparent), transparent),
+    color-mix(in srgb, var(--surface-muted) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 26%, transparent);
   display: flex;
   align-items: center;
   gap: 12px;
   color: var(--text-muted);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 16%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 
   input {
     width: 100%;
@@ -53,14 +68,17 @@
 
     &::placeholder {
       color: var(--text-muted);
-      background: var(--bg-soft);
+      background: transparent;
       padding: 11px 0;
     }
   }
 
   &:focus-within {
-    border-color: transparent;
-    box-shadow: var(--focus-ring);
+    border-color: color-mix(in srgb, var(--primary) 24%, var(--glass-edge));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 24%, transparent),
+      var(--focus-ring);
+    background: color-mix(in srgb, var(--surface-strong) 70%, transparent);
   }
 }
 
@@ -75,9 +93,9 @@
   height: 46px;
   width: clamp(230px, 24vw, 310px);
   padding: 0 12px;
-  border-radius: 14px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-muted) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 24%, transparent);
   display: flex;
   align-items: center;
   position: relative;
@@ -125,10 +143,12 @@
   left: 0;
   width: min(310px, calc(100vw - 28px));
   padding: 7px;
-  border-radius: 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  border-radius: 24px;
+  background: var(--dropdown-bg);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 32%, transparent);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
   z-index: 70;
   display: grid;
   gap: 4px;
@@ -138,7 +158,7 @@
   button {
     min-height: 36px;
     padding: 0 10px;
-    border-radius: 10px;
+    border-radius: 999px;
     background: transparent;
     color: var(--text-soft);
     font-size: 14px;
@@ -147,13 +167,15 @@
     white-space: normal;
 
     &:hover {
-      background: var(--bg-soft);
+      background: var(--surface-muted);
       color: var(--text-main);
     }
 
     &.active {
-      background: var(--primary);
-      color: #ffffff;
+      background: color-mix(in srgb, var(--surface-strong) 64%, var(--primary-soft));
+      border: 1px solid transparent;
+      color: var(--text-main);
+      font-weight: 700;
     }
   }
 }
@@ -161,17 +183,19 @@
 .header-icon-btn {
   width: 42px;
   height: 42px;
-  border-radius: 13px;
+  border-radius: 999px;
   display: grid;
   place-items: center;
-  background: var(--bg-soft);
+  background: color-mix(in srgb, var(--surface-muted) 84%, transparent);
   color: var(--text-muted);
+  border: 1px solid transparent;
   position: relative;
   transition: 0.16s ease;
 
   &:hover {
     color: var(--primary);
-    background: var(--primary-soft);
+    background: var(--surface-strong);
+    transform: translateY(-1px);
   }
 }
 
@@ -179,13 +203,13 @@
   height: 46px;
   min-width: 168px;
   padding: 6px 13px;
-  border-radius: 14px;
+  border-radius: 999px;
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--primary-soft) 54%, var(--bg-soft)),
-    var(--bg-soft)
+    color-mix(in srgb, var(--cyan-soft) 28%, var(--surface-muted)),
+    color-mix(in srgb, var(--surface-muted) 86%, transparent)
   );
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border-soft));
+  border: 1px solid color-mix(in srgb, var(--primary) 10%, var(--border-soft));
   color: var(--text-main);
   display: flex;
   align-items: center;
@@ -237,8 +261,9 @@
   min-width: 146px;
   height: 46px;
   padding: 5px 7px 5px 12px;
-  border-radius: 14px;
-  background: var(--bg-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-muted) 84%, transparent);
+  border: 1px solid transparent;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -265,10 +290,12 @@
 .header-avatar {
   width: 36px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: 999px;
   display: grid;
   place-items: center;
-  background: var(--primary);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent),
+    color-mix(in srgb, var(--primary) 54%, #6b7280);
   color: #ffffff;
   font-weight: 600;
   flex: 0 0 auto;
@@ -285,10 +312,12 @@
   left: 0;
   width: min(440px, calc(100vw - 32px));
   padding: 8px;
-  border-radius: 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  border-radius: 24px;
+  background: var(--dropdown-bg);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 32%, transparent);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
   z-index: 50;
   display: grid;
   gap: 6px;
@@ -310,7 +339,7 @@
     }
 
     &:hover {
-      background: var(--bg-soft);
+      background: var(--surface-muted);
     }
   }
 
@@ -340,8 +369,11 @@
     gap: 10px;
     height: auto;
     min-height: var(--header-height);
-    padding: 12px 16px;
+    padding: 12px;
     flex-wrap: wrap;
+    margin: 10px 10px 0;
+    top: 10px;
+    border-radius: 26px;
   }
 
   .header-menu-btn {
@@ -455,11 +487,11 @@
   height: 20px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #ef4444;
+  background: var(--danger);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
-  border: 2px solid var(--bg-header);
+  border: 2px solid color-mix(in srgb, var(--bg-header) 56%, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -476,10 +508,12 @@
   right: 0;
   width: 340px;
   padding: 12px;
-  border-radius: 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  border-radius: 26px;
+  background: var(--dropdown-bg);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 32%, transparent);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
   z-index: 90;
 }
 
@@ -506,9 +540,9 @@
   button {
     height: 30px;
     padding: 0 10px;
-    border-radius: 10px;
-    background: var(--primary-soft);
-    color: var(--primary);
+    border-radius: 999px;
+    background: var(--surface-muted);
+    color: var(--text-main);
     font-size: 13px;
     font-weight: 700;
   }
@@ -522,9 +556,9 @@
 .notification-dropdown-item {
   width: 100%;
   padding: 11px 12px;
-  border-radius: 14px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
+  border: 1px solid transparent;
   text-align: left;
   display: grid;
   gap: 4px;
@@ -555,14 +589,14 @@
 
   &:hover {
     transform: translateY(-1px);
-    background: var(--primary-soft);
+    background: var(--surface-strong);
   }
 }
 
 .notification-dropdown-empty {
   padding: 18px;
   border-radius: 14px;
-  background: var(--bg-soft);
+  background: var(--surface-muted);
   color: var(--text-muted);
   text-align: center;
   font-size: 14px;
@@ -570,8 +604,9 @@
 
 @media (max-width: 1199px) and (min-width: 981px) {
   .header {
-    padding: 0 18px;
+    padding: 10px 14px;
     gap: 10px;
+    margin-right: 14px;
   }
 
   .header-search-wrap {
@@ -620,7 +655,7 @@
 @media (max-width: 640px) {
   .header-notification-dropdown {
     position: fixed;
-    top: calc(var(--header-height) + 14px);
+    top: calc(var(--header-height) + 24px);
     right: 12px;
     left: 12px;
     width: auto;
@@ -633,6 +668,7 @@
   .header {
     padding: 10px;
     gap: 8px;
+    border-radius: 24px;
   }
 
   .header-menu-btn,

@@ -2,8 +2,9 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(2, 6, 23, 0.78);
-  backdrop-filter: blur(10px);
+  background: rgba(5, 6, 10, 0.42);
+  backdrop-filter: blur(46px) saturate(175%);
+  -webkit-backdrop-filter: blur(46px) saturate(175%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -16,10 +17,16 @@
   max-width: 100%;
   max-height: calc(100dvh - 36px);
   overflow-y: auto;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #111827, #0f172a);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+  border-radius: var(--radius-modal);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--glass-highlight) 12%, transparent),
+      transparent 44%
+    ),
+    color-mix(in srgb, var(--surface-strong) 70%, #020617);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 72%, transparent);
+  box-shadow: var(--shadow-panel);
   padding: 12px;
   scrollbar-width: thin;
 }
@@ -37,7 +44,9 @@
   align-items: stretch;
   gap: 8px;
   padding: 0 0 10px;
-  background: #111827;
+  background: color-mix(in srgb, var(--surface-strong) 58%, #020617);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
 }
 
 .receipt-close-btn,
@@ -45,7 +54,7 @@
   width: 100%;
   min-width: 0;
   min-height: 40px;
-  border-radius: 12px;
+  border-radius: 16px;
   border: none;
   font-size: 14px;
   font-weight: 800;
@@ -59,12 +68,15 @@
 }
 
 .receipt-close-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--surface-muted) 80%, transparent);
   color: #fff;
+  border: 1px solid var(--border-soft);
 }
 
 .receipt-print-btn {
-  background: #2563eb;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent),
+    color-mix(in srgb, var(--primary) 54%, var(--surface-strong));
   color: #fff;
 }
 
@@ -76,6 +88,7 @@
   color: #111827;
   font-family: "Courier New", monospace;
   font-size: 9.4px;
+  font-weight: 800;
   border-radius: 9px;
   box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
   print-color-adjust: exact;
@@ -85,16 +98,16 @@
 .receipt-brand {
   text-align: center;
 
-  .receipt-logo {
-    width: 30px;
-    height: 30px;
+  .receipt-logo,
+  .receipt-logo-placeholder {
+    width: 44px;
+    height: 28px;
     margin: 0 auto 5px;
-    border: 2px solid #111827;
-    border-radius: 8px;
+    border-radius: 4px;
     display: grid;
     place-items: center;
     font-weight: 900;
-    font-size: 12px;
+    font-size: 8px;
   }
 
   h3 {
@@ -106,7 +119,7 @@
   p {
     margin: 3px 0 0;
     font-size: 9px;
-    font-weight: 700;
+    font-weight: 900;
   }
 }
 
@@ -143,13 +156,45 @@
   margin: 4px 0;
 
   span {
-    color: #374151;
+    color: #111827;
+    font-weight: 900;
   }
 
   b {
     text-align: right;
     max-width: 132px;
     word-break: break-word;
+    font-weight: 900;
+  }
+}
+
+.receipt-locker-list {
+  display: grid;
+  gap: 1px;
+}
+
+.receipt-row--locker {
+  align-items: flex-start;
+}
+
+.receipt-locker-meta {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  max-width: 118px;
+
+  strong {
+    color: #111827;
+    font-weight: 900;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  small {
+    color: #111827;
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 1.2;
   }
 }
 
@@ -175,6 +220,41 @@
     margin: 4px 0 0;
     line-height: 1.35;
   }
+}
+
+.receipt-logo-placeholder {
+  width: 120px;
+  height: 80px;
+  margin: 0 auto 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+}
+
+.receipt-logo-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.thermal-receipt .receipt-brand .receipt-logo-placeholder {
+  width: 150px !important;
+  height: 95px !important;
+  margin: 0 auto 10px !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.thermal-receipt .receipt-brand .receipt-logo-placeholder img {
+  width: 150px !important;
+  height: 95px !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  display: block !important;
 }
 
 .receipt-barcode {
@@ -235,6 +315,8 @@
   small {
     display: block;
     margin-top: 3px;
+    color: #111827;
+    font-weight: 900;
     line-height: 1.35;
   }
 }
@@ -348,6 +430,7 @@
     box-shadow: none;
     padding: 4mm;
     font-size: 9px;
+    font-weight: 900;
     margin: 0;
     page-break-inside: avoid;
     break-inside: avoid;

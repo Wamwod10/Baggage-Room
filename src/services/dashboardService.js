@@ -6,6 +6,9 @@ import {
   getShifts,
   getCurrentShift,
   getActivityLogs,
+  getCashMovements,
+  getInkassa,
+  getLockers,
   syncOvertimeOrders,
 } from "../utils/storage";
 
@@ -27,6 +30,9 @@ const dashboardService = {
         (shift) => shift.status === "OPEN",
       ),
       activityLogs: getActivityLogs(branchName),
+      cashMovements: getCashMovements(branchName),
+      inkassa: getInkassa(branchName),
+      lockers: getLockers(branchName),
     };
   },
 

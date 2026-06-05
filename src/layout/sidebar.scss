@@ -2,17 +2,21 @@
 
 .sidebar {
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 16px;
+  height: calc(100vh - 32px);
   width: var(--sidebar-width);
-  padding: 24px 18px;
+  padding: 22px 16px;
   display: flex;
   flex-direction: column;
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-soft);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 72%, transparent);
+  border-radius: 30px;
   box-shadow: var(--shadow-sidebar);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
   z-index: 20;
   overflow-y: auto;
+  margin: 16px 0 16px 16px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -25,10 +29,10 @@
 
   h2 {
     font-size: 25px;
-    font-weight: 700;
+    font-weight: 620;
     letter-spacing: -0.01em;
     line-height: 1.1;
-    color: var(--primary);
+    color: var(--text-main);
   }
 
   p {
@@ -39,26 +43,28 @@
 .sidebar-logo {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 16px;
   display: grid;
   place-items: center;
-  background: #020617;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent),
+    color-mix(in srgb, var(--primary) 26%, #3f4754);
   color: #ffffff;
   font-size: 15px;
   font-weight: 700;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .sidebar-menu {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   padding-bottom: 12px;
 }
 
 .sidebar-link {
   min-height: 46px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -66,7 +72,8 @@
   font-size: 15px;
   font-weight: 500;
   line-height: 1.15;
-  transition: 0.16s ease;
+  transition: background-color var(--transition), color var(--transition),
+    transform var(--transition), box-shadow var(--transition);
 
   svg {
     width: 19px;
@@ -75,24 +82,31 @@
   }
 
   &:hover {
-    background: var(--bg-soft);
+    background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
     color: var(--text-main);
+    transform: translateX(2px);
   }
 
   &.active {
-    background: var(--primary);
-    color: #ffffff;
-    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 12%, transparent), transparent),
+      color-mix(in srgb, var(--surface-strong) 58%, transparent);
+    color: var(--text-main);
+    border: 1px solid color-mix(in srgb, var(--glass-edge) 24%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 16%, transparent),
+      0 10px 20px color-mix(in srgb, var(--primary) 4%, transparent);
+    font-weight: 650;
   }
 
   &.locked {
     cursor: not-allowed;
     opacity: 0.58;
-    background: color-mix(in srgb, var(--bg-soft) 78%, transparent);
+    background: color-mix(in srgb, var(--surface-muted) 78%, transparent);
     color: var(--text-muted);
 
     &:hover {
-      background: color-mix(in srgb, var(--bg-soft) 78%, transparent);
+      background: color-mix(in srgb, var(--surface-muted) 78%, transparent);
       color: var(--text-muted);
       transform: none;
     }
@@ -109,13 +123,13 @@
   padding-top: 14px;
   display: grid;
   gap: 12px;
-  border-top: 1px solid var(--border-soft);
+  border-top: 0;
 }
 
 .sidebar-user {
   padding: 12px;
-  border-radius: 14px;
-  background: var(--bg-soft);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
   border: 1px solid transparent;
   display: flex;
   align-items: center;
@@ -143,19 +157,22 @@
 .sidebar-avatar {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
-  background: var(--primary);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent),
+    color-mix(in srgb, var(--primary) 28%, #6b7280);
   color: #ffffff;
   font-weight: 600;
 }
 
 .sidebar-logout {
   height: 44px;
-  border-radius: 13px;
-  background: var(--danger-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger-soft) 24%, var(--surface-muted));
   color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 10%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -165,7 +182,9 @@
   transition: 0.16s ease;
 
   &:hover {
-    filter: brightness(0.97);
+    background: color-mix(in srgb, var(--danger-soft) 36%, var(--surface-strong));
+    filter: brightness(1.02);
+    transform: translateY(-1px);
   }
 }
 
@@ -205,17 +224,18 @@
 @media (max-width: 980px) {
   .sidebar {
     position: fixed;
-    left: 0;
-    top: 0;
+    left: 10px;
+    top: 10px;
     z-index: 100;
     display: flex;
     width: min(320px, calc(100vw - 42px));
     max-width: 88vw;
-    height: 100dvh;
+    height: calc(100dvh - 20px);
     padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-105%);
-    border-right: 1px solid var(--border);
-    box-shadow: 0 28px 80px rgba(2, 6, 23, 0.28);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-panel);
+    margin: 0;
 
     &.open {
       transform: translateX(0);
@@ -245,7 +265,8 @@
     width: 42px;
     height: 42px;
     border-radius: 13px;
-    background: var(--bg-soft);
+    background: var(--surface-muted);
+    border: 1px solid var(--border-soft);
     color: var(--text-muted);
     display: grid;
     place-items: center;

@@ -1,11 +1,19 @@
 import { useEffect } from "react";
 import { Printer, X } from "lucide-react";
 import { useTranslation } from "../../i18n/useTranslation";
+import settingsService from "../../services/settingsService";
 import { printReceipt } from "../../utils/printReceipt";
+import { formatMoneyByCurrency } from "../../utils/currency";
 import "./receiptPreview.scss";
 
+const hasLockerPrice = (locker) =>
+  locker?.price !== undefined &&
+  locker?.price !== null &&
+  locker?.price !== "" &&
+  Number.isFinite(Number(locker.price));
+
 export default function ReceiptPreview({ order, onClose }) {
-  const { t, formatMoney, formatDateTime } = useTranslation();
+  const { t, formatDateTime } = useTranslation();
 
   useEffect(() => {
     if (!order) return;
@@ -22,8 +30,25 @@ export default function ReceiptPreview({ order, onClose }) {
 
   if (!order) return null;
 
-  const totalPrice =
-    Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+  const printerSettings = settingsService.get().printer || {};
+  const logoEnabled = printerSettings.logoEnabled !== false;
+  const logoSrc = printerSettings.logoSrc || "/1.jpg";
+  const totalPrice = Number(order.realPaidAmount || order.finalPrice || 0);
+  const lockers =
+    Array.isArray(order.lockers) && order.lockers.length ? order.lockers : [];
+  const money = (value) => formatMoneyByCurrency(value, order.currency);
+  const getLockerPrice = (locker) => {
+    if (hasLockerPrice(locker)) return Number(locker.price);
+
+    return null;
+  };
+  const getTariffHours = (locker = {}) => {
+    const hours = Number(locker.tariffHours || order.tariffHours || 0);
+
+    return Number.isFinite(hours) && hours > 0 ? hours : null;
+  };
+  const formatTariffHours = (hours) =>
+    hours ? `${hours} ${t("soat")}` : t("Tarif ko'rsatilmagan");
 
   return (
     <div className="receipt-preview-backdrop" onClick={onClose}>
@@ -58,15 +83,18 @@ export default function ReceiptPreview({ order, onClose }) {
 
         <div className="thermal-receipt" id="thermal-receipt">
           <div className="receipt-brand">
-            <div className="receipt-logo">BR</div>
-            <h3>BAGGAGE ROOM</h3>
+            {logoEnabled && (
+              <div className="receipt-logo-placeholder">
+                <img src={logoSrc} alt="Logo" />
+              </div>
+            )}
             <p>{order.branch ? t(order.branch) : "-"}</p>
           </div>
 
           <div className="receipt-divider" />
 
           <div className="receipt-status">
-            <span>✓ {t("Order qabul qilindi")}</span>
+            <span>{t("Order qabul qilindi")}</span>
           </div>
 
           <div className="receipt-row">
@@ -107,15 +135,48 @@ export default function ReceiptPreview({ order, onClose }) {
 
           <div className="receipt-section-title">{t("Baggage")}</div>
 
-          <div className="receipt-row">
-            <span>{t("Size")}</span>
-            <b>{order.size ? t(order.size) : "-"}</b>
-          </div>
+          {lockers.length ? (
+            <div className="receipt-locker-list">
+              {lockers.map((locker, index) => (
+                <div
+                  className="receipt-row receipt-row--locker"
+                  key={`${locker.number}-${locker.size}-${index}`}
+                >
+                  <span className="receipt-locker-meta">
+                    <strong>
+                      #{locker.number} / {locker.size || "-"}
+                    </strong>
+                    <small>
+                      {formatTariffHours(getTariffHours(locker))}
+                    </small>
+                  </span>
+
+                  <b>
+                    {getLockerPrice(locker) === null
+                      ? "Narx topilmadi"
+                      : money(getLockerPrice(locker))}
+                  </b>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="receipt-row">
+              <span>{t("Size")}</span>
+              <b>{order.size ? t(order.size) : "-"}</b>
+            </div>
+          )}
+
+          {!lockers.length && (
+            <div className="receipt-row">
+              <span>{t("Tarif")}</span>
+              <b>{formatTariffHours(getTariffHours())}</b>
+            </div>
+          )}
 
           <div className="receipt-row">
-            <span>{t("Count")}</span>
+            <span>{t("Jami")}</span>
             <b>
-              {order.count || 0} {t("ta")}
+              {order.count || lockers.length || 0} {t("ta")}
             </b>
           </div>
 
@@ -147,17 +208,33 @@ export default function ReceiptPreview({ order, onClose }) {
 
           <div className="receipt-row">
             <span>{t("Base price")}</span>
-            <b>{formatMoney(order.finalPrice)}</b>
+            <b>
+              {money(
+                order.calculatedAmount ||
+                  order.originalPrice ||
+                  order.finalPrice,
+              )}
+            </b>
+          </div>
+
+          <div className="receipt-row">
+            <span>{t("Discount")}</span>
+            <b>{money(order.discount)}</b>
           </div>
 
           <div className="receipt-row">
             <span>{t("Overtime")}</span>
-            <b>{formatMoney(order.overtimeAmount)}</b>
+            <b>{money(order.overtimeAmount)}</b>
+          </div>
+
+          <div className="receipt-row">
+            <span>{t("Real paid")}</span>
+            <b>{money(order.realPaidAmount || order.finalPrice)}</b>
           </div>
 
           <div className="receipt-total-row">
             <span>{t("Total")}</span>
-            <b>{formatMoney(totalPrice)}</b>
+            <b>{money(totalPrice)}</b>
           </div>
 
           <div className="receipt-divider" />
@@ -166,10 +243,10 @@ export default function ReceiptPreview({ order, onClose }) {
             <span>{order.id || "ORDER"}</span>
           </div>
 
-          <div className="receipt-qr-placeholder">
+          {/* <div className="receipt-qr-placeholder">
             <span>QR</span>
             <small>{order.id || "-"}</small>
-          </div>
+          </div> */}
 
           <div className="receipt-footer">
             <p>{t("Chekni saqlab qo'ying")}</p>

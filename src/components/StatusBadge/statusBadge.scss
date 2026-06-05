@@ -2,6 +2,7 @@
   min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
+  border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
   font-size: 12px;
@@ -10,17 +11,20 @@
 
   &--active,
   &--completed {
-    background: var(--success-soft);
+    background: color-mix(in srgb, var(--success-soft) 78%, var(--surface-strong));
     color: var(--success);
+    border-color: transparent;
   }
 
   &--pending {
-    background: var(--warning-soft);
+    background: color-mix(in srgb, var(--warning-soft) 78%, var(--surface-strong));
     color: var(--warning);
+    border-color: transparent;
   }
 
   &--overdue {
-    background: var(--danger-soft);
+    background: color-mix(in srgb, var(--danger-soft) 78%, var(--surface-strong));
     color: var(--danger);
+    border-color: transparent;
   }
 }

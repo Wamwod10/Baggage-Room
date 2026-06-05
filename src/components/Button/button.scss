@@ -1,31 +1,45 @@
 .button {
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 12px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 620;
+  border: 1px solid transparent;
+  box-shadow: none;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 
   &--primary {
-    background: var(--primary);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent),
+      color-mix(in srgb, var(--primary) 58%, var(--surface-strong));
     color: #ffffff;
+    box-shadow: 0 12px 22px color-mix(in srgb, var(--primary) 12%, transparent);
 
     &:hover {
       background: var(--primary-hover);
+      transform: translateY(-1px);
     }
   }
 
   &--soft {
-    background: var(--primary-soft);
-    color: var(--primary);
+    background: color-mix(in srgb, var(--primary-soft) 46%, var(--surface-muted));
+    color: var(--text-main);
+    border-color: transparent;
   }
 
   &--ghost {
-    background: var(--bg-soft);
+    background: var(--surface-muted);
     color: var(--text-main);
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
+
+    &:hover {
+      background: var(--surface-strong);
+      transform: translateY(-1px);
+    }
   }
 }

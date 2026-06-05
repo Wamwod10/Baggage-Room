@@ -1,9 +1,10 @@
 .shift-refresh-btn {
-  height: 40px;
+  height: 42px;
   padding: 0 14px;
-  border-radius: 12px;
-  background: var(--primary-soft);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface-strong));
   color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border-soft));
   font-size: 15px;
   font-weight: 600;
   display: inline-flex;
@@ -11,8 +12,8 @@
   gap: 8px;
 
   &:hover {
-    background: var(--primary);
-    color: #ffffff;
+    background: var(--surface-strong);
+    transform: translateY(-1px);
   }
 }
 
@@ -165,13 +166,18 @@
     }
 
     input,
-    select {
+    select,
+    .glass-select {
       width: 100%;
       height: 42px;
-      padding: 0 12px;
-      border-radius: 12px;
+      border-radius: 16px;
       font-size: 15px;
       line-height: 42px;
+    }
+
+    input,
+    select {
+      padding: 0 12px;
     }
   }
 }
@@ -184,9 +190,9 @@
   div {
     min-height: 42px;
     padding: 10px 12px;
-    border-radius: 12px;
-    background: var(--bg-soft);
-    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-muted) 62%, transparent);
+    border: 1px solid transparent;
     display: flex;
     justify-content: space-between;
     gap: 12px;
@@ -212,7 +218,7 @@
 .open-shift-btn,
 .close-shift-btn {
   height: 42px;
-  border-radius: 12px;
+  border-radius: 16px;
   color: #ffffff;
   font-size: 15px;
   font-weight: 600;
@@ -228,6 +234,33 @@
 
 .close-shift-btn {
   background: var(--danger);
+}
+
+.close-inkassa-panel {
+  padding: 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--danger-soft) 34%, var(--surface-muted));
+  border: 1px solid color-mix(in srgb, var(--danger) 10%, var(--border-soft));
+  display: grid;
+  gap: 10px;
+}
+
+.close-inkassa-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  span {
+    color: var(--text-main) !important;
+    font-weight: 700 !important;
+  }
+
+  small {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
 }
 
 .shift-history-head {
@@ -249,22 +282,98 @@
 
 .shift-history-table {
   overflow-x: auto;
+  padding: 8px;
 }
 
 .shift-history-table-head,
 .shift-history-row {
-  min-width: 1120px;
+  min-width: 1220px;
   display: grid;
-  grid-template-columns: 1.3fr 0.95fr 1.35fr 1.35fr 1fr 1fr 1fr 0.75fr;
+  grid-template-columns: 1.3fr 0.85fr 1.2fr 1.2fr 0.95fr 0.95fr 0.95fr 0.95fr 0.75fr;
   gap: 14px;
   align-items: center;
 }
 
+.inkassa-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+  display: grid;
+  grid-template-columns: 1fr 130px auto;
+  gap: 10px;
+  align-items: end;
+
+  label {
+    display: grid;
+    gap: 6px;
+  }
+
+  span {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  input {
+    height: 40px;
+    border-radius: 12px;
+    padding: 0 12px;
+  }
+
+  button {
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 88%, #ffffff), var(--primary));
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  &.standalone {
+    margin-top: 70px;
+    padding: 16px;
+    grid-template-columns: minmax(0, 1fr) 150px auto;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 48%, transparent), transparent 72%),
+      var(--surface-muted);
+  }
+}
+
+.inkassa-box__head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+
+  h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  p {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  b {
+    flex: 0 0 auto;
+    color: var(--primary);
+    font-size: 15px;
+    font-weight: 800;
+    text-align: right;
+  }
+}
+
 .shift-history-table-head {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--bg-soft);
-  color: var(--text-muted);
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text-muted) 84%, transparent);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -273,11 +382,19 @@
 
 .shift-history-row {
   min-height: 62px;
-  margin-top: 9px;
+  margin-top: 7px;
   padding: 13px 14px;
-  border-radius: 14px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-muted) 44%, transparent);
+  border: 1px solid transparent;
+  transition: background-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
+
+  &:hover {
+    background: color-mix(in srgb, var(--surface-strong) 62%, transparent);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055);
+    transform: translateY(-1px);
+  }
 
   b {
     display: block;
@@ -324,8 +441,8 @@
 
 .shift-empty {
   padding: 22px;
-  border-radius: 14px;
-  background: var(--bg-soft);
+  border-radius: 18px;
+  background: var(--surface-muted);
   color: var(--text-muted);
   text-align: center;
   font-size: 15px;
@@ -335,7 +452,9 @@
 .shift-report-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.48);
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -347,6 +466,7 @@
   max-height: calc(100vh - 40px);
   padding: 20px;
   overflow-y: auto;
+  border-radius: var(--radius-modal);
 }
 
 .shift-report-head {
@@ -369,8 +489,8 @@
   button {
     height: 34px;
     padding: 0 11px;
-    border-radius: 10px;
-    background: var(--danger-soft);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--danger-soft) 78%, var(--surface-strong));
     color: var(--danger);
     font-size: 14px;
     font-weight: 600;
@@ -379,8 +499,8 @@
 
 .telegram-report-box {
   padding: 16px;
-  border-radius: 14px;
-  background: var(--bg-soft);
+  border-radius: 18px;
+  background: var(--surface-muted);
   border: 1px solid var(--border-soft);
 
   h3 {
@@ -405,8 +525,8 @@
   width: 100%;
   height: 40px;
   margin-top: 12px;
-  border-radius: 12px;
-  background: var(--primary);
+  border-radius: 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 88%, #ffffff), var(--primary));
   color: #ffffff;
   font-size: 15px;
   font-weight: 600;
@@ -458,6 +578,18 @@
   .payment-breakdown-list div {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .inkassa-box {
+    grid-template-columns: 1fr;
+  }
+
+  .inkassa-box__head {
+    flex-direction: column;
+
+    b {
+      text-align: left;
+    }
   }
 
   .open-shift-btn,

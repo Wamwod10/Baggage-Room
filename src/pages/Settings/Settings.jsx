@@ -8,11 +8,14 @@ import {
   EyeOff,
 } from "lucide-react";
 import settingsService from "../../services/settingsService";
+import exportService from "../../services/exportService";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
+import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "../../i18n/translations";
 import { useTranslation } from "../../i18n/useTranslation";
+import { getBranchNames } from "../../utils/branches";
 import "./settings.scss";
 
 const fallbackSettings = {
@@ -25,6 +28,24 @@ const fallbackSettings = {
     XL: 0,
   },
   overtimePerHour: 0,
+  branchTariffs: {},
+  currencies: ["UZS", "USD", "RUB", "EUR"],
+  defaultCurrency: "UZS",
+  printer: {
+    paperWidth: "80mm",
+    logoEnabled: true,
+    logoSrc: "/1.jpg",
+  },
+  googleSheets: {
+    enabled: false,
+    endpoint: "",
+  },
+  exportCenter: {
+    orders: true,
+    shifts: true,
+    finance: true,
+    analytics: true,
+  },
   telegram: {
     botToken: "",
     groupId: "",
@@ -34,12 +55,23 @@ const fallbackSettings = {
     shiftClosed: false,
     orderCancelled: false,
     delayedBaggage: false,
+    overtimePayment: false,
+    debtClosed: false,
+    inkassa: false,
     expenseAlerts: false,
+    orderEdit: false,
+    lockerTransfer: false,
+    lockerBlock: false,
+    groups: {},
   },
 };
 
+const tariffHours = [1, 12, 24, 48, 72];
+const tariffSizes = ["S", "M", "L"];
+
 export default function Settings() {
   const { t, language, setLanguage, formatDateTime } = useTranslation();
+  const branchNames = getBranchNames();
   const [settings, setSettings] = useState(fallbackSettings);
   const [message, setMessage] = useState("");
   const [testStatus, setTestStatus] = useState("");
@@ -64,29 +96,54 @@ export default function Settings() {
     }
   }, [loadedSettings, error]);
 
-  const handlePricingChange = (size, value) => {
-    const price = Number(value || 0);
-
-    if (!Number.isFinite(price) || price < 0) {
-      setMessage(t("Narx manfiy bo'lishi mumkin emas."));
-      return;
-    }
-
-    setSettings((prev) => ({
-      ...prev,
-      pricing: {
-        ...prev.pricing,
-        [size]: price,
-      },
-    }));
-  };
-
   const handleTelegramChange = (key, value) => {
     setSettings((prev) => ({
       ...prev,
       telegram: {
         ...prev.telegram,
         [key]: value,
+      },
+    }));
+  };
+
+  const handleBranchTariffChange = (branch, size, key, value) => {
+    const amount = Number(value || 0);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      setMessage(t("Tarif qiymati manfiy bo'lishi mumkin emas."));
+      return;
+    }
+
+    setSettings((prev) => ({
+      ...prev,
+      branchTariffs: {
+        ...prev.branchTariffs,
+        [branch]: {
+          ...(prev.branchTariffs?.[branch] || {}),
+          sizes: {
+            ...(prev.branchTariffs?.[branch]?.sizes || {}),
+            [size]: {
+              ...(prev.branchTariffs?.[branch]?.sizes?.[size] || {}),
+              [key]: amount,
+            },
+          },
+        },
+      },
+    }));
+  };
+
+  const handleTelegramGroupChange = (branch, key, value) => {
+    setSettings((prev) => ({
+      ...prev,
+      telegram: {
+        ...prev.telegram,
+        groups: {
+          ...(prev.telegram?.groups || {}),
+          [branch]: {
+            ...(prev.telegram?.groups?.[branch] || {}),
+            [key]: value,
+          },
+        },
       },
     }));
   };
@@ -111,17 +168,6 @@ export default function Settings() {
   };
 
   const handleSave = () => {
-    const prices = Object.values(settings.pricing || {});
-
-    if (
-      prices.some(
-        (price) => !Number.isFinite(Number(price)) || Number(price) < 0,
-      )
-    ) {
-      setMessage(t("Pricing qiymatlari manfiy bo'lmasligi kerak."));
-      return;
-    }
-
     if (
       !Number.isFinite(Number(settings.overtimePerHour)) ||
       Number(settings.overtimePerHour) < 0
@@ -131,9 +177,14 @@ export default function Settings() {
     }
 
     if (settings.telegram?.enabled) {
+      const hasBranchGroup = Object.values(settings.telegram?.groups || {}).some(
+        (group) => group?.enabled !== false && group?.token?.trim() && group?.groupId?.trim(),
+      );
+
       if (
-        !settings.telegram?.botToken?.trim() ||
-        !settings.telegram?.groupId?.trim()
+        !hasBranchGroup &&
+        (!settings.telegram?.botToken?.trim() ||
+          !settings.telegram?.groupId?.trim())
       ) {
         setMessage(
           t("Telegram yoqilgan bo'lsa, Bot token va Group ID majburiy."),
@@ -169,7 +220,7 @@ export default function Settings() {
       settingsService.save(settings);
 
       const text = [
-        "✅ Baggage Room test xabari",
+        "Baggage Room test xabari",
         "",
         "Telegram integration ishlayapti.",
         `${t("Sana")}: ${formatDateTime(new Date())}`,
@@ -208,7 +259,7 @@ export default function Settings() {
         <div>
           <h1>{t("Settings")}</h1>
           <p>
-            {t("Pricing presetlar, overtime, Telegram va system sozlamalari")}
+            {t("Filial tariflari, Telegram va system sozlamalari")}
           </p>
         </div>
 
@@ -239,30 +290,74 @@ export default function Settings() {
       ) : (
         !error && (
           <div className="settings-grid">
-            <div className="settings-card card">
+            <div className="settings-card settings-card--tariffs card">
               <div className="settings-title">
                 <SettingsIcon size={18} />
-                <h2>{t("Pricing presets")}</h2>
+                <h2>{t("Filial tariflari")}</h2>
               </div>
 
-              <div className="pricing-list">
-                {Object.entries(settings.pricing || {}).map(([size, price]) => (
-                  <label key={size}>
-                    <span>{size}</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={price}
-                      onChange={(event) =>
-                        handlePricingChange(size, event.target.value)
-                      }
-                    />
-                  </label>
-                ))}
+              <div className="branch-settings-list">
+                {branchNames.map((branch) => {
+                  const tariff = settings.branchTariffs?.[branch] || {};
+
+                  return (
+                    <div className="branch-tariff-card" key={branch}>
+                      <div className="branch-tariff-head">
+                        <h3>{t(branch)}</h3>
+                        <span>S / M / L</span>
+                      </div>
+
+                      <div className="tariff-table">
+                        <div className="tariff-table-head">
+                          <span>{t("Size")}</span>
+                          {tariffHours.map((hour) => (
+                            <span key={hour}>{hour}h</span>
+                          ))}
+                          <span>72h+</span>
+                        </div>
+
+                        {tariffSizes.map((size) => (
+                          <div className="tariff-table-row" key={`${branch}-${size}`}>
+                            <b>{size}</b>
+                            {tariffHours.map((hour) => (
+                              <input
+                                key={hour}
+                                type="number"
+                                min="0"
+                                value={tariff.sizes?.[size]?.[hour] || 0}
+                                onChange={(event) =>
+                                  handleBranchTariffChange(
+                                    branch,
+                                    size,
+                                    hour,
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            ))}
+                            <input
+                              type="number"
+                              min="0"
+                              value={tariff.sizes?.[size]?.after72 || 0}
+                              onChange={(event) =>
+                                handleBranchTariffChange(
+                                  branch,
+                                  size,
+                                  "after72",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="settings-card card">
+            <div className="settings-card settings-card--system card">
               <div className="settings-title">
                 <SettingsIcon size={18} />
                 <h2>{t("System")}</h2>
@@ -295,7 +390,7 @@ export default function Settings() {
 
                 <label>
                   <span>{t("Language")}</span>
-                  <select
+                  <GlassSelect
                     value={normalizeLanguage(settings.language || language)}
                     onChange={(event) =>
                       handleLanguageChange(event.target.value)
@@ -306,23 +401,80 @@ export default function Settings() {
                         {item.label}
                       </option>
                     ))}
-                  </select>
+                  </GlassSelect>
                 </label>
 
                 <label>
+                  <span>{t("Currencies")}</span>
+                  <input
+                    value={(settings.currencies || []).join(",")}
+                    onChange={(event) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        currencies: event.target.value
+                          .split(",")
+                          .map((item) => item.trim().toUpperCase())
+                          .filter(Boolean),
+                      }))
+                    }
+                    placeholder="UZS,USD,RUB,EUR"
+                  />
+                </label>
+
+                <label>
+                  <span>{t("Default currency")}</span>
+                  <GlassSelect
+                    value={settings.defaultCurrency || "UZS"}
+                    onChange={(event) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        defaultCurrency: event.target.value,
+                      }))
+                    }
+                  >
+                    {(settings.currencies || ["UZS"]).map((currency) => (
+                      <option value={currency} key={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </GlassSelect>
+                </label>
+
+                {["USD", "RUB", "EUR"].map((currency) => (
+                  <label key={currency}>
+                    <span>{currency} / UZS</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={settings.exchangeRates?.[currency] || 0}
+                      onChange={(event) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          exchangeRates: {
+                            ...(prev.exchangeRates || {}),
+                            UZS: 1,
+                            [currency]: Number(event.target.value || 0),
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                ))}
+
+                <label>
                   <span>{t("Theme")}</span>
-                  <select
+                  <GlassSelect
                     value={settings.theme}
                     onChange={(event) => handleThemeChange(event.target.value)}
                   >
                     <option value="light">{t("Light")}</option>
                     <option value="dark">{t("Dark")}</option>
-                  </select>
+                  </GlassSelect>
                 </label>
               </div>
             </div>
 
-            <div className="settings-card telegram-card card">
+            <div className="settings-card settings-card--telegram telegram-card card">
               <div className="settings-title">
                 <Send size={18} />
                 <h2>{t("Telegram integration")}</h2>
@@ -389,80 +541,82 @@ export default function Settings() {
               </div>
 
               <div className="telegram-toggles">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.telegram?.newOrder)}
-                    onChange={(event) =>
-                      handleTelegramChange("newOrder", event.target.checked)
-                    }
-                  />
-                  <span>{t("Yangi order xabari")}</span>
-                </label>
+                {[
+                  ["newOrder", "Yangi order xabari"],
+                  ["shiftOpened", "Kassa ochilganda xabar"],
+                  ["shiftClosed", "Shift yopilganda report"],
+                  ["orderCancelled", "Order bekor qilinganda xabar"],
+                  ["delayedBaggage", "Kechikkan bagaj alert"],
+                  ["overtimePayment", "Overtime payment"],
+                  ["debtClosed", "Qarz yopildi"],
+                  ["inkassa", "Inkassa"],
+                  ["expenseAlerts", "Harajat alertlari"],
+                  ["orderEdit", "Order edit"],
+                  ["lockerTransfer", "Yacheyka transfer"],
+                  ["lockerBlock", "Yacheyka block"],
+                ].map(([key, label]) => (
+                  <label key={key}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(settings.telegram?.[key])}
+                      onChange={(event) =>
+                        handleTelegramChange(key, event.target.checked)
+                      }
+                    />
+                    <span>{t(label)}</span>
+                  </label>
+                ))}
+              </div>
 
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.telegram?.shiftClosed)}
-                    onChange={(event) =>
-                      handleTelegramChange("shiftClosed", event.target.checked)
-                    }
-                  />
-                  <span>{t("Shift yopilganda report")}</span>
-                </label>
+              <div className="telegram-branch-list">
+                <h3>{t("Filial Telegram groups")}</h3>
+                {branchNames.map((branch) => {
+                  const group = settings.telegram?.groups?.[branch] || {};
 
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.telegram?.shiftOpened)}
-                    onChange={(event) =>
-                      handleTelegramChange("shiftOpened", event.target.checked)
-                    }
-                  />
-                  <span>{t("Kassa ochilganda xabar")}</span>
-                </label>
-
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.telegram?.orderCancelled)}
-                    onChange={(event) =>
-                      handleTelegramChange(
-                        "orderCancelled",
-                        event.target.checked,
-                      )
-                    }
-                  />
-                  <span>{t("Order bekor qilinganda xabar")}</span>
-                </label>
-
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.telegram?.delayedBaggage)}
-                    onChange={(event) =>
-                      handleTelegramChange(
-                        "delayedBaggage",
-                        event.target.checked,
-                      )
-                    }
-                  />
-                  <span>{t("Kechikkan bagaj alert")}</span>
-                </label>
-
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.telegram?.expenseAlerts)}
-                    onChange={(event) =>
-                      handleTelegramChange(
-                        "expenseAlerts",
-                        event.target.checked,
-                      )
-                    }
-                  />
-                  <span>{t("Harajat alertlari")}</span>
-                </label>
+                  return (
+                    <div className="telegram-branch-row" key={branch}>
+                      <div>
+                        <b>{t(branch)}</b>
+                        <label className="toggle-line mini">
+                          <input
+                            type="checkbox"
+                            checked={group.enabled !== false}
+                            onChange={(event) =>
+                              handleTelegramGroupChange(
+                                branch,
+                                "enabled",
+                                event.target.checked,
+                              )
+                            }
+                          />
+                          <span />
+                        </label>
+                      </div>
+                      <input
+                        value={group.token || ""}
+                        onChange={(event) =>
+                          handleTelegramGroupChange(
+                            branch,
+                            "token",
+                            event.target.value,
+                          )
+                        }
+                        placeholder={t("Bot token")}
+                      />
+                      <input
+                        value={group.groupId || ""}
+                        onChange={(event) =>
+                          handleTelegramGroupChange(
+                            branch,
+                            "groupId",
+                            event.target.value,
+                          )
+                        }
+                        placeholder={t("Group ID")}
+                      />
+                    </div>
+                  );
+                })}
               </div>
 
               <button
@@ -477,6 +631,120 @@ export default function Settings() {
               {testStatus && (
                 <div className="telegram-test-status">{testStatus}</div>
               )}
+            </div>
+
+            <div className="settings-card settings-card--platform card">
+              <div className="settings-title">
+                <SettingsIcon size={18} />
+                <h2>{t("Platform settings")}</h2>
+              </div>
+
+              <div className="system-settings">
+                <label>
+                  <span>{t("Printer width")}</span>
+                  <GlassSelect
+                    value={settings.printer?.paperWidth || "80mm"}
+                    onChange={(event) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        printer: {
+                          ...(prev.printer || {}),
+                          paperWidth: event.target.value,
+                        },
+                      }))
+                    }
+                  >
+                    <option value="80mm">80mm</option>
+                    <option value="58mm">58mm</option>
+                  </GlassSelect>
+                </label>
+
+                <label className="check-line">
+                  <input
+                    type="checkbox"
+                    checked={settings.printer?.logoEnabled !== false}
+                    onChange={(event) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        printer: {
+                          ...(prev.printer || {}),
+                          logoEnabled: event.target.checked,
+                        },
+                      }))
+                    }
+                  />
+                  <span>{t("Chekda logo ko'rsatish")}</span>
+                </label>
+
+                <label>
+                  <span>{t("Logo path")}</span>
+                  <input
+                    value={settings.printer?.logoSrc || "/1.jpg"}
+                    onChange={(event) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        printer: {
+                          ...(prev.printer || {}),
+                          logoSrc: event.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="/1.jpg"
+                  />
+                </label>
+
+                <label>
+                  <span>{t("Google Sheets endpoint")}</span>
+                  <input
+                    value={settings.googleSheets?.endpoint || ""}
+                    onChange={(event) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        googleSheets: {
+                          ...(prev.googleSheets || {}),
+                          endpoint: event.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="Backend webhook keyin ulanadi"
+                  />
+                </label>
+              </div>
+
+              <div className="telegram-toggles">
+                {["orders", "shifts", "finance", "analytics"].map((key) => (
+                  <label key={key}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(settings.exportCenter?.[key])}
+                      onChange={(event) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          exportCenter: {
+                            ...(prev.exportCenter || {}),
+                            [key]: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    <span>{t("Export")} {key}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="export-actions">
+                {["orders", "shifts", "finance", "analytics"].map((key) => (
+                  <div key={key}>
+                    <span>{t("Export")} {key}</span>
+                    <button type="button" onClick={() => exportService.exportJson(key)}>
+                      JSON
+                    </button>
+                    <button type="button" onClick={() => exportService.exportPdf(key)}>
+                      PDF
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )

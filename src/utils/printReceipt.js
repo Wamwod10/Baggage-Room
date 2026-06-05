@@ -63,6 +63,7 @@ const receiptPrintStyles = `
       background: #ffffff !important;
       color: #111827 !important;
       font-family: "Courier New", monospace !important;
+      font-weight: 900 !important;
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -83,16 +84,17 @@ const receiptPrintStyles = `
       text-align: center;
     }
 
-    body.receipt-printing .receipt-logo {
-      width: 30px;
-      height: 30px;
+    body.receipt-printing .receipt-logo,
+    body.receipt-printing .receipt-logo-placeholder {
+      width: 44px;
+      height: 28px;
       margin: 0 auto 5px;
       border: 2px solid #111827;
-      border-radius: 8px;
+      border-radius: 4px;
       display: grid;
       place-items: center;
       font-weight: 900;
-      font-size: 12px;
+      font-size: 8px;
     }
 
     body.receipt-printing h3 {
@@ -103,6 +105,7 @@ const receiptPrintStyles = `
 
     body.receipt-printing p {
       margin: 3px 0 0;
+      font-weight: 900;
     }
 
     body.receipt-printing .receipt-divider,
@@ -142,7 +145,8 @@ const receiptPrintStyles = `
     body.receipt-printing .receipt-row span,
     body.receipt-printing .receipt-total-row span,
     body.receipt-printing .receipt-total span {
-      color: #374151;
+      color: #111827;
+      font-weight: 900;
     }
 
     body.receipt-printing .receipt-row b,
@@ -151,6 +155,37 @@ const receiptPrintStyles = `
       max-width: 48mm;
       text-align: right;
       word-break: break-word;
+      font-weight: 900;
+    }
+
+    body.receipt-printing .receipt-row--locker {
+      align-items: flex-start;
+    }
+
+    body.receipt-printing .receipt-locker-meta {
+      display: grid;
+      gap: 1px;
+      min-width: 0;
+      max-width: 38mm;
+    }
+
+    body.receipt-printing .receipt-locker-meta strong {
+      color: #111827;
+      font-weight: 900;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    body.receipt-printing .receipt-locker-meta small {
+      color: #111827;
+      font-size: 8px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    body.receipt-printing small {
+      color: #111827;
+      font-weight: 900;
     }
 
     body.receipt-printing .receipt-total-row,

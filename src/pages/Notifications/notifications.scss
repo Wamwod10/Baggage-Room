@@ -4,11 +4,12 @@
 }
 
 .notification-refresh {
-  height: 40px;
+  height: 42px;
   padding: 0 14px;
-  border-radius: 12px;
-  background: var(--primary-soft);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface-strong));
   color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border-soft));
   font-size: 15px;
   font-weight: 700;
   display: inline-flex;
@@ -16,8 +17,8 @@
   gap: 8px;
 
   &:hover {
-    background: var(--primary);
-    color: #ffffff;
+    background: var(--surface-strong);
+    transform: translateY(-1px);
   }
 }
 
@@ -29,7 +30,7 @@
 
 .notification-stat-card {
   padding: 16px;
-  border-radius: 20px;
+  border-radius: 22px;
   display: grid;
   gap: 6px;
 
@@ -73,7 +74,7 @@
   button {
     height: 38px;
     padding: 0 13px;
-    border-radius: 11px;
+    border-radius: 14px;
     background: transparent;
     color: var(--text-muted);
     font-size: 15px;
@@ -84,8 +85,10 @@
     gap: 8px;
 
     &.active {
-      background: var(--primary);
-      color: #ffffff;
+      background: color-mix(in srgb, var(--surface-strong) 64%, var(--primary-soft));
+      color: var(--text-main);
+      border: 1px solid transparent;
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 18%, transparent);
     }
   }
 }
@@ -132,9 +135,17 @@
 .notification-item {
   min-height: 74px;
   padding: 14px;
-  border-radius: 16px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-muted) 58%, transparent);
+  border: 1px solid transparent;
+  transition: background-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
+
+  &:hover {
+    background: color-mix(in srgb, var(--surface-strong) 62%, transparent);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055);
+    transform: translateY(-1px);
+  }
   display: flex;
   gap: 13px;
   align-items: flex-start;
@@ -159,7 +170,7 @@
 .notification-icon {
   width: 40px;
   height: 40px;
-  border-radius: 14px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -215,6 +226,7 @@
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
+  border: 1px solid transparent;
 
   &.danger {
     background: var(--danger-soft);
@@ -240,9 +252,17 @@
 .activity-log-item {
   min-height: 70px;
   padding: 14px;
-  border-radius: 16px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-muted) 58%, transparent);
+  border: 1px solid transparent;
+  transition: background-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
+
+  &:hover {
+    background: color-mix(in srgb, var(--surface-strong) 62%, transparent);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055);
+    transform: translateY(-1px);
+  }
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -277,9 +297,9 @@
 
 .notification-empty {
   min-height: 180px;
-  border-radius: 18px;
-  background: var(--bg-soft);
-  border: 1px dashed var(--border-soft);
+  border-radius: 22px;
+  background: var(--surface-muted);
+  border: 1px dashed color-mix(in srgb, var(--glass-edge) 22%, transparent);
   display: grid;
   place-items: center;
   align-content: center;

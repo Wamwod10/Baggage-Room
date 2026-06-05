@@ -1,13 +1,18 @@
 .search-bar {
   height: 44px;
-  padding: 0 13px;
-  border-radius: 12px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
+  padding: 0 14px;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 12%, transparent), transparent),
+    color-mix(in srgb, var(--surface-muted) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 28%, transparent);
   color: var(--text-muted);
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 16%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 
   input {
     width: 100%;
@@ -18,7 +23,10 @@
   }
 
   &:focus-within {
-    border-color: transparent;
-    box-shadow: var(--focus-ring);
+    border-color: color-mix(in srgb, var(--primary) 24%, var(--glass-edge));
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 24%, transparent),
+      var(--focus-ring);
+    background: color-mix(in srgb, var(--surface-strong) 70%, transparent);
   }
 }
