@@ -29,7 +29,6 @@ const reversePaymentMap = {
   Karta: "CARD",
   "Click/Payme": "CARD",
   "O'tkazma": "TRANSFER",
-  "OвЂtkazma": "TRANSFER",
   Qarz: "DEBT",
 };
 
@@ -95,8 +94,8 @@ const mapOrder = (order) => {
   return {
     ...order,
     id: order.id || order.orderNumber || fallbackText,
-    orderNumber: order.orderNumber || order.id || fallbackText,
-    displayId: order.orderNumber || order.id || fallbackText,
+    orderNumber: order.orderNumber || fallbackText,
+    displayId: order.orderNumber || fallbackText,
     client: order.clientName || order.client || fallbackText,
     phone: order.phone || fallbackText,
     passport: order.passport || "",
