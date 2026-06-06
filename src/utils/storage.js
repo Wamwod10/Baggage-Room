@@ -155,7 +155,7 @@ const DEFAULT_SETTINGS = {
     fontWeight: "bold",
   },
   telegram: {
-    enabled: true,
+    enabled: false,
     botToken: "",
     groupId: "",
     groups: {},
@@ -268,7 +268,9 @@ const normalizeSettings = (settings = {}) => {
     result[branch] = {
       token: settings.telegram?.groups?.[branch]?.token || settings.telegram?.botToken || "",
       groupId: settings.telegram?.groups?.[branch]?.groupId || settings.telegram?.groupId || "",
-      enabled: settings.telegram?.groups?.[branch]?.enabled ?? settings.telegram?.enabled ?? true,
+      // Respect backend setting when available. Default to `false` when no value provided
+      // to avoid enabling Telegram on frontend when backend has no setting for branch.
+      enabled: settings.telegram?.groups?.[branch]?.enabled ?? settings.telegram?.enabled ?? false,
     };
     return result;
   }, {});

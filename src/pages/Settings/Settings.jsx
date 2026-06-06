@@ -301,6 +301,36 @@ export default function Settings() {
         language: normalizeLanguage(settings.language),
       });
       setLanguage(savedSettings.language);
+
+      // Refetch Telegram settings from backend to ensure frontend reflects persisted values
+      try {
+        const telegramSettings = await telegramService.getSettings();
+        const groups = {};
+        for (const item of telegramSettings) {
+          const branch = branchService.getBranchName(item.branch);
+          groups[branch] = {
+            branchId: item.branchId,
+            token: item.botToken || "",
+            groupId: item.groupId || "",
+            // Preserve backend boolean exactly; do not default to true
+            enabled: item.enabled === true,
+          };
+        }
+
+        setSettings((prev) => ({
+          ...prev,
+          telegram: {
+            ...prev.telegram,
+            groups,
+            enabled: Array.isArray(telegramSettings) && telegramSettings.some((it) => it.enabled === true),
+          },
+        }));
+      } catch (err) {
+        // If fetching fails, keep current settings and show a message
+        // Do not overwrite enabled=false from backend with frontend defaults
+        console.warn("Refetching telegram settings failed", err);
+      }
+
       setMessage(t("Settings saqlandi"));
     } catch (error) {
       setMessage(error.message || t("Settings saqlashda xatolik yuz berdi."));
