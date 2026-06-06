@@ -164,7 +164,9 @@ const mapCashMovement = (item = {}) => ({
 });
 
 const mapShift = (shift) => {
-  if (!shift) return null;
+  // If there's no meaningful shift data (for example empty object returned
+  // from API), treat it as no shift. Real shifts always have an `id`.
+  if (!shift || !shift.id) return null;
   const openedByName = shift.openedBy?.name || shift.openedBy?.login || shift.admin || fallbackText;
   const closedByName = shift.closedBy?.name || shift.closedBy?.login || shift.closedByName || fallbackText;
   const acceptedCash = Number(shift.acceptedCash ?? shift.acceptedAmount ?? 0);
@@ -210,7 +212,8 @@ const mapShift = (shift) => {
     expectedCash: systemExpectedCash,
     cashLeft: Number(shift.cashLeft ?? shift.closingCash ?? systemExpectedCash),
     netProfit: Number(shift.netProfit ?? totalRevenue - expenseAmount),
-    status: shift.status || "OPEN",
+    // do not assume OPEN when status is missing — keep actual status or null
+    status: shift.status || null,
     shiftTime: shift.shiftTime || fallbackText,
   };
 };
