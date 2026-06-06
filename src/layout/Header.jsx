@@ -168,20 +168,24 @@ export default function Header({ onMenuClick }) {
 
         {safeResults.length > 0 && (
           <div className="header-search-results">
-            {safeResults.map((order) => (
-              <button key={order.id} onClick={() => openResult(order.id)}>
-                <div>
-                  <b>{order.id || "-"}</b>
-                  <span>
-                    {order.client || "-"} - {order.phone || "-"}
-                  </span>
-                </div>
+            {safeResults.map((order) => {
+              const label = order.orderNumber || order.id || "-";
+              const target = order.orderNumber || order.id || "";
+              return (
+                <button key={label} onClick={() => openResult(target)}>
+                  <div>
+                    <b>{label}</b>
+                    <span>
+                      {order.client || "-"} - {order.phone || "-"}
+                    </span>
+                  </div>
 
-                <small>
-                  {t(order.branch || "Ma'lumot yo'q")} - {t(order.payment || "-")}
-                </small>
-              </button>
-            ))}
+                  <small>
+                    {t(order.branch || "Ma'lumot yo'q")} - {t(order.payment || "-")}
+                  </small>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

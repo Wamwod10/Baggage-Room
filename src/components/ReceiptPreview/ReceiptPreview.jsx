@@ -99,7 +99,7 @@ export default function ReceiptPreview({ order, onClose }) {
 
           <div className="receipt-row">
             <span>{t("Order ID")}</span>
-            <b>{order.id || "-"}</b>
+            <b>{order.orderNumber || order.id || "-"}</b>
           </div>
 
           <div className="receipt-row">
@@ -240,7 +240,7 @@ export default function ReceiptPreview({ order, onClose }) {
           <div className="receipt-divider" />
 
           <div className="receipt-barcode">
-            <span>{order.id || "ORDER"}</span>
+            <span>{order.orderNumber || order.id || "ORDER"}</span>
           </div>
 
           {/* <div className="receipt-qr-placeholder">
