@@ -7,11 +7,12 @@ const mapBranch = (branch) => ({
   ...branch,
   displayName: BRANCH_NAME_BY_CODE[branch.code] || branch.name,
 });
+const getArrayData = (payload) => (Array.isArray(payload?.data) ? payload.data : []);
 
 const getAll = async ({ force = false } = {}) => {
   if (branchCache && !force) return branchCache;
   const response = await apiClient.get("/branches");
-  branchCache = (response.data || []).map(mapBranch);
+  branchCache = getArrayData(response).map(mapBranch);
   setRuntimeBranches(branchCache);
   return branchCache;
 };

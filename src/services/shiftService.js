@@ -1,19 +1,19 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { mapShift } from "./apiMappers";
+import { getArrayData, getData, mapShift } from "./apiMappers";
 
 const shiftService = {
   async getAll(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/shifts", { params: { branchId } });
-    return (response.data || []).map(mapShift);
+    return getArrayData(response).map(mapShift);
   },
 
   async getCurrent(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     try {
       const response = await apiClient.get("/shifts/current", { params: { branchId } });
-      return response.data ? mapShift(response.data) : null;
+      return getData(response) ? mapShift(getData(response)) : null;
     } catch (error) {
       if (error.status === 400 && !branchId) return null;
       throw error;
@@ -29,7 +29,7 @@ const shiftService = {
       acceptedFromName: data.acceptedFromName,
       handoverToName: data.handoverToName,
     });
-    return mapShift(response.data);
+    return mapShift(getData(response));
   },
 
   async close(branchName, data) {
@@ -39,7 +39,7 @@ const shiftService = {
       closingCash: Number(data.closingCash || data.cashLeft || 0),
       handoverToName: data.handoverToName,
     });
-    return mapShift(response.data);
+    return mapShift(getData(response));
   },
 
   async isOpen(branchName = null) {

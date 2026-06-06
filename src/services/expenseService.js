@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { getItems, mapExpense } from "./apiMappers";
+import { getData, getItems, mapExpense } from "./apiMappers";
 
 const expenseService = {
   async getAll(branchName = null) {
@@ -18,12 +18,12 @@ const expenseService = {
       amount: Number(data.amount || 0),
       currency: data.currency || "UZS",
     });
-    return mapExpense(response.data);
+    return mapExpense(getData(response));
   },
 
   async delete(id) {
     const response = await apiClient.delete(`/expenses/${id}`);
-    return response.data;
+    return getData(response);
   },
 };
 

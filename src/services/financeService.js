@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { getItems, mapCashMovement, mapInkassa } from "./apiMappers";
+import { getArrayData, getData, getItems, mapCashMovement, mapInkassa } from "./apiMappers";
 
 const financeService = {
   async getCashMovements(branchName = null) {
@@ -12,7 +12,7 @@ const financeService = {
   async getInkassa(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/inkassa", { params: { branchId } });
-    return (response.data || []).map(mapInkassa);
+    return getArrayData(response).map(mapInkassa);
   },
 
   async createInkassa(data) {
@@ -24,7 +24,7 @@ const financeService = {
       currency: data.currency || "UZS",
       note: data.note || "",
     });
-    return mapInkassa(response.data);
+    return mapInkassa(getData(response));
   },
 };
 

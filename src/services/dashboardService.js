@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { mapCashMovement, mapLocker, mapNotification, mapOrder, mapShift } from "./apiMappers";
+import { asArray, getArrayData, getData, getItems, mapCashMovement, mapLocker, mapNotification, mapOrder, mapShift } from "./apiMappers";
 
 const mapDashboard = (data = {}) => ({
   stats: {
@@ -17,11 +17,11 @@ const mapDashboard = (data = {}) => ({
     delayedLockers: data.delayedOrders || 0,
     inkassa: data.inkassaAmount || 0,
   },
-  branchSummary: data.branchSummary || [],
+  branchSummary: asArray(data.branchSummary),
   paymentBreakdown: data.paymentBreakdown || {},
   currencyBreakdown: data.currencyBreakdown || {},
-  currentShifts: (data.shiftStatus || []).map(mapShift),
-  currentShift: (data.shiftStatus || [])[0] ? mapShift(data.shiftStatus[0]) : null,
+  currentShifts: asArray(data.shiftStatus).map(mapShift),
+  currentShift: asArray(data.shiftStatus)[0] ? mapShift(asArray(data.shiftStatus)[0]) : null,
   orders: [],
   expenses: [],
   notifications: [],
@@ -45,12 +45,12 @@ const dashboardService = {
     ]);
 
     return {
-      ...mapDashboard(dashboard.data),
-      orders: (orders.data?.items || []).map(mapOrder),
-      notifications: (notifications.data?.items || []).map(mapNotification),
-      activityLogs: audit.data?.items || [],
-      cashMovements: (cash.data?.items || []).map(mapCashMovement),
-      lockers: (lockers.data || []).map(mapLocker),
+      ...mapDashboard(getData(dashboard, {})),
+      orders: getItems(orders).map(mapOrder).filter(Boolean),
+      notifications: getItems(notifications).map(mapNotification),
+      activityLogs: getItems(audit),
+      cashMovements: getItems(cash).map(mapCashMovement),
+      lockers: getArrayData(lockers).map(mapLocker).filter(Boolean),
     };
   },
 
@@ -61,7 +61,7 @@ const dashboardService = {
   async getLiveActivity(limit = 8, branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/audit", { params: { branchId, limit } });
-    return response.data?.items || [];
+    return getItems(response);
   },
 };
 

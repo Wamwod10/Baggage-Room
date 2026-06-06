@@ -12,7 +12,7 @@ const notificationService = {
   async getActivityLogs(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/audit", { params: { branchId, limit: 100 } });
-    return response.data?.items || [];
+    return getItems(response);
   },
 
   async getSmartAlerts(branchName = null) {
@@ -22,13 +22,13 @@ const notificationService = {
 
   async markRead(id) {
     const response = await apiClient.patch(`/notifications/${id}/read`);
-    return mapNotification(response.data);
+    return mapNotification(response.data ?? response);
   },
 
   async markAllRead(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.patch("/notifications/read-all", { branchId });
-    return response.data;
+    return response.data ?? response;
   },
 
   async checkDelayedTelegramAlerts() {

@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { getItems, mapOrder, toPaymentType } from "./apiMappers";
+import { asArray, getArrayData, getData, getItems, mapOrder, mapLocker, toPaymentType } from "./apiMappers";
 
 const statusByLabel = {
   Aktiv: "ACTIVE",
@@ -15,27 +15,30 @@ const baggageService = {
     const response = await apiClient.get("/orders", {
       params: { branchId, limit: 200 },
     });
-    return getItems(response).map(mapOrder);
+    return getItems(response).map(mapOrder).filter(Boolean);
   },
 
   async getActive(branchName = null) {
     const orders = await this.getAll(branchName);
-    return orders.filter((order) => order.status === "Aktiv" || order.status === "Kechikdi");
+    return asArray(orders).filter((order) => order.status === "Aktiv" || order.status === "Kechikdi");
   },
 
   async getHistory(branchName = null) {
     const orders = await this.getAll(branchName);
-    return orders.filter((order) => order.status === "Olib ketildi" || order.status === "Bekor qilindi");
+    return asArray(orders).filter((order) => order.status === "Olib ketildi" || order.status === "Bekor qilindi");
   },
 
   async getById(id) {
     const response = await apiClient.get(`/orders/${id}`);
-    return mapOrder(response.data);
+    return mapOrder(getData(response));
   },
 
   async create(data) {
     const branchId = await branchService.getBranchIdByName(data.branch);
-    const lockerIds = (data.lockers || []).map((locker) => locker.id || locker.lockerId).filter(Boolean);
+    const lockers = asArray(data.lockers);
+    const lockerIds = lockers.map((locker) => locker.id || locker.lockerId).filter(Boolean);
+    if (!branchId) throw new Error("Filial tanlanmagan");
+    if (!lockerIds.length) throw new Error("Kamida bitta yacheyka tanlang");
     const response = await apiClient.post("/orders", {
       branchId,
       clientName: data.client,
@@ -53,7 +56,7 @@ const baggageService = {
       plannedCheckOut: data.checkOut ? new Date(data.checkOut).toISOString() : undefined,
       note: data.note || "",
       lockerIds,
-      items: (data.lockers || []).map((locker) => ({
+      items: lockers.map((locker) => ({
         lockerId: locker.id || locker.lockerId,
         tariffHours: Number(locker.tariffHours || data.tariffHours || data.hours || 1),
         originalPrice: locker.originalPrice ?? locker.price,
@@ -61,12 +64,13 @@ const baggageService = {
         currency: locker.currency || data.currency || "UZS",
       })).filter((locker) => locker.lockerId),
     });
-    return mapOrder(response.data?.order || response.data);
+    const responseData = getData(response, {});
+    return mapOrder(responseData.order || responseData);
   },
 
   async update(id, data) {
     const response = await apiClient.patch(`/orders/${id}`, data);
-    return mapOrder(response.data);
+    return mapOrder(getData(response));
   },
 
   async pickup(id, data = {}) {
@@ -76,7 +80,7 @@ const baggageService = {
       paymentType: toPaymentType(data.payment),
       currency: data.currency,
     });
-    return mapOrder(response.data);
+    return mapOrder(getData(response));
   },
 
   async closeDebt(id, data) {
@@ -88,16 +92,19 @@ const baggageService = {
       currency: data.currency || order.currency,
       note: data.note || "",
     });
-    return response.data;
+    return getData(response);
   },
 
   async transfer(id, data) {
     const order = await this.getById(id);
-    const from = (order.lockers || []).find((locker) => Number(locker.number) === Number(data.fromNumber));
+    const from = asArray(order.lockers).find((locker) => Number(locker.number) === Number(data.fromNumber));
     if (!from) throw new Error("Eski yacheyka topilmadi");
     const branchId = await branchService.getBranchIdByName(order.branch);
     const lockersResponse = await apiClient.get("/lockers", { params: { branchId } });
-    const to = (lockersResponse.data || []).find((locker) => Number(locker.number) === Number(data.toNumber));
+    const to = getArrayData(lockersResponse)
+      .map(mapLocker)
+      .filter(Boolean)
+      .find((locker) => Number(locker.number) === Number(data.toNumber));
     if (!to) throw new Error("Yangi yacheyka topilmadi");
     const response = await apiClient.post("/lockers/transfer", {
       orderId: id,
@@ -105,22 +112,30 @@ const baggageService = {
       toLockerId: to.id,
       note: data.reason || "",
     });
-    return mapOrder(response.data);
+    return mapOrder(getData(response));
   },
 
   calculateTariff({ lockers = [], hours = 1 }) {
-    return lockers.reduce((sum, locker) => sum + Number(locker.price || locker.originalPrice || 0), 0) || Number(hours || 1) * lockers.length * 20000;
+    const safeLockers = asArray(lockers);
+    return safeLockers.reduce((sum, locker) => sum + Number(locker.price || locker.originalPrice || 0), 0) || Number(hours || 1) * safeLockers.length * 20000;
   },
 
   async getCustomerHistory({ phone, passport, branchName }) {
-    if (!phone && !passport) return [];
+    if (!phone && !passport) return { visits: 0, orders: [], activeOrders: [], duplicateOrders: [] };
     const orders = await this.getAll(branchName);
-    return orders.filter((order) => (phone && order.phone === phone) || (passport && order.passport === passport));
+    const matchedOrders = asArray(orders).filter((order) => (phone && order.phone === phone) || (passport && order.passport === passport));
+    const activeOrders = matchedOrders.filter((order) => order.status === "Aktiv" || order.status === "Kechikdi");
+    return {
+      visits: matchedOrders.length,
+      orders: matchedOrders,
+      activeOrders,
+      duplicateOrders: activeOrders,
+    };
   },
 
   async cancel(id, reason) {
     const response = await apiClient.post(`/orders/${id}/cancel`, { cancelReason: reason });
-    return mapOrder(response.data);
+    return mapOrder(getData(response));
   },
 
   async reprint(id) {

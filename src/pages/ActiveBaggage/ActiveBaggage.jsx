@@ -30,7 +30,9 @@ const hasLockerPrice = (locker) =>
   locker?.price !== undefined &&
   locker?.price !== null &&
   locker?.price !== "" &&
-  Number.isFinite(Number(locker.price));
+    Number.isFinite(Number(locker.price));
+
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 const lockerPriceLabel = (order) => {
   const lockers = Array.isArray(order.lockers) ? order.lockers : [];
@@ -99,7 +101,7 @@ export default function ActiveBaggage() {
         baggageService.getAll(effectiveBranch),
         lockerService.getAll(effectiveBranch),
       ]);
-      return { orders, lockers };
+      return { orders: asArray(orders), lockers: asArray(lockers) };
     },
     [effectiveBranch, refreshKey],
     { orders: [], lockers: [] },
@@ -122,19 +124,23 @@ export default function ActiveBaggage() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [selectedOrder, receiptOrder, cancelOrder, pickupOrder, transferOrder]);
 
+  const safePageData = pageData && typeof pageData === "object" ? pageData : { orders: [], lockers: [] };
+  const pageOrders = asArray(safePageData.orders);
+  const pageLockers = asArray(safePageData.lockers);
+
   const rawActiveOrders = useMemo(() => {
-    return pageData.orders.filter(
+    return pageOrders.filter(
       (order) =>
         order.status === "Aktiv" ||
         order.status === "Kechikdi" ||
         Number(order.debtAmount || 0) > 0,
     );
-  }, [pageData.orders]);
+  }, [pageOrders]);
 
   const activeOrders = useMemo(() => {
-    return rawActiveOrders.filter((order) => {
+    return asArray(rawActiveOrders).filter((order) => {
       const query = search.toLowerCase();
-      const lockerText = (order.lockers || []).map((locker) => locker.number).join(" ");
+      const lockerText = asArray(order.lockers).map((locker) => locker.number).join(" ");
 
       const matchSearch =
         String(order.id || "").toLowerCase().includes(query) ||
@@ -262,9 +268,10 @@ export default function ActiveBaggage() {
   };
 
   const openTransfer = (order) => {
+    const orderLockers = asArray(order.lockers);
     setTransferOrder(order);
     setTransferForm({
-      fromNumber: String(order.lockers?.[0]?.number || ""),
+      fromNumber: String(orderLockers[0]?.number || ""),
       toNumber: "",
       reason: "",
     });
@@ -273,17 +280,17 @@ export default function ActiveBaggage() {
 
   const transferTargets = useMemo(() => {
     if (!transferOrder) return [];
-    const fromLocker = transferOrder.lockers?.find(
+    const fromLocker = asArray(transferOrder.lockers).find(
       (locker) => Number(locker.number) === Number(transferForm.fromNumber),
     );
 
-    return pageData.lockers.filter(
+    return pageLockers.filter(
       (locker) =>
         locker.branch === transferOrder.branch &&
         locker.status === "Bosh" &&
         (!fromLocker || locker.size === fromLocker.size),
     );
-  }, [pageData.lockers, transferForm.fromNumber, transferOrder]);
+  }, [pageLockers, transferForm.fromNumber, transferOrder]);
 
   const handleTransfer = async () => {
     if (!transferOrder) return;
@@ -319,7 +326,7 @@ export default function ActiveBaggage() {
       : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
 
   const lockerLabel = (order) =>
-    (order.lockers || []).map((locker) => `#${locker.number} ${locker.size}`).join(", ") ||
+    asArray(order.lockers).map((locker) => `#${locker.number} ${locker.size}`).join(", ") ||
     `${order.size} / ${order.count} ${t("ta")}`;
 
   return (
@@ -425,7 +432,7 @@ export default function ActiveBaggage() {
                 <div>
                   <span>{lockerLabel(order)}</span>
                   <small>
-                    {order.lockers?.length || order.count || 1} {t("ta")}
+                    {asArray(order.lockers).length || order.count || 1} {t("ta")}
                   </small>
                 </div>
 
@@ -605,7 +612,7 @@ export default function ActiveBaggage() {
               <label>
                 <span>{t("Old")}</span>
                 <GlassSelect value={transferForm.fromNumber} onChange={(event) => setTransferForm((prev) => ({ ...prev, fromNumber: event.target.value, toNumber: "" }))}>
-                  {(transferOrder.lockers || []).map((locker) => (
+                  {asArray(transferOrder.lockers).map((locker) => (
                     <option key={locker.number} value={locker.number}>
                       #{locker.number} {locker.size}
                     </option>

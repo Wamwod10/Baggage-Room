@@ -50,6 +50,9 @@ const getInitialForm = (defaultBranch, defaultCurrency = "UZS") => ({
   finalEdit: false,
 });
 
+const emptyCustomerHistory = { visits: 0, orders: [], activeOrders: [], duplicateOrders: [] };
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
 export default function NewBaggage() {
   const { t, formatDateTime } = useTranslation();
   const navigate = useNavigate();
@@ -72,7 +75,7 @@ export default function NewBaggage() {
   const [serviceLocker, setServiceLocker] = useState(null);
   const [serviceReason, setServiceReason] = useState("");
   const [message, setMessage] = useState("");
-  const [customerHistory, setCustomerHistory] = useState([]);
+  const [customerHistory, setCustomerHistory] = useState(emptyCustomerHistory);
 
   const {
     data: pageData = { lockers: [], orders: [], orderCount: 0 },
@@ -86,18 +89,36 @@ export default function NewBaggage() {
         baggageService.getAll(effectiveBranch || branch),
         baggageService.getAll(),
       ]);
-      return { lockers, orders, orderCount: allOrders.length };
+      const safeLockers = asArray(lockers);
+      const safeOrders = asArray(orders);
+      const safeAllOrders = asArray(allOrders);
+      return { lockers: safeLockers, orders: safeOrders, orderCount: safeAllOrders.length };
     },
     [effectiveBranch, branch, refreshKey],
     { lockers: [], orders: [], orderCount: 0 },
   );
 
-  const nextOrderId = `BR-${String(pageData.orderCount + 1).padStart(6, "0")}`;
+  const safePageData = pageData && typeof pageData === "object" ? pageData : { lockers: [], orders: [], orderCount: 0 };
+  const pageLockers = asArray(safePageData.lockers);
+  const pageOrders = asArray(safePageData.orders);
+  const selectedLockers = asArray(form.lockers);
+  const safeCustomerHistory = customerHistory && typeof customerHistory === "object" && !Array.isArray(customerHistory)
+    ? customerHistory
+    : {
+        ...emptyCustomerHistory,
+        orders: asArray(customerHistory),
+        activeOrders: asArray(customerHistory).filter((order) => order.status === "Aktiv" || order.status === "Kechikdi"),
+        visits: asArray(customerHistory).length,
+      };
+  const customerActiveOrders = asArray(safeCustomerHistory.activeOrders);
+  const customerDuplicateOrders = asArray(safeCustomerHistory.duplicateOrders);
+  const branchTariffHours = asArray(branchTariff.tariffs).length ? asArray(branchTariff.tariffs) : [1, 12, 24, 48, 72];
+  const currencies = asArray(settings.currencies).length ? asArray(settings.currencies) : ["UZS", "USD", "RUB", "EUR"];
+  const nextOrderId = `BR-${String(Number(safePageData.orderCount || 0) + 1).padStart(6, "0")}`;
   const selectedHours = Math.max(
     1,
     Number(form.tariffPreset === "custom" ? form.customHours : form.tariffPreset) || 1,
   );
-  const selectedLockers = form.lockers || [];
   const isCustomTariff = form.tariffPreset === "custom";
   const originalAmountUZS = baggageService.calculateTariff({
     branch: currentBranch,
@@ -131,10 +152,10 @@ export default function NewBaggage() {
         branchName: effectiveBranch,
       })
       .then((items) => {
-        if (active) setCustomerHistory(items);
+        if (active) setCustomerHistory(items && typeof items === "object" ? items : emptyCustomerHistory);
       })
       .catch(() => {
-        if (active) setCustomerHistory([]);
+        if (active) setCustomerHistory(emptyCustomerHistory);
       });
     return () => {
       active = false;
@@ -144,7 +165,7 @@ export default function NewBaggage() {
   const lockers = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return (pageData.lockers || [])
+    return pageLockers
       .filter((locker) => locker.branch === currentBranch)
       .filter((locker) => {
         const status = locker.status;
@@ -159,15 +180,15 @@ export default function NewBaggage() {
 
         return matchesFilter && matchesSearch;
       });
-  }, [pageData.lockers, currentBranch, filter, search]);
+  }, [pageLockers, currentBranch, filter, search]);
 
-  const branchLockers = (pageData.lockers || []).filter(
+  const branchLockers = pageLockers.filter(
     (locker) => locker.branch === currentBranch,
   );
   const freeLockers = branchLockers.filter((locker) => locker.status === "Bosh");
   const selectedOrder =
     selectedLocker?.activeOrder ||
-    (pageData.orders || []).find((order) => order.id === selectedLocker?.activeOrderId) ||
+    pageOrders.find((order) => order.id === selectedLocker?.activeOrderId) ||
     null;
   const lockerStats = {
     total: branchLockers.length,
@@ -196,12 +217,13 @@ export default function NewBaggage() {
     if (locker.status !== "Bosh") return;
 
     setForm((prev) => {
-      const exists = prev.lockers.some(
+      const previousLockers = asArray(prev.lockers);
+      const exists = previousLockers.some(
         (item) => Number(item.number) === Number(locker.number),
       );
       const lockers = exists
-        ? prev.lockers.filter((item) => Number(item.number) !== Number(locker.number))
-        : [...prev.lockers, { id: locker.id, lockerId: locker.id, number: locker.number, size: locker.size, price: locker.price }];
+        ? previousLockers.filter((item) => Number(item.number) !== Number(locker.number))
+        : [...previousLockers, { id: locker.id, lockerId: locker.id, number: locker.number, size: locker.size, price: locker.price }];
 
       return { ...prev, lockers };
     });
@@ -311,8 +333,8 @@ export default function NewBaggage() {
         admin: user?.fullName || "Admin",
         printed: print,
       });
-    } catch {
-      setMessage(t("Orderni saqlashda xatolik yuz berdi."));
+    } catch (error) {
+      setMessage(error?.message || t("Orderni saqlashda xatolik yuz berdi."));
       return;
     }
 
@@ -472,16 +494,16 @@ export default function NewBaggage() {
             </button>
           </div>
 
-          {customerHistory.activeOrders.length > 0 && (
+          {customerActiveOrders.length > 0 && (
             <div className="duplicate-warning">
-              {t("Bu mijozda aktiv baggage mavjud")}: {customerHistory.activeOrders.map((item) => item.id).join(", ")}
+              {t("Bu mijozda aktiv baggage mavjud")}: {customerActiveOrders.map((item) => item.id).join(", ")}
             </div>
           )}
 
-          {customerHistory.visits > 0 && (
+          {Number(safeCustomerHistory.visits || customerDuplicateOrders.length || 0) > 0 && (
             <div className="customer-history-box">
               <span>{t("Customer history")}</span>
-              <b>{customerHistory.visits} {t("order")}</b>
+              <b>{Number(safeCustomerHistory.visits || customerDuplicateOrders.length || 0)} {t("order")}</b>
             </div>
           )}
 
@@ -532,7 +554,7 @@ export default function NewBaggage() {
               <label>
                 <span>{t("Tarif")}</span>
                 <GlassSelect value={form.tariffPreset} onChange={(event) => updateForm("tariffPreset", event.target.value)}>
-                  {(branchTariff.tariffs || [1, 12, 24, 48, 72]).map((hours) => (
+                  {branchTariffHours.map((hours) => (
                     <option key={hours} value={hours}>{hours} {t("soat")}</option>
                   ))}
                   <option value="custom">{t("Qo'lda soat")}</option>
@@ -547,7 +569,7 @@ export default function NewBaggage() {
               <label>
                 <span>{t("Currency")}</span>
                 <GlassSelect value={form.currency} onChange={(event) => updateForm("currency", event.target.value)}>
-                  {(settings.currencies || ["UZS", "USD", "RUB", "EUR"]).map((currency) => (
+                  {currencies.map((currency) => (
                     <option value={currency} key={currency}>{currency}</option>
                   ))}
                 </GlassSelect>

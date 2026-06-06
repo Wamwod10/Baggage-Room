@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { mapLocker } from "./apiMappers";
+import { asArray, getArrayData, getData, mapLocker } from "./apiMappers";
 
 const LOCKER_STATUSES = {
   FREE: "Bosh",
@@ -15,25 +15,25 @@ const lockerService = {
   async getAll(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/lockers", { params: { branchId } });
-    return (response.data || []).map(mapLocker);
+    return getArrayData(response).map(mapLocker).filter(Boolean);
   },
 
   async block(branchName, number, data = {}) {
     const lockers = await this.getAll(branchName);
-    const locker = lockers.find((item) => Number(item.number) === Number(number));
+    const locker = asArray(lockers).find((item) => Number(item.number) === Number(number));
     if (!locker) throw new Error("Locker topilmadi");
     const response = await apiClient.patch(`/lockers/${locker.id}/service`, {
       serviceReason: data.reason || "",
     });
-    return mapLocker(response.data);
+    return mapLocker(getData(response));
   },
 
   async unblock(branchName, number) {
     const lockers = await this.getAll(branchName);
-    const locker = lockers.find((item) => Number(item.number) === Number(number));
+    const locker = asArray(lockers).find((item) => Number(item.number) === Number(number));
     if (!locker) throw new Error("Locker topilmadi");
     const response = await apiClient.patch(`/lockers/${locker.id}/restore`);
-    return mapLocker(response.data);
+    return mapLocker(getData(response));
   },
 
   async transfer({ orderId, fromLockerId, toLockerId, note }) {
@@ -43,7 +43,7 @@ const lockerService = {
       toLockerId,
       note,
     });
-    return response.data;
+    return getData(response);
   },
 };
 

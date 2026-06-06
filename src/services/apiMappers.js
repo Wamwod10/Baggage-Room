@@ -49,9 +49,20 @@ const cashTypeMap = {
 const toPaymentType = (payment) => reversePaymentMap[payment] || payment || "CASH";
 const toStatusLabel = (status) => statusMap[status] || status;
 const toLockerStatusLabel = (status) => lockerStatusMap[status] || status;
-const getItems = (payload) => payload?.items || payload?.data?.items || payload?.data || [];
+const unwrapData = (payload) => payload?.data ?? payload ?? null;
+const asArray = (value) => (Array.isArray(value) ? value : []);
+const getItems = (payload) => {
+  const data = unwrapData(payload);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
+const getData = (payload, fallback = null) => unwrapData(payload) ?? fallback;
+const getArrayData = (payload) => asArray(unwrapData(payload));
 
 const mapLocker = (locker) => {
+  if (!locker) return null;
   const branch = branchService.getBranchName(locker.branch);
   return {
     ...locker,
@@ -68,7 +79,8 @@ const mapLocker = (locker) => {
 const mapOrder = (order) => {
   if (!order) return null;
   const branch = branchService.getBranchName(order.branch);
-  const lockers = (order.items || []).map((item) => ({
+  const items = asArray(order.items);
+  const lockers = items.map((item) => ({
     id: item.lockerId,
     lockerId: item.lockerId,
     number: item.lockerNumber,
@@ -165,6 +177,9 @@ const mapTariff = (tariff) => ({
 });
 
 export {
+  asArray,
+  getArrayData,
+  getData,
   getItems,
   mapCashMovement,
   mapExpense,
