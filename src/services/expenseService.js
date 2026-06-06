@@ -11,10 +11,11 @@ const expenseService = {
 
   async create(data) {
     const branchId = await branchService.getBranchIdByName(data.branch);
+    const reason = data.reason || data.note || data.category;
     const response = await apiClient.post("/expenses", {
       branchId,
       category: data.category,
-      reason: data.reason,
+      reason,
       amount: Number(data.amount || 0),
       currency: data.currency || "UZS",
     });

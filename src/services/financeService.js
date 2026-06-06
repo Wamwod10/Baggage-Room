@@ -17,12 +17,14 @@ const financeService = {
 
   async createInkassa(data) {
     const branchId = await branchService.getBranchIdByName(data.branch);
+    const receiverName = data.receiverName || data.receiver || data.recipient;
     const response = await apiClient.post("/inkassa", {
       branchId,
-      receiverName: data.receiverName || data.receiver,
+      receiverName,
+      shiftId: data.shiftId,
       amount: Number(data.amount || 0),
       currency: data.currency || "UZS",
-      note: data.note || "",
+      note: data.note || data.reason || "Inkassa",
     });
     return mapInkassa(getData(response));
   },

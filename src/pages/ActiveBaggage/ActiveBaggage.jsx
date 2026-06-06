@@ -143,7 +143,7 @@ export default function ActiveBaggage() {
       const lockerText = asArray(order.lockers).map((locker) => locker.number).join(" ");
 
       const matchSearch =
-        String(order.orderNumber || order.id || "").toLowerCase().includes(query) ||
+        String(order.orderNumber || "").toLowerCase().includes(query) ||
         String(order.client || "").toLowerCase().includes(query) ||
         String(order.phone || "").toLowerCase().includes(query) ||
         lockerText.includes(query);
@@ -272,8 +272,8 @@ export default function ActiveBaggage() {
 
     try {
       await telegramService.sendOrderCancelled(cancelledOrder);
-    } catch (error) {
-      setFormError(`${t("Telegram yuborilmadi")}: ${error.message || t("xatolik yuz berdi")}.`);
+    } catch {
+      // Backend already sends Telegram notifications; frontend notification is best-effort.
     }
   };
 
@@ -445,7 +445,7 @@ export default function ActiveBaggage() {
             activeOrders.map((order) => (
               <div className="active-table-row" key={order.id}>
                 <div>
-                  <b>{order.orderNumber || order.id}</b>
+                  <b>{order.orderNumber || "-"}</b>
                   <small>{formatDateTime(order.checkIn)}</small>
                 </div>
 
@@ -523,7 +523,7 @@ export default function ActiveBaggage() {
           <div className="active-modal card" onClick={(event) => event.stopPropagation()}>
             <div className="active-modal-head">
               <div>
-                <h2>{selectedOrder.orderNumber || selectedOrder.id}</h2>
+                <h2>{selectedOrder.orderNumber || "-"}</h2>
                 <p>
                   {selectedOrder.client} - {selectedOrder.phone}
                 </p>
@@ -568,7 +568,7 @@ export default function ActiveBaggage() {
               <div className="active-modal-head">
               <div>
                 <h2>{t("Pickup payment")}</h2>
-                <p>{pickupOrder.orderNumber || pickupOrder.id} - {lockerLabel(pickupOrder)}</p>
+                <p>{pickupOrder.orderNumber || "-"} - {lockerLabel(pickupOrder)}</p>
               </div>
               <button type="button" onClick={() => setPickupOrder(null)}>{t("Close")}</button>
             </div>
@@ -632,7 +632,7 @@ export default function ActiveBaggage() {
             <div className="active-modal-head">
               <div>
                 <h2>{t("Yacheyka transfer")}</h2>
-                <p>{transferOrder.orderNumber || transferOrder.id}</p>
+                <p>{transferOrder.orderNumber || "-"}</p>
               </div>
               <button type="button" onClick={() => setTransferOrder(null)}>{t("Close")}</button>
             </div>
@@ -679,7 +679,7 @@ export default function ActiveBaggage() {
             <div className="active-modal-head">
               <div>
                 <h2>{t("Orderni bekor qilish")}</h2>
-                <p>{cancelOrder.orderNumber || cancelOrder.id} - {cancelOrder.client}</p>
+                <p>{cancelOrder.orderNumber || "-"} - {cancelOrder.client}</p>
               </div>
 
               <button type="button" onClick={() => setCancelOrder(null)}>{t("Close")}</button>

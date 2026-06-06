@@ -74,7 +74,7 @@ export default function SalesHistory() {
       const query = search.toLowerCase();
 
       const matchSearch =
-        String(order.orderNumber || order.id || "").toLowerCase().includes(query) ||
+        String(order.orderNumber || "").toLowerCase().includes(query) ||
         String(order.client || "").toLowerCase().includes(query) ||
         String(order.phone || "").toLowerCase().includes(query);
 
@@ -194,7 +194,7 @@ export default function SalesHistory() {
           <div className="order-modal card" onClick={(event) => event.stopPropagation()}>
             <div className="order-modal-head">
               <div>
-                <h2>{selectedOrder.orderNumber || selectedOrder.id}</h2>
+                <h2>{selectedOrder.orderNumber || "-"}</h2>
                 <p>
                   {selectedOrder.client} · {selectedOrder.phone}
                 </p>
@@ -433,7 +433,7 @@ export default function SalesHistory() {
           {!isLoading && !error && filteredOrders.map((item) => (
             <div className="history-table-row" key={item.id}>
               <div>
-                <b>{item.id}</b>
+                <b>{item.orderNumber || "-"}</b>
                 <small>{formatDateTime(item.createdAt)}</small>
               </div>
 

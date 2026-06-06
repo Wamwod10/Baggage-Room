@@ -55,8 +55,20 @@
 }
 
 .settings-card--tariffs,
-.settings-card--telegram {
+.settings-card--telegram,
+.settings-card--platform {
   min-width: 0;
+}
+
+.settings-card--platform {
+  .system-settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+  }
+
+  .settings-title {
+    margin-bottom: 14px;
+  }
 }
 
 .settings-title {
@@ -507,6 +519,19 @@
   }
 }
 
+.settings-card--platform .export-actions div {
+  min-height: 48px;
+  grid-template-columns: minmax(0, 1fr) 58px 58px;
+
+  span {
+    overflow-wrap: anywhere;
+  }
+
+  button {
+    width: 100%;
+  }
+}
+
 @media (max-width: 1100px) {
   .telegram-form {
     grid-template-columns: 1fr;
@@ -532,6 +557,10 @@
     width: 100%;
     justify-content: center;
   }
+
+  .settings-card--platform .system-settings {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -543,6 +572,14 @@
   .system-settings,
   .telegram-toggles {
     grid-template-columns: 1fr;
+  }
+
+  .settings-card--platform .export-actions div {
+    grid-template-columns: 1fr 1fr;
+
+    span {
+      grid-column: 1 / -1;
+    }
   }
 
   .telegram-status-row,

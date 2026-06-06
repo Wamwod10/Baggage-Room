@@ -603,7 +603,7 @@ export function createOrder(order) {
 
   addActivityLog({
     action: "ORDER_CREATED",
-    description: `${newOrder.id} - ${newOrder.client} order yaratildi`,
+    description: `${newOrder.orderNumber || newOrder.id} - ${newOrder.client} order yaratildi`,
     branch: newOrder.branch,
     user: newOrder.admin || newOrder.adminName,
     entityId: newOrder.id,
@@ -1158,7 +1158,7 @@ export function getNotifications(branchName = null) {
         id: `pickup-${order.id}`,
         type: "warning",
         title: "Check-out vaqti yaqin",
-        message: `${order.id} - ${order.client} pickup ${diffMinutes} daqiqadan keyin`,
+        message: `${order.orderNumber || order.id} - ${order.client} pickup ${diffMinutes} daqiqadan keyin`,
       });
     }
 
@@ -1167,7 +1167,7 @@ export function getNotifications(branchName = null) {
         id: `late-${order.id}`,
         type: "danger",
         title: "Baggage kechikdi",
-        message: `${order.id} - ${order.client} tarif vaqtidan o'tgan`,
+        message: `${order.orderNumber || order.id} - ${order.client} tarif vaqtidan o'tgan`,
       });
     }
   });
@@ -1294,4 +1294,3 @@ export function addActivityLog(log) {
   localStorage.setItem(ACTIVITY_KEY, JSON.stringify([newLog, ...logs]));
   return newLog;
 }
-

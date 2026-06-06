@@ -160,7 +160,7 @@ export default function Shifts() {
     }
 
     try {
-      const openedShift = await shiftService.open({
+      await shiftService.open({
         branch: branchName,
         admin: adminName.trim(),
         shiftTime: selectedShiftTime,
@@ -176,16 +176,7 @@ export default function Shifts() {
       setFormError("");
       refreshData();
 
-      try {
-        const telegramResult = await telegramService.sendShiftOpened(openedShift);
-        setStatusMessage(
-          telegramResult?.skipped
-            ? `${t("Kassa ochildi")}. ${t("Telegram yuborilmadi")}: ${telegramResult.reason}.`
-            : `${t("Kassa ochildi")}. ${t("Telegram xabar yuborildi.")}`,
-        );
-      } catch (error) {
-        setStatusMessage(`${t("Kassa ochildi")}. ${t("Telegram yuborilmadi")}: ${error.message || t("xatolik yuz berdi")}.`);
-      }
+      setStatusMessage(`${t("Kassa ochildi")}.`);
     } catch (error) {
       setFormError(error.message || t("Kassani ochishda xatolik yuz berdi."));
     }
@@ -271,16 +262,7 @@ export default function Shifts() {
       refreshData();
       setReportShift(closedShift);
 
-      try {
-        const telegramResult = await telegramService.sendShiftClosed(closedShift);
-        setStatusMessage(
-          telegramResult?.skipped
-            ? `${t("Kassa yopildi")}. ${t("Telegram yuborilmadi")}: ${telegramResult.reason}.`
-            : `${t("Kassa yopildi")}. ${t("Telegram xabar yuborildi.")}`,
-        );
-      } catch (error) {
-        setStatusMessage(`${t("Kassa yopildi")}. ${t("Telegram yuborilmadi")}: ${error.message || t("xatolik yuz berdi")}.`);
-      }
+      setStatusMessage(`${t("Kassa yopildi")}.`);
     } catch (error) {
       setFormError(error.message || t("Kassani yopishda xatolik yuz berdi."));
     }

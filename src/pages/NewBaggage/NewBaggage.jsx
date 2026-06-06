@@ -188,7 +188,7 @@ export default function NewBaggage() {
   const freeLockers = branchLockers.filter((locker) => locker.status === "Bosh");
   const selectedOrder =
     selectedLocker?.activeOrder ||
-    pageOrders.find((order) => (order.orderNumber || order.id) === selectedLocker?.activeOrderId || order.id === selectedLocker?.activeOrderId) ||
+    pageOrders.find((order) => order.orderNumber === selectedLocker?.activeOrderId || order.id === selectedLocker?.activeOrderId) ||
     null;
   const lockerStats = {
     total: branchLockers.length,
@@ -352,23 +352,11 @@ export default function NewBaggage() {
       setReceiptOrder(order);
     }
 
-    let telegramNotice = ` ${t("Telegram xabar yuborildi.")}`;
-
-    try {
-      const telegramResult = await telegramService.sendNewOrder(order);
-
-      if (telegramResult?.skipped) {
-        telegramNotice = ` ${t("Telegram yuborilmadi")}: ${telegramResult.reason}.`;
-      }
-    } catch (error) {
-      telegramNotice = ` ${t("Telegram yuborilmadi")}: ${error.message || t("xatolik yuz berdi")}.`;
-    }
-
-    const orderLabel = order?.orderNumber || order?.id;
+    const orderLabel = order?.orderNumber || "-";
     setMessage(
       (print
         ? `${orderLabel} ${t("saqlandi va chek chiqarishga tayyor")}`
-        : `${orderLabel} ${t("muvaffaqiyatli saqlandi")}`) + telegramNotice,
+        : `${orderLabel} ${t("muvaffaqiyatli saqlandi")}`),
     );
     setSelectedLocker(null);
     setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));
@@ -435,7 +423,7 @@ export default function NewBaggage() {
             <div className="panel-order-detail">
               <div>
                 <span>{t("Order")}</span>
-                <b>{selectedOrder.orderNumber || selectedOrder.id}</b>
+                <b>{selectedOrder.orderNumber || "-"}</b>
               </div>
               <div>
                 <span>{t("Client")}</span>
@@ -507,7 +495,7 @@ export default function NewBaggage() {
 
           {customerActiveOrders.length > 0 && (
             <div className="duplicate-warning">
-              {t("Bu mijozda aktiv baggage mavjud")}: {customerActiveOrders.map((item) => item.orderNumber || item.id).join(", ")}
+              {t("Bu mijozda aktiv baggage mavjud")}: {customerActiveOrders.map((item) => item.orderNumber || "-").join(", ")}
             </div>
           )}
 
@@ -725,8 +713,8 @@ export default function NewBaggage() {
             !error && (
               <div className="locker-grid">
                 {lockers.map((locker) => {
-                  const activeOrderObj = pageOrders.find((o) => (o.orderNumber || o.id) === locker.activeOrderId || o.id === locker.activeOrderId);
-                  const lockerOrderLabel = activeOrderObj ? (activeOrderObj.orderNumber || activeOrderObj.id) : locker.activeOrderId;
+                  const activeOrderObj = pageOrders.find((o) => o.orderNumber === locker.activeOrderId || o.id === locker.activeOrderId);
+                  const lockerOrderLabel = activeOrderObj?.orderNumber || "-";
                   return (
                     <article
                       className={`locker-card card ${locker.status} ${selectedLocker?.id === locker.id ? "selected" : ""}`}

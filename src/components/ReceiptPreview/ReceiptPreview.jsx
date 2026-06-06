@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Printer, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useTranslation } from "../../i18n/useTranslation";
 import settingsService from "../../services/settingsService";
 import { printReceipt } from "../../utils/printReceipt";
@@ -99,7 +99,7 @@ export default function ReceiptPreview({ order, onClose }) {
 
           <div className="receipt-row">
             <span>{t("Order ID")}</span>
-            <b>{order.orderNumber || order.id || "-"}</b>
+            <b>{order.orderNumber || "-"}</b>
           </div>
 
           <div className="receipt-row">
@@ -240,13 +240,8 @@ export default function ReceiptPreview({ order, onClose }) {
           <div className="receipt-divider" />
 
           <div className="receipt-barcode">
-            <span>{order.orderNumber || order.id || "ORDER"}</span>
+            <span>{order.orderNumber || "ORDER"}</span>
           </div>
-
-          {/* <div className="receipt-qr-placeholder">
-            <span>QR</span>
-            <small>{order.id || "-"}</small>
-          </div> */}
 
           <div className="receipt-footer">
             <p>{t("Chekni saqlab qo'ying")}</p>
@@ -254,14 +249,6 @@ export default function ReceiptPreview({ order, onClose }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="receipt-preview-print no-print"
-          onClick={() => printReceipt()}
-        >
-          <Printer size={17} />
-          {t("Print chek")}
-        </button>
       </div>
     </div>
   );

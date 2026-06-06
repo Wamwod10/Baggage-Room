@@ -2,9 +2,9 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(5, 6, 10, 0.52);
-  backdrop-filter: blur(54px) saturate(190%);
-  -webkit-backdrop-filter: blur(54px) saturate(190%);
+  background: rgba(5, 6, 10, 0.74);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -328,6 +328,9 @@
 @media (max-width: 520px) {
   .receipt-preview-backdrop {
     padding: 10px;
+    background: rgba(5, 6, 10, 0.8);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
   }
 
   .receipt-preview-modal {

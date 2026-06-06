@@ -778,7 +778,7 @@ export default function Analytics() {
                   <h3>{t(item.size)}</h3>
 
                   <p>
-                    {item.count} {t("ta")} {t("Baggage")} В· {item.orders} {t("order")}
+                    {item.count} {t("ta")} {t("Baggage")} - {item.orders} {t("order")}
                   </p>
                 </div>
 
@@ -1021,7 +1021,7 @@ export default function Analytics() {
                   <div>
                     <h3>{t(item.branch)}</h3>
                     <p>
-                      {item.orders} {t("order")} В· {item.delayed} {t("Kechikdi")} В·{" "}
+                      {item.orders} {t("order")} - {item.delayed} {t("Kechikdi")} -{" "}
                       {item.cancelled} {t("Cancelled")}
                     </p>
                   </div>
@@ -1083,7 +1083,7 @@ export default function Analytics() {
               <span>{t("Eng kuchli shift")}</span>
               <h3>{t(shiftAnalytics.bestShift.branch)}</h3>
               <p>
-                {shiftAnalytics.bestShift.admin} В·{" "}
+                {shiftAnalytics.bestShift.admin} -{" "}
                 {shiftAnalytics.bestShift.shiftTime || "-"}
               </p>
               <b>

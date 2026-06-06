@@ -120,7 +120,7 @@
 
 .active-table-body {
   display: grid;
-  gap: 6px;
+  gap: 14px;
 }
 
 .active-table-row {
@@ -255,9 +255,9 @@
 .receipt-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(5, 6, 10, 0.46);
-  backdrop-filter: blur(52px) saturate(190%);
-  -webkit-backdrop-filter: blur(52px) saturate(190%);
+  background: rgba(5, 6, 10, 0.74);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -746,9 +746,9 @@
   .active-modal-backdrop,
   .receipt-backdrop {
     padding: 10px;
-    background: rgba(5, 6, 10, 0.58);
-    backdrop-filter: blur(58px) saturate(200%);
-    -webkit-backdrop-filter: blur(58px) saturate(200%);
+    background: rgba(5, 6, 10, 0.8);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
   }
 }
 

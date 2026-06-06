@@ -56,9 +56,16 @@ apiClient.interceptors.response.use(
       clearAuthStorage();
     }
 
+    const firstValidationMessage = Array.isArray(payload?.errors)
+      ? payload.errors.find((item) => item?.message)?.message
+      : "";
+
     return Promise.reject({
       success: false,
-      message: payload?.message || error.message || "Request failed",
+      message:
+        payload?.message === "Validation failed" && firstValidationMessage
+          ? firstValidationMessage
+          : payload?.message || error.message || "Request failed",
       errors: payload?.errors || [],
       status,
     });

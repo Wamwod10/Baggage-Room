@@ -10,7 +10,6 @@ import {
   Settings,
   LogOut,
   BarChart3,
-  Lock,
   X,
 } from "lucide-react";
 import { useAuth } from "../store/AuthContext";
@@ -64,6 +63,7 @@ const menuItems = [
     title: "Settings",
     path: "/settings",
     icon: Settings,
+    superAdminOnly: true,
   },
 ];
 
@@ -95,20 +95,7 @@ export default function Sidebar({ open = false, onClose }) {
           const Icon = item.icon;
           const isLocked = item.superAdminOnly && !isSuperAdmin;
 
-          if (isLocked) {
-            return (
-              <div
-                className="sidebar-link locked"
-                key={item.path}
-                aria-disabled="true"
-                title={t("Faqat rahbariyat uchun")}
-              >
-                <Icon size={19} />
-                <span>{t(item.title)}</span>
-                <Lock className="sidebar-lock" size={15} />
-              </div>
-            );
-          }
+          if (isLocked) return null;
 
           return (
             <NavLink

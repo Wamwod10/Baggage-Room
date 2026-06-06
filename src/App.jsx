@@ -5,6 +5,7 @@ import { I18nProvider, useTranslation } from "./i18n/useTranslation";
 import { getSettings } from "./utils/storage";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import AppLoader from "./components/AppLoader/AppLoader";
+import StateBlock from "./components/StateBlock/StateBlock";
 
 import MainLayout from "./layout/MainLayout";
 import Login from "./pages/Login/Login";
@@ -29,6 +30,23 @@ function PublicRoute({ children }) {
   const { authLoading, isAuth } = useAuth();
   if (authLoading) return <RouteFallback />;
   return isAuth ? <Navigate to="/" replace /> : children;
+}
+
+function SuperAdminRoute({ children }) {
+  const { isSuperAdmin } = useAuth();
+  const { t } = useTranslation();
+
+  if (!isSuperAdmin) {
+    return (
+      <StateBlock
+        type="lock"
+        title={t("Access Denied")}
+        description={t("Bu sahifa faqat rahbariyat uchun ochiq.")}
+      />
+    );
+  }
+
+  return children;
 }
 
 function HomeRoute() {
@@ -77,7 +95,14 @@ function AppRoutes() {
         <Route path="expenses" element={<Expenses />} />
         <Route path="shifts" element={<Shifts />} />
         <Route path="notifications" element={<Notifications />} />
-        <Route path="settings" element={<Settings />} />
+        <Route
+          path="settings"
+          element={
+            <SuperAdminRoute>
+              <Settings />
+            </SuperAdminRoute>
+          }
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

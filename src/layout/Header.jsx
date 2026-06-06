@@ -90,7 +90,6 @@ export default function Header({ onMenuClick }) {
           asArray(orders)
             .filter((order) => {
               const searchableFields = [
-                order.id,
                 order.orderNumber,
                 order.client,
                 order.phone,
@@ -169,8 +168,8 @@ export default function Header({ onMenuClick }) {
         {safeResults.length > 0 && (
           <div className="header-search-results">
             {safeResults.map((order) => {
-              const label = order.orderNumber || order.id || "-";
-              const target = order.orderNumber || order.id || "";
+              const label = order.orderNumber || "-";
+              const target = order.orderNumber || "";
               return (
                 <button key={label} onClick={() => openResult(target)}>
                   <div>
