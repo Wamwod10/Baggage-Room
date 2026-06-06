@@ -133,12 +133,14 @@ export default function SalesHistory() {
   };
 
   const handleCloseDebt = async (order) => {
-    const updatedOrders = baggageService.closeDebt(order.id, {
+    await baggageService.closeDebt(order.id, {
       amount: order.debtAmount,
+      payment: "Naqd",
+      currency: order.currency,
       admin: "Admin",
       note: "Debt closed from sales history",
     });
-    const updatedOrder = updatedOrders.find((item) => item.id === order.id) || order;
+    const updatedOrder = { ...order, debtAmount: 0 };
 
     setSelectedOrder(updatedOrder);
     setRefreshKey((value) => value + 1);

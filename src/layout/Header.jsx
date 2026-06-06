@@ -24,8 +24,10 @@ export default function Header({ onMenuClick }) {
     useAuth();
 
   const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [alertRefreshKey, setAlertRefreshKey] = useState(0);
+  const [headerAlerts, setHeaderAlerts] = useState([]);
   const [currentDate, setCurrentDate] = useState(() => new Date());
 
   useEffect(() => {
@@ -44,13 +46,20 @@ export default function Header({ onMenuClick }) {
     return () => clearInterval(interval);
   }, []);
 
-  const headerAlerts = useMemo(
-    () => {
-      void alertRefreshKey;
-      return notificationService.getSmartAlerts(effectiveBranch);
-    },
-    [effectiveBranch, alertRefreshKey],
-  );
+  useEffect(() => {
+    let active = true;
+    notificationService
+      .getSmartAlerts(effectiveBranch)
+      .then((alerts) => {
+        if (active) setHeaderAlerts(alerts);
+      })
+      .catch(() => {
+        if (active) setHeaderAlerts([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [effectiveBranch, alertRefreshKey]);
 
   const alertCount = headerAlerts.length;
   const liveDate = useMemo(() => {
@@ -64,33 +73,48 @@ export default function Header({ onMenuClick }) {
     };
   }, [currentDate]);
 
-  const results = useMemo(() => {
-    if (!search.trim()) return [];
+  useEffect(() => {
+    let active = true;
+    const query = search.trim().toLowerCase();
+    if (!query) {
+      setResults([]);
+      return undefined;
+    }
 
-    const query = search.toLowerCase();
-
-    return baggageService
+    baggageService
       .getAll(effectiveBranch)
-      .filter((order) => {
-        const searchableFields = [
-          order.id,
-          order.client,
-          order.phone,
-          order.passport,
-          order.branch,
-          order.size,
-          order.payment,
-          order.status,
-          order.admin,
-        ];
+      .then((orders) => {
+        if (!active) return;
+        setResults(
+          orders
+            .filter((order) => {
+              const searchableFields = [
+                order.id,
+                order.orderNumber,
+                order.client,
+                order.phone,
+                order.passport,
+                order.branch,
+                order.size,
+                order.payment,
+                order.status,
+                order.admin,
+              ];
 
-        return searchableFields.some((field) =>
-          String(field || "")
-            .toLowerCase()
-            .includes(query),
+              return searchableFields.some((field) =>
+                String(field || "").toLowerCase().includes(query),
+              );
+            })
+            .slice(0, 8),
         );
       })
-      .slice(0, 8);
+      .catch(() => {
+        if (active) setResults([]);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [effectiveBranch, search]);
 
   const toggleTheme = () => {

@@ -70,13 +70,13 @@ export default function Dashboard() {
     error,
     retry,
   } = usePageResource(() => {
-    dashboardService.sync();
-    const dashboardData = dashboardService.getData(effectiveBranch);
-
-    return {
+    return Promise.all([
+      dashboardService.getData(effectiveBranch),
+      notificationService.getSmartAlerts(effectiveBranch),
+    ]).then(([dashboardData, smartAlerts]) => ({
       ...dashboardData,
-      smartAlerts: notificationService.getSmartAlerts(effectiveBranch),
-    };
+      smartAlerts,
+    }));
   }, [effectiveBranch, refreshKey], emptyDashboardData);
 
   const branches = (effectiveBranch ? [effectiveBranch] : getBranchNames()).map(

@@ -94,10 +94,13 @@ export default function ActiveBaggage() {
     error,
     retry,
   } = usePageResource(
-    () => ({
-      orders: baggageService.getAll(effectiveBranch),
-      lockers: lockerService.getAll(effectiveBranch),
-    }),
+    async () => {
+      const [orders, lockers] = await Promise.all([
+        baggageService.getAll(effectiveBranch),
+        lockerService.getAll(effectiveBranch),
+      ]);
+      return { orders, lockers };
+    },
     [effectiveBranch, refreshKey],
     { orders: [], lockers: [] },
   );
@@ -185,11 +188,12 @@ export default function ActiveBaggage() {
       return;
     }
 
-    const updatedOrders = baggageService.pickup(pickupOrder.id, {
+    const updatedOrder = await baggageService.pickup(pickupOrder.id, {
       ...pickupForm,
+      overtimeAmount: pickupOrder.overtimeAmount || 0,
+      debtPaidAmount: pickupOrder.debtAmount || undefined,
       admin: user?.fullName,
     });
-    const updatedOrder = updatedOrders.find((order) => order.id === pickupOrder.id) || pickupOrder;
 
     setRefreshKey((value) => value + 1);
     setPickupOrder(null);
@@ -205,12 +209,14 @@ export default function ActiveBaggage() {
   };
 
   const handleCloseDebt = async (order) => {
-    const updatedOrders = baggageService.closeDebt(order.id, {
+    await baggageService.closeDebt(order.id, {
       amount: order.debtAmount,
+      payment: "Naqd",
+      currency: order.currency,
       admin: user?.fullName,
       note: "Debt closed from active baggage",
     });
-    const updatedOrder = updatedOrders.find((item) => item.id === order.id) || order;
+    const updatedOrder = { ...order, debtAmount: 0 };
     setRefreshKey((value) => value + 1);
 
     try {
@@ -234,14 +240,7 @@ export default function ActiveBaggage() {
       return;
     }
 
-    const updatedOrders = baggageService.cancel(cancelOrder.id, cancelReason.trim());
-    const cancelledOrder =
-      updatedOrders.find((order) => order.id === cancelOrder.id) || {
-        ...cancelOrder,
-        status: "Bekor qilindi",
-        cancelReason: cancelReason.trim(),
-        cancelledAt: new Date().toISOString(),
-      };
+    const cancelledOrder = await baggageService.cancel(cancelOrder.id, cancelReason.trim());
 
     setRefreshKey((value) => value + 1);
     setSelectedOrder(null);
@@ -255,9 +254,8 @@ export default function ActiveBaggage() {
     }
   };
 
-  const handleReprint = (orderId) => {
-    const updated = baggageService.reprint(orderId);
-    const order = updated.find((item) => item.id === orderId);
+  const handleReprint = async (orderId) => {
+    const order = await baggageService.reprint(orderId);
 
     setRefreshKey((value) => value + 1);
     setReceiptOrder(order);
@@ -295,11 +293,10 @@ export default function ActiveBaggage() {
       return;
     }
 
-    const updatedOrders = baggageService.transfer(transferOrder.id, {
+    const updatedOrder = await baggageService.transfer(transferOrder.id, {
       ...transferForm,
       admin: user?.fullName || "Admin",
     });
-    const updatedOrder = updatedOrders.find((order) => order.id === transferOrder.id) || transferOrder;
     const transfer = updatedOrder.transferHistory?.at(-1);
 
     setRefreshKey((value) => value + 1);

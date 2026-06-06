@@ -52,7 +52,7 @@ export default function Expenses() {
     }));
   };
 
-  const handleAddExpense = (event) => {
+  const handleAddExpense = async (event) => {
     event.preventDefault();
 
     const amount = Number(form.amount);
@@ -70,7 +70,7 @@ export default function Expenses() {
     const branch = effectiveBranch || form.branch || defaultBranch;
 
     try {
-      expenseService.create({
+      await expenseService.create({
         ...form,
         branch,
         amount,
@@ -86,9 +86,9 @@ export default function Expenses() {
     setForm(getInitialForm(defaultBranch));
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     try {
-      expenseService.delete(id);
+      await expenseService.delete(id);
       setRefreshKey((value) => value + 1);
     } catch {
       setFormError("Harajatni o'chirishda xatolik yuz berdi.");

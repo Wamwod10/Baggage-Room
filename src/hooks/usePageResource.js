@@ -24,25 +24,26 @@ export default function usePageResource(loader, dependencies = [], initialData =
     }, 0);
 
     const timer = window.setTimeout(() => {
-      try {
-        const data = loader();
-
-        if (active) {
-          setState({
-            data,
-            isLoading: false,
-            error: null,
-          });
-        }
-      } catch (error) {
-        if (active) {
-          setState({
-            data: initialData,
-            isLoading: false,
-            error,
-          });
-        }
-      }
+      Promise.resolve()
+        .then(loader)
+        .then((data) => {
+          if (active) {
+            setState({
+              data,
+              isLoading: false,
+              error: null,
+            });
+          }
+        })
+        .catch((error) => {
+          if (active) {
+            setState({
+              data: initialData,
+              isLoading: false,
+              error,
+            });
+          }
+        });
     }, LOADING_DELAY);
 
     return () => {

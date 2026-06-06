@@ -19,12 +19,14 @@ import Settings from "./pages/Settings/Settings";
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
 
 function ProtectedRoute({ children }) {
-  const { isAuth } = useAuth();
+  const { authLoading, isAuth } = useAuth();
+  if (authLoading) return <RouteFallback />;
   return isAuth ? children : <Navigate to="/login" replace />;
 }
 
 function PublicRoute({ children }) {
-  const { isAuth } = useAuth();
+  const { authLoading, isAuth } = useAuth();
+  if (authLoading) return <RouteFallback />;
   return isAuth ? <Navigate to="/" replace /> : children;
 }
 

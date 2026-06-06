@@ -1,54 +1,19 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import authService from "../services/authService";
+import { AUTH_EVENT } from "../services/apiClient";
+import branchService from "../services/branchService";
 import { ALL_BRANCHES_LABEL, getBranchNames } from "../utils/branches";
 
 const AuthContext = createContext(null);
 const ACTIVE_BRANCH_KEY = "br_active_branch";
-
-const USERS = [
-  {
-    username: "rahbariyat",
-    password: "admin123",
-    role: "SUPER_ADMIN",
-    fullName: "Rahbariyat",
-    branchName: ALL_BRANCHES_LABEL,
-  },
-  {
-    username: "tashkent_airport",
-    password: "12345",
-    role: "BRANCH_ADMIN",
-    fullName: "Toshkent xalqaro aeroport",
-    branchName: "Toshkent xalqaro aeroport",
-  },
-  {
-    username: "tashkent_north",
-    password: "12345",
-    role: "BRANCH_ADMIN",
-    fullName: "Toshkent Shimoliy vokzal",
-    branchName: "Toshkent Shimoliy vokzal",
-  },
-  {
-    username: "tashkent_south",
-    password: "12345",
-    role: "BRANCH_ADMIN",
-    fullName: "Toshkent Janubiy vokzal",
-    branchName: "Toshkent Janubiy vokzal",
-  },
-  {
-    username: "samarkand_station",
-    password: "12345",
-    role: "BRANCH_ADMIN",
-    fullName: "Samarqand vokzal",
-    branchName: "Samarqand vokzal",
-  },
-  {
-    username: "samarkand_airport",
-    password: "12345",
-    role: "BRANCH_ADMIN",
-    fullName: "Samarqand xalqaro aeroport",
-    branchName: "Samarqand xalqaro aeroport",
-  },
-];
 
 const getSavedActiveBranch = () => {
   const savedBranch = (() => {
@@ -66,44 +31,27 @@ const getSavedActiveBranch = () => {
 };
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    let savedUser = null;
-
-    try {
-      const saved = localStorage.getItem("br_user");
-      savedUser = saved ? JSON.parse(saved) : null;
-    } catch {
-      localStorage.removeItem("br_user");
-      return null;
-    }
-
-    if (!savedUser) return null;
-
-    const canonicalUser = USERS.find(
-      (item) => item.username === savedUser?.username,
-    );
-
-    if (canonicalUser) {
-      localStorage.setItem("br_user", JSON.stringify(canonicalUser));
-      return canonicalUser;
-    }
-
-    return savedUser;
-  });
+  const [user, setUser] = useState(() =>
+    authService.getToken() ? authService.getUser() : null,
+  );
+  const [authLoading, setAuthLoading] = useState(() =>
+    Boolean(authService.getToken()),
+  );
   const [activeBranch, setActiveBranchState] = useState(getSavedActiveBranch);
+  const [branchVersion, setBranchVersion] = useState(0);
 
-  const login = ({ username, password }) => {
-    const foundUser = USERS.find(
-      (item) => item.username === username && item.password === password,
-    );
-
-    if (!foundUser) {
-      throw new Error("Login yoki parol noto'g'ri");
+  const hydrateBranches = useCallback(async () => {
+    try {
+      await branchService.getAll({ force: true });
+    } finally {
+      setBranchVersion((value) => value + 1);
     }
+  }, []);
 
-    localStorage.setItem("br_user", JSON.stringify(foundUser));
+  const applyUser = useCallback((nextUser) => {
+    setUser(nextUser);
 
-    if (foundUser.role === "SUPER_ADMIN") {
+    if (nextUser?.role === "SUPER_ADMIN") {
       const savedActiveBranch = getSavedActiveBranch();
       localStorage.setItem(ACTIVE_BRANCH_KEY, savedActiveBranch);
       setActiveBranchState(savedActiveBranch);
@@ -111,19 +59,63 @@ export function AuthProvider({ children }) {
       localStorage.removeItem(ACTIVE_BRANCH_KEY);
       setActiveBranchState(ALL_BRANCHES_LABEL);
     }
+  }, []);
 
-    setUser(foundUser);
-    return foundUser;
-  };
-
-  const logout = () => {
-    localStorage.removeItem("br_user");
+  const logout = useCallback(() => {
+    authService.logout();
     localStorage.removeItem(ACTIVE_BRANCH_KEY);
     setActiveBranchState(ALL_BRANCHES_LABEL);
     setUser(null);
-  };
+    setAuthLoading(false);
+  }, []);
 
-  const setActiveBranch = (branchName) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      if (!authService.getToken()) {
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        const currentUser = await authService.me();
+        await hydrateBranches();
+        if (!cancelled) applyUser(currentUser);
+      } catch {
+        if (!cancelled) logout();
+      } finally {
+        if (!cancelled) setAuthLoading(false);
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyUser, logout]);
+
+  useEffect(() => {
+    window.addEventListener(AUTH_EVENT, logout);
+    return () => window.removeEventListener(AUTH_EVENT, logout);
+  }, [logout]);
+
+  const login = useCallback(async ({ username, password }) => {
+    try {
+      const { user: authenticatedUser } = await authService.login(
+        username,
+        password,
+      );
+      await hydrateBranches();
+      applyUser(authenticatedUser);
+      return authenticatedUser;
+    } catch (error) {
+      throw new Error(error.message || "Login yoki parol noto'g'ri");
+    }
+  }, [applyUser]);
+
+  const setActiveBranch = useCallback((branchName) => {
     const allowedBranches = [ALL_BRANCHES_LABEL, ...getBranchNames()];
     const nextBranch = allowedBranches.includes(branchName)
       ? branchName
@@ -131,7 +123,7 @@ export function AuthProvider({ children }) {
 
     localStorage.setItem(ACTIVE_BRANCH_KEY, nextBranch);
     setActiveBranchState(nextBranch);
-  };
+  }, []);
 
   const effectiveBranch =
     user?.role === "BRANCH_ADMIN"
@@ -145,14 +137,25 @@ export function AuthProvider({ children }) {
       user,
       activeBranch,
       effectiveBranch,
+      authLoading,
       isAuth: Boolean(user),
       isSuperAdmin: user?.role === "SUPER_ADMIN",
       isBranchAdmin: user?.role === "BRANCH_ADMIN",
       login,
       logout,
       setActiveBranch,
+      branchVersion,
     }),
-    [activeBranch, effectiveBranch, user],
+    [
+      activeBranch,
+      authLoading,
+      branchVersion,
+      effectiveBranch,
+      login,
+      logout,
+      setActiveBranch,
+      user,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

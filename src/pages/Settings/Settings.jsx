@@ -8,6 +8,8 @@ import {
   EyeOff,
 } from "lucide-react";
 import settingsService from "../../services/settingsService";
+import telegramService from "../../services/telegramService";
+import branchService from "../../services/branchService";
 import exportService from "../../services/exportService";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
@@ -82,6 +84,7 @@ export default function Settings() {
     error,
     retry,
   } = usePageResource(() => settingsService.get(), [], fallbackSettings);
+  const [apiBranches, setApiBranches] = useState([]);
 
   useEffect(() => {
     if (loadedSettings && !error) {
@@ -95,6 +98,62 @@ export default function Settings() {
       return () => window.clearTimeout(timer);
     }
   }, [loadedSettings, error]);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      branchService.getAll(),
+      settingsService.getTariffs(),
+      telegramService.getSettings(),
+    ])
+      .then(([branches, tariffs, telegramSettings]) => {
+        if (!active) return;
+        setApiBranches(branches);
+
+        const branchTariffs = {};
+        for (const tariff of tariffs) {
+          branchTariffs[tariff.branch] = branchTariffs[tariff.branch] || { sizes: {} };
+          branchTariffs[tariff.branch].sizes[tariff.size] = {
+            id: tariff.id,
+            1: tariff.price1h,
+            12: tariff.price12h,
+            24: tariff.price24h,
+            48: tariff.price48h,
+            72: tariff.price72h,
+            after72: tariff.after72hPrice,
+          };
+        }
+
+        const groups = {};
+        for (const item of telegramSettings) {
+          const branch = branchService.getBranchName(item.branch);
+          groups[branch] = {
+            branchId: item.branchId,
+            token: item.botToken || "",
+            groupId: item.groupId || "",
+            enabled: item.enabled,
+          };
+        }
+
+        setSettings((prev) => ({
+          ...prev,
+          branchTariffs,
+          telegram: {
+            ...prev.telegram,
+            groups,
+            enabled: telegramSettings.some((item) => item.enabled),
+          },
+        }));
+      })
+      .catch(() => {
+        if (active) setMessage(t("Backend settings yuklanmadi"));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [t]);
 
   const handleTelegramChange = (key, value) => {
     setSettings((prev) => ({
@@ -167,7 +226,7 @@ export default function Settings() {
     setLanguage(normalizedLanguage);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (
       !Number.isFinite(Number(settings.overtimePerHour)) ||
       Number(settings.overtimePerHour) < 0
@@ -194,6 +253,49 @@ export default function Settings() {
     }
 
     try {
+      const tariffUpdates = [];
+      for (const [branch, tariff] of Object.entries(settings.branchTariffs || {})) {
+        for (const [size, values] of Object.entries(tariff.sizes || {})) {
+          if (!values.id) continue;
+          tariffUpdates.push(
+            settingsService.updateTariff(values.id, {
+              price1h: Number(values[1] || 0),
+              price12h: Number(values[12] || 0),
+              price24h: Number(values[24] || 0),
+              price48h: Number(values[48] || 0),
+              price72h: Number(values[72] || 0),
+              after72hPrice: Number(values.after72 || 0),
+            }),
+          );
+        }
+      }
+
+      const telegramUpdates = Object.entries(settings.telegram?.groups || {}).map(
+        ([branch, group]) => {
+          const apiBranch = apiBranches.find((item) => item.displayName === branch || item.name === branch);
+          if (!apiBranch) return null;
+          return telegramService.updateSettings(apiBranch.id, {
+            botToken: group.token || settings.telegram?.botToken || "",
+            groupId: group.groupId || settings.telegram?.groupId || "",
+            enabled: Boolean(settings.telegram?.enabled && group.enabled !== false),
+            newOrderEnabled: Boolean(settings.telegram?.newOrder),
+            shiftOpenEnabled: Boolean(settings.telegram?.shiftOpened),
+            shiftCloseEnabled: Boolean(settings.telegram?.shiftClosed),
+            orderCancelEnabled: Boolean(settings.telegram?.orderCancelled),
+            delayedBaggageEnabled: Boolean(settings.telegram?.delayedBaggage),
+            overtimePaymentEnabled: Boolean(settings.telegram?.overtimePayment),
+            debtClosedEnabled: Boolean(settings.telegram?.debtClosed),
+            inkassaEnabled: Boolean(settings.telegram?.inkassa),
+            expenseEnabled: Boolean(settings.telegram?.expenseAlerts),
+            orderEditEnabled: Boolean(settings.telegram?.orderEdit),
+            lockerTransferEnabled: Boolean(settings.telegram?.lockerTransfer),
+            lockerServiceEnabled: Boolean(settings.telegram?.lockerBlock),
+          });
+        },
+      ).filter(Boolean);
+
+      await Promise.all([...tariffUpdates, ...telegramUpdates]);
+
       const savedSettings = settingsService.save({
         ...settings,
         language: normalizeLanguage(settings.language),
@@ -217,35 +319,14 @@ export default function Settings() {
     setTestStatus(t("Test xabar yuborilmoqda..."));
 
     try {
-      settingsService.save(settings);
-
-      const text = [
-        "Baggage Room test xabari",
-        "",
-        "Telegram integration ishlayapti.",
-        `${t("Sana")}: ${formatDateTime(new Date())}`,
-      ].join("\n");
-
-      const response = await fetch(
-        `https://api.telegram.org/bot${token}/sendMessage`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            chat_id: groupId,
-            text,
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!data.ok) {
-        setTestStatus(data.description || t("Telegram test xabar yuborilmadi"));
-        return;
-      }
+      const firstBranch = apiBranches[0];
+      if (!firstBranch) throw new Error("Branch topilmadi");
+      await telegramService.updateSettings(firstBranch.id, {
+        botToken: token,
+        groupId,
+        enabled: true,
+      });
+      await telegramService.test(firstBranch.id);
 
       setTestStatus(t("Test xabar Telegram groupga yuborildi"));
     } catch {

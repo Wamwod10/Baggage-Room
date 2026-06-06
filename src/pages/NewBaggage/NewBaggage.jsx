@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Ban,
   Eye,
@@ -72,6 +72,7 @@ export default function NewBaggage() {
   const [serviceLocker, setServiceLocker] = useState(null);
   const [serviceReason, setServiceReason] = useState("");
   const [message, setMessage] = useState("");
+  const [customerHistory, setCustomerHistory] = useState([]);
 
   const {
     data: pageData = { lockers: [], orders: [], orderCount: 0 },
@@ -79,11 +80,14 @@ export default function NewBaggage() {
     error,
     retry,
   } = usePageResource(
-    () => ({
-      lockers: lockerService.getAll(effectiveBranch || branch),
-      orders: baggageService.getAll(effectiveBranch || branch),
-      orderCount: baggageService.getAll().length,
-    }),
+    async () => {
+      const [lockers, orders, allOrders] = await Promise.all([
+        lockerService.getAll(effectiveBranch || branch),
+        baggageService.getAll(effectiveBranch || branch),
+        baggageService.getAll(),
+      ]);
+      return { lockers, orders, orderCount: allOrders.length };
+    },
     [effectiveBranch, branch, refreshKey],
     { lockers: [], orders: [], orderCount: 0 },
   );
@@ -118,15 +122,24 @@ export default function NewBaggage() {
     return date.toISOString();
   }, [form.checkIn, selectedHours]);
 
-  const customerHistory = useMemo(
-    () =>
-      baggageService.getCustomerHistory({
+  useEffect(() => {
+    let active = true;
+    baggageService
+      .getCustomerHistory({
         phone: form.phone,
         passport: form.passport,
         branchName: effectiveBranch,
-      }),
-    [form.phone, form.passport, effectiveBranch],
-  );
+      })
+      .then((items) => {
+        if (active) setCustomerHistory(items);
+      })
+      .catch(() => {
+        if (active) setCustomerHistory([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [form.phone, form.passport, effectiveBranch]);
 
   const lockers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -173,7 +186,7 @@ export default function NewBaggage() {
   const openOrderPanel = (locker) => {
     setForm({
       ...getInitialForm(currentBranch, settings.defaultCurrency || "UZS"),
-      lockers: [{ number: locker.number, size: locker.size }],
+      lockers: [{ id: locker.id, lockerId: locker.id, number: locker.number, size: locker.size, price: locker.price }],
     });
     setSelectedLocker(locker);
     setMessage("");
@@ -188,7 +201,7 @@ export default function NewBaggage() {
       );
       const lockers = exists
         ? prev.lockers.filter((item) => Number(item.number) !== Number(locker.number))
-        : [...prev.lockers, { number: locker.number, size: locker.size }];
+        : [...prev.lockers, { id: locker.id, lockerId: locker.id, number: locker.number, size: locker.size, price: locker.price }];
 
       return { ...prev, lockers };
     });
@@ -204,7 +217,7 @@ export default function NewBaggage() {
 
     const locker = serviceLocker;
     const reason = serviceReason.trim();
-    lockerService.block(locker.branch, locker.number, {
+    await lockerService.block(locker.branch, locker.number, {
       reason,
       admin: user?.fullName,
     });
@@ -223,8 +236,8 @@ export default function NewBaggage() {
     }
   };
 
-  const handleUnblockLocker = (locker) => {
-    lockerService.unblock(locker.branch, locker.number, {
+  const handleUnblockLocker = async (locker) => {
+    await lockerService.unblock(locker.branch, locker.number, {
       admin: user?.fullName,
     });
     setRefreshKey((value) => value + 1);
@@ -258,7 +271,7 @@ export default function NewBaggage() {
       return;
     }
 
-    const currentShift = shiftService.getCurrent(currentBranch);
+    const currentShift = await shiftService.getCurrent(currentBranch);
 
     if (!currentShift) {
       setMessage(t("Avval kassani oching. Ochiq shift topilmadi."));
@@ -268,7 +281,7 @@ export default function NewBaggage() {
     let order;
 
     try {
-      order = baggageService.create({
+      order = await baggageService.create({
         client: form.client.trim(),
         phone: form.phone.trim(),
         passport: form.passport.trim(),

@@ -12,10 +12,11 @@ export default function Login() {
 
   const [form, setForm] = useState({
     username: "rahbariyat",
-    password: "admin123",
+    password: "Admin@12345",
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -28,14 +29,17 @@ export default function Login() {
     setError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setLoading(true);
 
     try {
-      login(form);
+      await login(form);
       navigate("/");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,20 +89,20 @@ export default function Login() {
 
           {error && <div className="login-error">{error}</div>}
 
-          <button type="submit" className="login-btn">
-            {t("Kirish")}
+          <button type="submit" className="login-btn" disabled={loading}>
+            {loading ? t("Loading") : t("Kirish")}
             <ArrowRight size={18} />
           </button>
         </form>
 
         <div className="login-demo">
           <p>{t("Loginlar")}:</p>
-          <span>rahbariyat / admin123</span>
-          <span>tashkent_airport / 12345</span>
-          <span>tashkent_north / 12345</span>
-          <span>tashkent_south / 12345</span>
-          <span>samarkand_station / 12345</span>
-          <span>samarkand_airport / 12345</span>
+          <span>rahbariyat / Admin@12345</span>
+          <span>toshkent_airport / Admin@12345</span>
+          <span>toshkent_shimoliy / Admin@12345</span>
+          <span>toshkent_janubiy / Admin@12345</span>
+          <span>samarqand_vokzal / Admin@12345</span>
+          <span>samarqand_airport / Admin@12345</span>
         </div>
       </section>
     </main>

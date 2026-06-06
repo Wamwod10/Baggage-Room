@@ -1,11 +1,4 @@
-import {
-  getCashMovements,
-  getExpenses,
-  getInkassa,
-  getOrders,
-  getShifts,
-} from "../utils/storage";
-import analyticsService from "./analyticsService";
+import apiClient from "./apiClient";
 
 const download = (filename, content, type = "application/json") => {
   const blob = new Blob([content], { type });
@@ -17,28 +10,27 @@ const download = (filename, content, type = "application/json") => {
   URL.revokeObjectURL(url);
 };
 
+const endpointByType = {
+  orders: "/export/orders",
+  shifts: "/export/shifts",
+  shift: "/export/shifts",
+  finance: "/export/finance",
+};
+
 const exportService = {
-  getPayload(type) {
-    if (type === "orders") return getOrders();
-    if (type === "shifts") return getShifts();
-    if (type === "finance") {
-      return {
-        expenses: getExpenses(),
-        inkassa: getInkassa(),
-        cashMovements: getCashMovements(),
-      };
-    }
-    if (type === "analytics") return analyticsService.getData("all");
-    return {};
+  async getPayload(type) {
+    const endpoint = endpointByType[type] || "/analytics/reports";
+    const response = await apiClient.get(endpoint);
+    return response.data;
   },
 
-  exportJson(type) {
-    const payload = this.getPayload(type);
+  async exportJson(type) {
+    const payload = await this.getPayload(type);
     download(`baggage-room-${type}.json`, JSON.stringify(payload, null, 2));
   },
 
-  exportPdf(type) {
-    const payload = this.getPayload(type);
+  async exportPdf(type) {
+    const payload = await this.getPayload(type);
     const printWindow = window.open("", "_blank", "width=900,height=700");
 
     if (!printWindow) return;

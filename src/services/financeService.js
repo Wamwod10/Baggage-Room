@@ -1,20 +1,30 @@
-import {
-  createInkassa,
-  getCashMovements,
-  getInkassa,
-} from "../utils/storage";
+import apiClient from "./apiClient";
+import branchService from "./branchService";
+import { getItems, mapCashMovement, mapInkassa } from "./apiMappers";
 
 const financeService = {
-  getCashMovements(branchName = null) {
-    return getCashMovements(branchName);
+  async getCashMovements(branchName = null) {
+    const branchId = await branchService.getBranchIdByName(branchName);
+    const response = await apiClient.get("/cash-movements", { params: { branchId, limit: 200 } });
+    return getItems(response).map(mapCashMovement);
   },
 
-  getInkassa(branchName = null) {
-    return getInkassa(branchName);
+  async getInkassa(branchName = null) {
+    const branchId = await branchService.getBranchIdByName(branchName);
+    const response = await apiClient.get("/inkassa", { params: { branchId } });
+    return (response.data || []).map(mapInkassa);
   },
 
-  createInkassa(data) {
-    return createInkassa(data);
+  async createInkassa(data) {
+    const branchId = await branchService.getBranchIdByName(data.branch);
+    const response = await apiClient.post("/inkassa", {
+      branchId,
+      receiverName: data.receiverName || data.receiver,
+      amount: Number(data.amount || 0),
+      currency: data.currency || "UZS",
+      note: data.note || "",
+    });
+    return mapInkassa(response.data);
   },
 };
 

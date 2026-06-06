@@ -8,8 +8,6 @@ import {
   Square,
 } from "lucide-react";
 import shiftService from "../../services/shiftService";
-import baggageService from "../../services/baggageService";
-import expenseService from "../../services/expenseService";
 import financeService from "../../services/financeService";
 import { useAuth } from "../../store/AuthContext";
 import telegramService from "../../services/telegramService";
@@ -66,10 +64,13 @@ export default function Shifts() {
     error,
     retry,
   } = usePageResource(
-    () => ({
-      shifts: shiftService.getAll(effectiveBranch),
-      currentShift: shiftService.getCurrent(branchName),
-    }),
+    async () => {
+      const [shifts, currentShift] = await Promise.all([
+        shiftService.getAll(effectiveBranch),
+        shiftService.getCurrent(branchName),
+      ]);
+      return { shifts, currentShift };
+    },
     [effectiveBranch, branchName, refreshKey],
     emptyShiftData,
   );
@@ -121,51 +122,19 @@ export default function Shifts() {
       };
     }
 
-    const openedTime = new Date(currentShift.openedAt).getTime();
-    const isAfterOpen = (item) =>
-      new Date(item.createdAt || item.openedAt).getTime() >= openedTime;
-    const shiftOrders = baggageService.getAll(branchName).filter(isAfterOpen);
-    const shiftExpenses = expenseService.getAll(branchName).filter(isAfterOpen);
-    const shiftInkassa = financeService.getInkassa(branchName).filter(isAfterOpen);
-    const movements = financeService.getCashMovements(branchName).filter(isAfterOpen);
-    const paidOrders = shiftOrders.filter((order) => order.payment !== "Qarz");
-    const revenue = paidOrders.reduce((sum, order) => sum + getOrderTotal(order), 0);
-    const expenses = shiftExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    const debt = shiftOrders
-      .filter((order) => order.payment === "Qarz" && !order.debtClosedAt)
-      .reduce((sum, order) => sum + Number(order.debtAmount || 0), 0);
-    const inkassa = shiftInkassa.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const paymentTotal = (paymentType) =>
-      shiftOrders
-        .filter((order) => order.payment === paymentType)
-        .reduce((sum, order) => sum + getOrderTotal(order), 0);
-    const normalizePayment = (payment) =>
-      String(payment || "")
-        .replace(/[^\u0020-\u007E]/g, "")
-        .toLowerCase();
-    const transferTotal = shiftOrders
-      .filter((order) => ["o'tkazma", "otkazma"].includes(normalizePayment(order.payment)))
-      .reduce((sum, order) => sum + getOrderTotal(order), 0);
-    const cashIn = movements
-      .filter((item) => item.type === "IN")
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const cashOut = movements
-      .filter((item) => item.type === "OUT")
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
     return {
-      orders: shiftOrders.length,
-      baggage: shiftOrders.reduce((sum, order) => sum + Number(order.count || 0), 0),
-      revenue,
-      expenses,
-      netProfit: revenue - expenses,
-      cash: paymentTotal("Naqd"),
-      card: paymentTotal("Karta"),
-      clickPayme: paymentTotal("Click/Payme"),
-      transfer: transferTotal,
-      debt,
-      inkassa,
-      cashLeft: Number(currentShift.acceptedAmount || currentShift.openingCash || 0) + cashIn - cashOut,
+      orders: 0,
+      baggage: 0,
+      revenue: Number(currentShift.totalRevenue || 0),
+      expenses: Number(currentShift.expenseAmount || currentShift.totalExpense || 0),
+      netProfit: Number(currentShift.totalRevenue || 0) - Number(currentShift.expenseAmount || currentShift.totalExpense || 0),
+      cash: Number(currentShift.cashRevenue || 0),
+      card: Number(currentShift.cardRevenue || 0),
+      clickPayme: 0,
+      transfer: Number(currentShift.transferRevenue || 0),
+      debt: Number(currentShift.debtAmount || 0),
+      inkassa: Number(currentShift.inkassaAmount || currentShift.totalInkassa || 0),
+      cashLeft: Number(currentShift.systemExpectedCash || currentShift.expectedCash || currentShift.openingCash || 0),
     };
   }, [branchName, currentShift, refreshKey]);
 
@@ -192,7 +161,7 @@ export default function Shifts() {
     }
 
     try {
-      const openedShift = shiftService.open({
+      const openedShift = await shiftService.open({
         branch: branchName,
         admin: adminName.trim(),
         shiftTime: selectedShiftTime,
@@ -232,7 +201,7 @@ export default function Shifts() {
   };
 
   const createInkassaRecord = async ({ recipient, amount }) => {
-    const item = financeService.createInkassa({
+    const item = await financeService.createInkassa({
       branch: branchName,
       admin: currentShift?.admin || adminName || "Admin",
       recipient: recipient.trim(),
@@ -288,13 +257,10 @@ export default function Shifts() {
         });
       }
 
-      const updatedShifts = shiftService.close(branchName, {
+      const closedShift = await shiftService.close(branchName, {
         closingCash,
         handoverTo: handoverTo.trim(),
       });
-      const closedShift = updatedShifts.find(
-        (shift) => shift.id === currentShift.id,
-      );
 
       setClosingCash("");
       setHandoverTo("");
