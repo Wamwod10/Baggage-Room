@@ -43,8 +43,11 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
-  padding: 0 0 10px;
-  background: color-mix(in srgb, var(--surface-strong) 82%, #020617);
+  width: 100%;
+  max-width: 304px;
+  margin: 0 auto 10px;
+  padding: 0;
+  background: transparent;
   backdrop-filter: var(--glass-blur-strong);
   -webkit-backdrop-filter: var(--glass-blur-strong);
 }
@@ -53,8 +56,10 @@
 .receipt-print-btn {
   width: 100%;
   min-width: 0;
-  min-height: 40px;
-  border-radius: 16px;
+  height: 52px;
+  min-height: 52px;
+  padding: 0 10px;
+  border-radius: 14px;
   border: none;
   font-size: 14px;
   font-weight: 800;
@@ -68,9 +73,9 @@
 }
 
 .receipt-close-btn {
-  background: color-mix(in srgb, var(--surface-muted) 80%, transparent);
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
-  border: 1px solid var(--border-soft);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .receipt-print-btn {
@@ -345,12 +350,15 @@
   }
 
   .receipt-actions {
+    width: 100%;
+    max-width: 304px;
     gap: 8px;
   }
 
   .receipt-close-btn,
   .receipt-print-btn {
-    min-height: 42px;
+    height: 52px;
+    min-height: 52px;
     padding: 0 8px;
   }
 }
