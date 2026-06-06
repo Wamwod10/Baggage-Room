@@ -18,7 +18,8 @@ const hasLockerPrice = (locker) =>
   locker?.price !== undefined &&
   locker?.price !== null &&
   locker?.price !== "" &&
-  Number.isFinite(Number(locker.price));
+    Number.isFinite(Number(locker.price));
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 export default function SalesHistory() {
   const { t, formatMoney, formatDateTime } = useTranslation();
@@ -46,7 +47,7 @@ export default function SalesHistory() {
   );
 
   const orderFromUrl = useMemo(
-    () => orders.find((order) => order.id === orderIdFromUrl) || null,
+    () => asArray(orders).find((order) => order.id === orderIdFromUrl) || null,
     [orderIdFromUrl, orders],
   );
   const selectedOrder = manualSelectedOrder || orderFromUrl;
@@ -69,7 +70,7 @@ export default function SalesHistory() {
   }, [orderIdFromUrl, selectedOrder, setSearchParams]);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    return asArray(orders).filter((order) => {
       const query = search.toLowerCase();
 
       const matchSearch =
@@ -110,8 +111,8 @@ export default function SalesHistory() {
   };
 
   const lockerLabel = (order) =>
-    (order.lockers || []).map((locker) => `#${locker.number} ${locker.size}`).join(", ") ||
-    `${order.size} / ${order.count} ${t("ta")}`;
+    asArray(order.lockers).map((locker) => `#${locker.number || "-"} ${locker.size || "-"}`).join(", ") ||
+    `${order.size || "-"} / ${order.count || 0} ${t("ta")}`;
 
   const formatCurrency = (order, amount) =>
     order.currency ? formatMoneyByCurrency(amount, order.currency) : formatMoney(amount);
@@ -133,14 +134,20 @@ export default function SalesHistory() {
   };
 
   const handleCloseDebt = async (order) => {
-    await baggageService.closeDebt(order.id, {
-      amount: order.debtAmount,
-      payment: "Naqd",
-      currency: order.currency,
-      admin: "Admin",
-      note: "Debt closed from sales history",
-    });
     const updatedOrder = { ...order, debtAmount: 0 };
+
+    try {
+      await baggageService.closeDebt(order.id, {
+        amount: order.debtAmount,
+        payment: "Naqd",
+        currency: order.currency,
+        admin: "Admin",
+        note: "Debt closed from sales history",
+      });
+    } catch (error) {
+      setStatusMessage(error.message || t("Qarz yopishda xatolik yuz berdi."));
+      return;
+    }
 
     setSelectedOrder(updatedOrder);
     setRefreshKey((value) => value + 1);

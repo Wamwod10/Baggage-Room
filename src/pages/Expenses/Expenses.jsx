@@ -17,6 +17,7 @@ const getInitialForm = (defaultBranch = getBranchNames()[0] || "") => ({
   branch: defaultBranch,
   note: "",
 });
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 export default function Expenses() {
   const { t, formatMoney, formatDateTime } = useTranslation();
@@ -40,8 +41,9 @@ export default function Expenses() {
   );
 
   const totalExpense = useMemo(() => {
-    return expenses.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
+    return asArray(expenses).reduce((sum, item) => sum + Number(item?.amount || 0), 0);
   }, [expenses]);
+  const safeExpenses = asArray(expenses);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -76,8 +78,8 @@ export default function Expenses() {
         amount,
         currency: form.currency || "UZS",
       });
-    } catch {
-      setFormError("Harajatni saqlashda xatolik yuz berdi.");
+    } catch (error) {
+      setFormError(error.message || "Harajatni saqlashda xatolik yuz berdi.");
       return;
     }
 
@@ -90,8 +92,8 @@ export default function Expenses() {
     try {
       await expenseService.delete(id);
       setRefreshKey((value) => value + 1);
-    } catch {
-      setFormError("Harajatni o'chirishda xatolik yuz berdi.");
+    } catch (error) {
+      setFormError(error.message || "Harajatni o'chirishda xatolik yuz berdi.");
     }
   };
 
@@ -190,7 +192,7 @@ export default function Expenses() {
         <div className="expense-list card">
           <div className="expense-list-head">
             <h2>{t("Harajatlar ro'yxati")}</h2>
-            <span>{expenses.length} {t("ta")}</span>
+            <span>{safeExpenses.length} {t("ta")}</span>
           </div>
 
           <div className="expense-items">
@@ -207,7 +209,7 @@ export default function Expenses() {
 
             {isLoading && !error && <ListSkeleton rows={4} />}
 
-            {!isLoading && !error && expenses.length === 0 && (
+            {!isLoading && !error && safeExpenses.length === 0 && (
               <StateBlock
                 type="empty"
                 compact
@@ -216,7 +218,7 @@ export default function Expenses() {
               />
             )}
 
-            {!isLoading && !error && expenses.map((expense) => (
+            {!isLoading && !error && safeExpenses.map((expense) => (
               <div className="expense-item" key={expense.id}>
                 <div>
                   <b>{expense.category || t("Kategoriya yo'q")}</b>

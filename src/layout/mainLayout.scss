@@ -51,11 +51,11 @@
     display: block;
     pointer-events: none;
     opacity: 0;
-    background: rgba(2, 6, 23, 0.52);
+    background: var(--modal-backdrop-bg);
     border: 0;
     border-radius: 0;
-    backdrop-filter: blur(42px) saturate(190%);
-    -webkit-backdrop-filter: blur(42px) saturate(190%);
+    backdrop-filter: var(--modal-backdrop-blur);
+    -webkit-backdrop-filter: var(--modal-backdrop-blur);
     transition: opacity 0.18s ease;
 
     &.open {

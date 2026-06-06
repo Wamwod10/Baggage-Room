@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   CalendarClock,
@@ -15,6 +15,8 @@ import settingsService from "../services/settingsService";
 import { ALL_BRANCHES_LABEL, getBranchNames } from "../utils/branches";
 import { useTranslation } from "../i18n/useTranslation";
 import "./header.scss";
+
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 export default function Header({ onMenuClick }) {
   const { t } = useTranslation();
@@ -51,7 +53,7 @@ export default function Header({ onMenuClick }) {
     notificationService
       .getSmartAlerts(effectiveBranch)
       .then((alerts) => {
-        if (active) setHeaderAlerts(alerts);
+        if (active) setHeaderAlerts(asArray(alerts));
       })
       .catch(() => {
         if (active) setHeaderAlerts([]);
@@ -61,7 +63,9 @@ export default function Header({ onMenuClick }) {
     };
   }, [effectiveBranch, alertRefreshKey]);
 
-  const alertCount = headerAlerts.length;
+  const safeHeaderAlerts = asArray(headerAlerts);
+  const safeResults = asArray(results);
+  const alertCount = safeHeaderAlerts.length;
   const liveDate = useMemo(() => {
     const pad = (value) => String(value).padStart(2, "0");
 
@@ -76,17 +80,14 @@ export default function Header({ onMenuClick }) {
   useEffect(() => {
     let active = true;
     const query = search.trim().toLowerCase();
-    if (!query) {
-      setResults([]);
-      return undefined;
-    }
+    if (!query) return undefined;
 
     baggageService
       .getAll(effectiveBranch)
       .then((orders) => {
         if (!active) return;
         setResults(
-          orders
+          asArray(orders)
             .filter((order) => {
               const searchableFields = [
                 order.id,
@@ -135,6 +136,14 @@ export default function Header({ onMenuClick }) {
     navigate(`/sales-history?order=${orderId}`);
   };
 
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearch(value);
+    if (!value.trim()) {
+      setResults([]);
+    }
+  };
+
   return (
     <header className="header">
       <button
@@ -152,24 +161,24 @@ export default function Header({ onMenuClick }) {
 
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
             placeholder={t("Order, telefon, passport, filial, payment...")}
           />
         </div>
 
-        {results.length > 0 && (
+        {safeResults.length > 0 && (
           <div className="header-search-results">
-            {results.map((order) => (
+            {safeResults.map((order) => (
               <button key={order.id} onClick={() => openResult(order.id)}>
                 <div>
-                  <b>{order.id}</b>
+                  <b>{order.id || "-"}</b>
                   <span>
-                    {order.client} · {order.phone}
+                    {order.client || "-"} - {order.phone || "-"}
                   </span>
                 </div>
 
                 <small>
-                  {t(order.branch)} · {t(order.payment)}
+                  {t(order.branch || "Ma'lumot yo'q")} - {t(order.payment || "-")}
                 </small>
               </button>
             ))}
@@ -258,12 +267,12 @@ export default function Header({ onMenuClick }) {
               </div>
 
               <div className="notification-dropdown-list">
-                {headerAlerts.length === 0 ? (
+                {safeHeaderAlerts.length === 0 ? (
                   <div className="notification-dropdown-empty">
                     {t("Hozircha alert yo'q")}
                   </div>
                 ) : (
-                  headerAlerts.slice(0, 4).map((alert) => (
+                  safeHeaderAlerts.slice(0, 4).map((alert) => (
                     <button
                       key={alert.id}
                       className={`notification-dropdown-item ${alert.type}`}
@@ -273,8 +282,8 @@ export default function Header({ onMenuClick }) {
                         navigate("/notifications");
                       }}
                     >
-                      <b>{alert.title}</b>
-                      <span>{alert.message}</span>
+                      <b>{alert.title || "-"}</b>
+                      <span>{alert.message || "-"}</span>
                     </button>
                   ))
                 )}
@@ -285,9 +294,9 @@ export default function Header({ onMenuClick }) {
 
         <div className="header-user">
           <div>
-            <h4>{t(user?.fullName)}</h4>
+            <h4>{t(user?.fullName || "-")}</h4>
 
-            <p>{isSuperAdmin ? t(activeBranch) : t(user?.branchName)}</p>
+            <p>{isSuperAdmin ? t(activeBranch || ALL_BRANCHES_LABEL) : t(user?.branchName || "-")}</p>
           </div>
 
           <div className="header-avatar">
@@ -298,3 +307,4 @@ export default function Header({ onMenuClick }) {
     </header>
   );
 }
+

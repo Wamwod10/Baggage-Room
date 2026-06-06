@@ -25,11 +25,9 @@ const emptyShiftData = {
   shifts: [],
   currentShift: null,
 };
-
-const getOrderTotal = (order) =>
-  order.realPaidAmount !== undefined && order.realPaidAmount !== null
-    ? Number(order.realPaidAmount || 0)
-    : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
+const asArray = (value) => (Array.isArray(value) ? value : []);
+const fallback = (value, empty = "-") =>
+  value === undefined || value === null || value === "" ? empty : value;
 
 export default function Shifts() {
   const { t, formatDateTime, formatMoney } = useTranslation();
@@ -66,17 +64,18 @@ export default function Shifts() {
   } = usePageResource(
     async () => {
       const [shifts, currentShift] = await Promise.all([
-        shiftService.getAll(effectiveBranch),
+        shiftService.getAll(branchName),
         shiftService.getCurrent(branchName),
       ]);
-      return { shifts, currentShift };
+      return { shifts: asArray(shifts), currentShift: currentShift || null };
     },
     [effectiveBranch, branchName, refreshKey],
     emptyShiftData,
   );
 
-  const shifts = shiftData.shifts || [];
-  const currentShift = shiftData.currentShift || null;
+  const safeShiftData = shiftData && typeof shiftData === "object" ? shiftData : emptyShiftData;
+  const shifts = asArray(safeShiftData.shifts);
+  const currentShift = safeShiftData.currentShift || null;
   const selectedShiftTime = shiftOptions.some((item) => item.label === shiftTime)
     ? shiftTime
     : shiftOptions[0]?.label || "";
@@ -136,10 +135,10 @@ export default function Shifts() {
       inkassa: Number(currentShift.inkassaAmount || currentShift.totalInkassa || 0),
       cashLeft: Number(currentShift.systemExpectedCash || currentShift.expectedCash || currentShift.openingCash || 0),
     };
-  }, [branchName, currentShift, refreshKey]);
+  }, [currentShift, refreshKey]);
 
   const formatCurrencyMap = (items = {}) =>
-    Object.entries(items)
+    Object.entries(items || {})
       .filter(([, amount]) => Number(amount || 0) > 0)
       .map(([currency, amount]) => formatMoneyByCurrency(amount, currency))
       .join(" / ") || formatMoney(0);
@@ -201,6 +200,8 @@ export default function Shifts() {
   };
 
   const createInkassaRecord = async ({ recipient, amount }) => {
+    if (!currentShift) throw new Error(t("Bu filialda ochiq smena yo'q"));
+
     const item = await financeService.createInkassa({
       branch: branchName,
       admin: currentShift?.admin || adminName || "Admin",
@@ -290,7 +291,7 @@ export default function Shifts() {
     const inkassaError = validateInkassa(inkassaRecipient, amount);
 
     if (!currentShift) {
-      setFormError(t("Avval kassani oching. Ochiq shift topilmadi."));
+      setFormError(t("Bu filialda ochiq smena yo'q"));
       return;
     }
 
@@ -310,8 +311,8 @@ export default function Shifts() {
       setFormError("");
       setStatusMessage(`${t("Inkassa saqlandi")}: ${formatMoney(amount)}`);
       refreshData();
-    } catch {
-      setFormError(t("Inkassa saqlashda xatolik yuz berdi."));
+    } catch (error) {
+      setFormError(error.message || t("Inkassa saqlashda xatolik yuz berdi."));
     }
   };
 
@@ -320,7 +321,7 @@ export default function Shifts() {
 
     return `
 ${t("Smenani topshirdi")}:
-${shift.admin} -> ${shift.handoverTo || "-"}
+${fallback(shift.admin)} -> ${fallback(shift.handoverToName || shift.handoverTo)}
 
 ${t("Bugungi")}:
 ${t("Umumiy savdo")}: ${formatMoney(shift.totalRevenue)}
@@ -381,8 +382,8 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
               <h2>{currentShift ? t("Kassa ochiq") : t("Kassa yopiq")}</h2>
               <p>
                 {currentShift
-                  ? `${t(currentShift.branch)} - ${currentShift.admin} - ${currentShift.shiftTime || "-"}`
-                  : t("Hozir aktiv shift mavjud emas")}
+                  ? `${t(fallback(currentShift.branch, "Ma'lumot yo'q"))} - ${fallback(currentShift.admin)} - ${fallback(currentShift.shiftTime)}`
+                  : t("Bu filialda ochiq smena yo'q")}
               </p>
             </div>
           </div>
@@ -390,7 +391,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
           {currentShift && (
             <div className="shift-open-time">
               <span>{t("Opened")}</span>
-              <b>{formatDateTime(currentShift.openedAt)}</b>
+              <b>{currentShift.openedAt ? formatDateTime(currentShift.openedAt) : "-"}</b>
             </div>
           )}
         </div>
@@ -462,9 +463,9 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
           ) : (
             <div className="shift-form">
               <div className="shift-current-box">
-                <div><span>{t("Admin")}</span><b>{currentShift.admin}</b></div>
-                <div><span>{t("Kimdan")}</span><b>{currentShift.receivedFrom || "-"}</b></div>
-                <div><span>{t("Qabul")}</span><b>{formatMoney(currentShift.acceptedAmount)}</b></div>
+                <div><span>{t("Admin")}</span><b>{fallback(currentShift.admin)}</b></div>
+                <div><span>{t("Kimdan")}</span><b>{fallback(currentShift.receivedFrom || currentShift.acceptedFromName)}</b></div>
+                <div><span>{t("Qabul")}</span><b>{formatMoney(currentShift.acceptedAmount || currentShift.acceptedCash || 0)}</b></div>
                 <div><span>{t("Baggage count")}</span><b>{currentStats.baggage} {t("ta")}</b></div>
               </div>
               <label>
@@ -568,15 +569,15 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
 
           {!isLoading && !error && shifts.map((shift) => (
             <div className="shift-history-row" key={shift.id}>
-              <div><b>{t(shift.branch)}</b><small>{shift.admin}</small></div>
-              <div><span>{shift.shiftTime || "-"}</span></div>
-              <div><span>{formatDateTime(shift.openedAt)}</span></div>
+              <div><b>{t(fallback(shift.branch, "Ma'lumot yo'q"))}</b><small>{fallback(shift.admin)}</small></div>
+              <div><span>{fallback(shift.shiftTime)}</span></div>
+              <div><span>{shift.openedAt ? formatDateTime(shift.openedAt) : "-"}</span></div>
               <div><span>{shift.closedAt ? formatDateTime(shift.closedAt) : "-"}</span></div>
               <div><b>{formatMoney(shift.totalRevenue)}</b></div>
               <div><b className="danger">{formatMoney(shift.totalExpense)}</b></div>
               <div><b className="danger">{formatMoney(shift.totalDebt)}</b></div>
               <div><b>{formatMoney(shift.netProfit)}</b></div>
-              <div><strong className={shift.status === "OPEN" ? "open" : "closed"}>{t(shift.status)}</strong></div>
+              <div><strong className={shift.status === "OPEN" ? "open" : "closed"}>{t(fallback(shift.status))}</strong></div>
             </div>
           ))}
         </div>
@@ -595,7 +596,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
 
             <div className="telegram-report-box">
               <h3>{t("Smenani topshirdi")}:</h3>
-              <p>{reportShift.admin} {"->"} {reportShift.handoverTo || "-"}</p>
+              <p>{fallback(reportShift.admin)} {"->"} {fallback(reportShift.handoverToName || reportShift.handoverTo)}</p>
               <div className="report-line" />
               <p>{t("Umumiy savdo")}: {formatMoney(reportShift.totalRevenue)}</p>
               <p>Cash: {formatCurrencyMap(reportShift.report?.cashByCurrency)}</p>

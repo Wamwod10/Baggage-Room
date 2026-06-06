@@ -6,7 +6,7 @@ const shiftService = {
   async getAll(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/shifts", { params: { branchId } });
-    return getArrayData(response).map(mapShift);
+    return getArrayData(response).map(mapShift).filter(Boolean);
   },
 
   async getCurrent(branchName = null) {
@@ -15,29 +15,30 @@ const shiftService = {
       const response = await apiClient.get("/shifts/current", { params: { branchId } });
       return getData(response) ? mapShift(getData(response)) : null;
     } catch (error) {
-      if (error.status === 400 && !branchId) return null;
+      if (error.status === 400 && (!branchId || error.message === "branchId is required")) return null;
       throw error;
     }
   },
 
   async open(data) {
     const branchId = await branchService.getBranchIdByName(data.branch);
+    if (!branchId) throw new Error("Filial tanlanmagan");
     const response = await apiClient.post("/shifts/open", {
       branchId,
       openingCash: Number(data.openingCash || 0),
-      acceptedCash: Number(data.acceptedCash || 0),
-      acceptedFromName: data.acceptedFromName,
-      handoverToName: data.handoverToName,
+      acceptedCash: Number(data.acceptedCash ?? data.acceptedAmount ?? 0),
+      acceptedFromName: data.acceptedFromName || data.receivedFrom || "",
+      handoverToName: data.handoverToName || data.handoverTo || "",
     });
     return mapShift(getData(response));
   },
 
   async close(branchName, data) {
     const current = await this.getCurrent(branchName);
-    if (!current) throw new Error("Ochiq shift topilmadi");
+    if (!current) throw new Error("Bu filialda ochiq smena yo'q");
     const response = await apiClient.post(`/shifts/${current.id}/close`, {
       closingCash: Number(data.closingCash || data.cashLeft || 0),
-      handoverToName: data.handoverToName,
+      handoverToName: data.handoverToName || data.handoverTo || "",
     });
     return mapShift(getData(response));
   },

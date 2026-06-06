@@ -1,5 +1,6 @@
 import apiClient, { TOKEN_KEY } from "./apiClient";
 import { ALL_BRANCHES_LABEL, BRANCH_NAME_BY_CODE } from "../utils/branches";
+import { getData } from "./apiMappers";
 
 const USER_KEY = "br_user";
 
@@ -58,8 +59,9 @@ const login = async (loginName, password) => {
     login: loginName,
     password,
   });
-  const token = response.data?.token;
-  const user = normalizeUser(response.data?.user);
+  const data = getData(response, {});
+  const token = data.token;
+  const user = normalizeUser(data.user);
 
   setToken(token);
   setUser(user);
@@ -69,7 +71,7 @@ const login = async (loginName, password) => {
 
 const me = async () => {
   const response = await apiClient.get("/auth/me");
-  const user = normalizeUser(response.data);
+  const user = normalizeUser(getData(response));
   setUser(user);
   return user;
 };

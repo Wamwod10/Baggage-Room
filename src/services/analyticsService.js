@@ -1,5 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
+import { asArray, getData } from "./apiMappers";
 
 const objectToChart = (object, keyName, valueName) =>
   Object.entries(object || {}).map(([key, value]) => ({
@@ -16,8 +17,8 @@ const analyticsService = {
       apiClient.get("/analytics/reports", { params: { branchId } }),
     ]);
 
-    const dashboardData = dashboard.data || {};
-    const reportData = reports.data || {};
+    const dashboardData = getData(dashboard, {}) || {};
+    const reportData = getData(reports, {}) || {};
     const dailyRevenue = Object.entries(reportData.revenueByDay || {}).map(([date, revenue]) => ({
       date,
       label: date,
@@ -57,7 +58,7 @@ const analyticsService = {
       })),
       bestHour: { label: "-", orders: 0 },
       baggageSizeAnalytics: [],
-      adminPerformance: (reportData.adminActivity || []).map((item) => ({
+      adminPerformance: asArray(reportData.adminActivity).map((item) => ({
         admin: item.user?.name || item.user?.login || "-",
         orders: 0,
         revenue: 0,
@@ -68,8 +69,8 @@ const analyticsService = {
         closed: reportData.debtAnalytics?.closed || 0,
       },
       cashMovementAnalytics: {
-        in: (reportData.cashMovement || []).filter((item) => item.direction === "IN").reduce((sum, item) => sum + Number(item.amount || 0), 0),
-        out: (reportData.cashMovement || []).filter((item) => item.direction === "OUT").reduce((sum, item) => sum + Number(item.amount || 0), 0),
+        in: asArray(reportData.cashMovement).filter((item) => item.direction === "IN").reduce((sum, item) => sum + Number(item.amount || 0), 0),
+        out: asArray(reportData.cashMovement).filter((item) => item.direction === "OUT").reduce((sum, item) => sum + Number(item.amount || 0), 0),
       },
       financeAnalytics: {
         revenue: dashboardData.todayRevenue || 0,

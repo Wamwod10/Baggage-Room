@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./store/AuthContext";
 import { I18nProvider, useTranslation } from "./i18n/useTranslation";
 import { getSettings } from "./utils/storage";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
+import AppLoader from "./components/AppLoader/AppLoader";
 
 import MainLayout from "./layout/MainLayout";
 import Login from "./pages/Login/Login";
@@ -87,7 +88,7 @@ function AppRoutes() {
 function RouteFallback() {
   const { t } = useTranslation();
 
-  return <div className="page">{t("Loading")}</div>;
+  return <AppLoader label={`${t("Loading")}...`} />;
 }
 
 export default function App() {

@@ -1,4 +1,5 @@
 import apiClient from "./apiClient";
+import { getData } from "./apiMappers";
 
 const download = (filename, content, type = "application/json") => {
   const blob = new Blob([content], { type });
@@ -21,7 +22,7 @@ const exportService = {
   async getPayload(type) {
     const endpoint = endpointByType[type] || "/analytics/reports";
     const response = await apiClient.get(endpoint);
-    return response.data;
+    return getData(response, {});
   },
 
   async exportJson(type) {

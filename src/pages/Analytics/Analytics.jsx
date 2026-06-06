@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   BarChart3,
   Briefcase,
@@ -100,7 +100,7 @@ const shortMoneyFormatter = (value) => {
 };
 
 const hasMetricData = (items, keys) =>
-  (items || []).some((item) =>
+  (Array.isArray(items) ? items : []).some((item) =>
     keys.some((key) => Number(item?.[key] || 0) > 0),
   );
 
@@ -108,12 +108,13 @@ const truncateLabel = (value = "", limit = 14) =>
   String(value).length > limit ? `${String(value).slice(0, limit - 1)}...` : value;
 
 function ChartTooltip({ active, payload, label, formatValue, ordersLabel }) {
-  if (!active || !payload?.length) return null;
+  const safePayload = Array.isArray(payload) ? payload : [];
+  if (!active || !safePayload.length) return null;
 
   return (
     <div className="chart-tooltip">
       <b>{label}</b>
-      {payload.map((item) => (
+      {safePayload.map((item) => (
         <span key={`${item.name}-${item.dataKey}`} style={{ "--tip-color": item.color }}>
           {item.name}:{" "}
           {String(item.dataKey).toLowerCase().includes("orders") ||
@@ -176,26 +177,44 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
-  const overview = data.overview;
-  const healthScore = overview.healthScore ?? data.healthScore ?? 0;
+  const safeData = data && typeof data === "object" ? data : emptyAnalyticsData;
+  const overview = safeData.overview || emptyAnalyticsData.overview;
+  const dailyRevenue = Array.isArray(safeData.dailyRevenue) ? safeData.dailyRevenue : [];
+  const paymentAnalytics = Array.isArray(safeData.paymentAnalytics) ? safeData.paymentAnalytics : [];
+  const branchComparison = Array.isArray(safeData.branchComparison) ? safeData.branchComparison : [];
+  const expenseCategories = Array.isArray(safeData.expenseCategories) ? safeData.expenseCategories : [];
+  const peakHours = Array.isArray(safeData.peakHours) ? safeData.peakHours : [];
+  const baggageSizeAnalytics = Array.isArray(safeData.baggageSizeAnalytics) ? safeData.baggageSizeAnalytics : [];
+  const adminPerformance = Array.isArray(safeData.adminPerformance) ? safeData.adminPerformance : [];
+  const problemAnalytics = Array.isArray(safeData.problemAnalytics) ? safeData.problemAnalytics : [];
+  const currencyAnalytics = Array.isArray(safeData.currencyAnalytics) ? safeData.currencyAnalytics : [];
+  const lockerUsage = Array.isArray(safeData.lockerUsage) ? safeData.lockerUsage : [];
+  const branchRanking = Array.isArray(safeData.branchRanking) ? safeData.branchRanking : [];
+  const insights = Array.isArray(safeData.insights) ? safeData.insights : [];
+  const financeAnalytics = safeData.financeAnalytics || {};
+  const debtAnalytics = safeData.debtAnalytics || {};
+  const cashMovementAnalytics = safeData.cashMovementAnalytics || {};
+  const customerAnalytics = safeData.customerAnalytics || {};
+  const shiftAnalytics = safeData.shiftAnalytics || {};
+  const healthScore = overview.healthScore ?? safeData.healthScore ?? 0;
   const hasAnalyticsData =
     overview.totalOrders > 0 ||
     overview.revenue > 0 ||
-    (data.shiftAnalytics?.total || 0) > 0;
+    (shiftAnalytics.total || 0) > 0;
   const hasPeriodFilter = period !== "all";
-  const revenueChartData = data.dailyRevenue || [];
-  const paymentChartData = (data.paymentAnalytics || []).filter(
+  const revenueChartData = dailyRevenue;
+  const paymentChartData = paymentAnalytics.filter(
     (item) => item.amount > 0,
   );
-  const branchChartData = data.branchComparison || [];
+  const branchChartData = branchComparison;
   const expenseChartData =
-    hasMetricData(data.dailyRevenue, ["expenses", "revenue"]) ||
-    !(data.expenseCategories || []).length
-      ? data.dailyRevenue || []
-      : data.expenseCategories || [];
-  const peakHourChartData = data.peakHours || [];
-  const sizeChartData = data.baggageSizeAnalytics || [];
-  const adminChartData = data.adminPerformance || [];
+    hasMetricData(dailyRevenue, ["expenses", "revenue"]) ||
+    !expenseCategories.length
+      ? dailyRevenue
+      : expenseCategories;
+  const peakHourChartData = peakHours;
+  const sizeChartData = baggageSizeAnalytics;
+  const adminChartData = adminPerformance;
   const bestPayment = [...paymentChartData].sort((a, b) => b.amount - a.amount)[0];
   const bestSize = [...sizeChartData].sort((a, b) => b.amount - a.amount)[0];
   const bestAdmin = [...adminChartData].sort((a, b) => b.revenue - a.revenue)[0];
@@ -228,12 +247,12 @@ export default function Analytics() {
     },
     {
       title: t("Qarz"),
-      value: formatMoney(data.debtAnalytics?.amount || overview.debtAmount || 0),
+      value: formatMoney(debtAnalytics?.amount || overview.debtAmount || 0),
       icon: AlertTriangle,
     },
     {
       title: t("Unique customers"),
-      value: `${data.customerAnalytics?.unique || 0} ${t("ta")}`,
+      value: `${customerAnalytics?.unique || 0} ${t("ta")}`,
       icon: UserCheck,
     },
     {
@@ -510,7 +529,7 @@ export default function Analytics() {
           total={formatMoney(overview.totalExpenses)}
           insight={
             hasMetricData(expenseChartData, ["expenses", "amount"])
-              ? `${t("Expense ratio")}: ${data.financeAnalytics?.expenseRatio || 0}%`
+              ? `${t("Expense ratio")}: ${financeAnalytics?.expenseRatio || 0}%`
               : t("Harajat data mavjud emas")
           }
         >
@@ -547,10 +566,10 @@ export default function Analytics() {
           title={t("Peak hours")}
           subtitle={t("00:00-23:00 oralig'ida order count")}
           insight={
-            data.bestHour?.orders > 0
+            safeData.bestHour?.orders > 0
               ? t("Peak: {{time}}, {{orders}} ta order", {
-                  time: data.bestHour.label,
-                  orders: data.bestHour.orders,
+                  time: safeData.bestHour.label,
+                  orders: safeData.bestHour.orders,
                 })
               : t("Peak hour hali shakllanmagan")
           }
@@ -654,7 +673,7 @@ export default function Analytics() {
           </div>
 
           <div className="branch-analytics-list">
-            {data.branchComparison.length === 0 && (
+            {branchComparison.length === 0 && (
               <StateBlock
                 type="empty"
                 compact
@@ -663,7 +682,7 @@ export default function Analytics() {
               />
             )}
 
-            {data.branchComparison.map((branch) => (
+            {branchComparison.map((branch) => (
               <div className="branch-analytics-row" key={branch.branch}>
                 <div className="branch-analytics-main">
                   <h3>{t(branch.branch)}</h3>
@@ -698,7 +717,7 @@ export default function Analytics() {
           </div>
 
           <div className="payment-analytics-list">
-            {data.paymentAnalytics.length === 0 && (
+            {paymentAnalytics.length === 0 && (
               <StateBlock
                 type="empty"
                 compact
@@ -707,7 +726,7 @@ export default function Analytics() {
               />
             )}
 
-            {data.paymentAnalytics.map((item) => (
+            {paymentAnalytics.map((item) => (
               <div className="payment-analytics-item" key={item.payment}>
                 <div className="payment-analytics-top">
                   <span>{t(item.payment)}</span>
@@ -744,7 +763,7 @@ export default function Analytics() {
           </div>
 
           <div className="size-analytics-list">
-            {data.baggageSizeAnalytics.length === 0 && (
+            {baggageSizeAnalytics.length === 0 && (
               <StateBlock
                 type="empty"
                 compact
@@ -753,13 +772,13 @@ export default function Analytics() {
               />
             )}
 
-            {data.baggageSizeAnalytics.map((item) => (
+            {baggageSizeAnalytics.map((item) => (
               <div className="size-analytics-item" key={item.size}>
                 <div>
                   <h3>{t(item.size)}</h3>
 
                   <p>
-                    {item.count} {t("ta")} {t("Baggage")} · {item.orders} {t("order")}
+                    {item.count} {t("ta")} {t("Baggage")} В· {item.orders} {t("order")}
                   </p>
                 </div>
 
@@ -780,7 +799,7 @@ export default function Analytics() {
           </div>
 
           <div className="admin-performance-list">
-            {(data.adminPerformance || []).length === 0 && (
+            {(adminPerformance || []).length === 0 && (
               <StateBlock
                 type="empty"
                 compact
@@ -789,7 +808,7 @@ export default function Analytics() {
               />
             )}
 
-            {(data.adminPerformance || []).map((item) => (
+            {(adminPerformance || []).map((item) => (
               <div className="admin-performance-row" key={item.admin}>
                 <div>
                   <h3>{item.admin}</h3>
@@ -818,7 +837,7 @@ export default function Analytics() {
           </div>
 
           <div className="peak-hours-list">
-            {(data.peakHours || [])
+            {(peakHours || [])
               .filter((item) => item.orders > 0)
               .slice(0, 8)
               .map((item) => (
@@ -832,7 +851,7 @@ export default function Analytics() {
                 </div>
               ))}
 
-            {(data.peakHours || []).filter((item) => item.orders > 0).length ===
+            {(peakHours || []).filter((item) => item.orders > 0).length ===
               0 && (
               <StateBlock
                 type="empty"
@@ -855,7 +874,7 @@ export default function Analytics() {
           </div>
 
           <div className="problem-analytics-list">
-            {(data.problemAnalytics || []).map((item) => (
+            {(problemAnalytics || []).map((item) => (
               <div
                 className={`problem-analytics-row ${item.level}`}
                 key={item.title}
@@ -888,57 +907,57 @@ export default function Analytics() {
           <div className="finance-analytics-grid">
             <div>
               <span>{t("Qarz")}</span>
-              <b>{formatMoney(data.debtAnalytics?.amount)}</b>
+              <b>{formatMoney(debtAnalytics?.amount)}</b>
             </div>
 
             <div>
               <span>{t("Cash in")}</span>
-              <b>{formatMoney(data.cashMovementAnalytics?.in)}</b>
+              <b>{formatMoney(cashMovementAnalytics?.in)}</b>
             </div>
 
             <div>
               <span>{t("Cash out")}</span>
-              <b>{formatMoney(data.cashMovementAnalytics?.out)}</b>
+              <b>{formatMoney(cashMovementAnalytics?.out)}</b>
             </div>
 
             <div>
               <span>{t("Debt closed")}</span>
-              <b>{data.debtAnalytics?.closed || 0}</b>
+              <b>{debtAnalytics?.closed || 0}</b>
             </div>
 
             <div>
               <span>{t("Revenue")}</span>
-              <b>{formatMoney(data.financeAnalytics?.revenue)}</b>
+              <b>{formatMoney(financeAnalytics?.revenue)}</b>
             </div>
 
             <div>
               <span>{t("Expenses")}</span>
-              <b>{formatMoney(data.financeAnalytics?.totalExpenses)}</b>
+              <b>{formatMoney(financeAnalytics?.totalExpenses)}</b>
             </div>
 
             <div>
               <span>{t("Net profit")}</span>
-              <b>{formatMoney(data.financeAnalytics?.netProfit)}</b>
+              <b>{formatMoney(financeAnalytics?.netProfit)}</b>
             </div>
 
             <div>
               <span>{t("Profit margin")}</span>
-              <b>{data.financeAnalytics?.profitMargin || 0}%</b>
+              <b>{financeAnalytics?.profitMargin || 0}%</b>
             </div>
 
             <div>
               <span>{t("Average order")}</span>
-              <b>{formatMoney(Math.round(data.financeAnalytics?.averageOrder || 0))}</b>
+              <b>{formatMoney(Math.round(financeAnalytics?.averageOrder || 0))}</b>
             </div>
 
             <div>
               <span>{t("Average shift revenue")}</span>
-              <b>{formatMoney(Math.round(data.financeAnalytics?.averageShiftRevenue || 0))}</b>
+              <b>{formatMoney(Math.round(financeAnalytics?.averageShiftRevenue || 0))}</b>
             </div>
 
             <div>
               <span>{t("Expense ratio")}</span>
-              <b>{data.financeAnalytics?.expenseRatio || 0}%</b>
+              <b>{financeAnalytics?.expenseRatio || 0}%</b>
             </div>
           </div>
         </div>
@@ -954,7 +973,7 @@ export default function Analytics() {
           </div>
 
           <div className="finance-analytics-grid">
-            {(data.currencyAnalytics || []).map((item) => (
+            {(currencyAnalytics || []).map((item) => (
               <div key={item.currency}>
                 <span>{item.currency}</span>
                 <b>{formatMoneyByCurrency(item.amount, item.currency)}</b>
@@ -974,7 +993,7 @@ export default function Analytics() {
           </div>
 
           <div className="finance-analytics-grid">
-            {(data.lockerUsage || []).map((item) => (
+            {(lockerUsage || []).map((item) => (
               <div key={item.status}>
                 <span>{t(item.status)}</span>
                 <b>{item.count}</b>
@@ -994,7 +1013,7 @@ export default function Analytics() {
           </div>
 
           <div className="branch-ranking-list">
-            {(data.branchRanking || []).map((item, index) => (
+            {(branchRanking || []).map((item, index) => (
               <div className="branch-ranking-row" key={item.branch}>
                 <div className="branch-rank-left">
                   <strong>#{index + 1}</strong>
@@ -1002,7 +1021,7 @@ export default function Analytics() {
                   <div>
                     <h3>{t(item.branch)}</h3>
                     <p>
-                      {item.orders} {t("order")} · {item.delayed} {t("Kechikdi")} ·{" "}
+                      {item.orders} {t("order")} В· {item.delayed} {t("Kechikdi")} В·{" "}
                       {item.cancelled} {t("Cancelled")}
                     </p>
                   </div>
@@ -1030,47 +1049,47 @@ export default function Analytics() {
           <div className="shift-analytics-grid">
             <div>
               <span>{t("Jami shiftlar")}</span>
-              <b>{data.shiftAnalytics?.total || 0}</b>
+              <b>{shiftAnalytics?.total || 0}</b>
             </div>
 
             <div>
               <span>{t("Ochiq shiftlar")}</span>
-              <b>{data.shiftAnalytics?.open || 0}</b>
+              <b>{shiftAnalytics?.open || 0}</b>
             </div>
 
             <div>
               <span>{t("Yopilgan shiftlar")}</span>
-              <b>{data.shiftAnalytics?.closed || 0}</b>
+              <b>{shiftAnalytics?.closed || 0}</b>
             </div>
 
             <div>
               <span>{t("12 soatlik")}</span>
-              <b>{data.shiftAnalytics?.twelveHour || 0}</b>
+              <b>{shiftAnalytics?.twelveHour || 0}</b>
             </div>
 
             <div>
               <span>{t("24 soatlik")}</span>
-              <b>{data.shiftAnalytics?.twentyFourHour || 0}</b>
+              <b>{shiftAnalytics?.twentyFourHour || 0}</b>
             </div>
 
             <div>
               <span>{t("O'rtacha shift savdosi")}</span>
-              <b>{formatMoney(Math.round(data.shiftAnalytics?.averageRevenue || 0))}</b>
+              <b>{formatMoney(Math.round(shiftAnalytics?.averageRevenue || 0))}</b>
             </div>
           </div>
 
-          {data.shiftAnalytics?.bestShift && (
+          {shiftAnalytics?.bestShift && (
             <div className="best-shift-box">
               <span>{t("Eng kuchli shift")}</span>
-              <h3>{t(data.shiftAnalytics.bestShift.branch)}</h3>
+              <h3>{t(shiftAnalytics.bestShift.branch)}</h3>
               <p>
-                {data.shiftAnalytics.bestShift.admin} ·{" "}
-                {data.shiftAnalytics.bestShift.shiftTime || "-"}
+                {shiftAnalytics.bestShift.admin} В·{" "}
+                {shiftAnalytics.bestShift.shiftTime || "-"}
               </p>
               <b>
                 {formatMoney(
-                  data.shiftAnalytics.bestShift.analyticsRevenue ||
-                    data.shiftAnalytics.bestShift.totalRevenue ||
+                  shiftAnalytics.bestShift.analyticsRevenue ||
+                    shiftAnalytics.bestShift.totalRevenue ||
                     0,
                 )}
               </b>
@@ -1089,7 +1108,7 @@ export default function Analytics() {
           </div>
 
           <div className="insights-list">
-            {data.insights.length === 0 && (
+            {insights.length === 0 && (
               <StateBlock
                 type="empty"
                 compact
@@ -1098,7 +1117,7 @@ export default function Analytics() {
               />
             )}
 
-            {data.insights.map((item, index) => (
+            {insights.map((item, index) => (
               <div className="insight-item" key={index}>
                 {t(item)}
               </div>
@@ -1112,3 +1131,4 @@ export default function Analytics() {
     </section>
   );
 }
+

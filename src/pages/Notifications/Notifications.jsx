@@ -22,6 +22,7 @@ const emptyPageData = {
   systemNotifications: [],
   activityLogs: [],
 };
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 export default function Notifications() {
   const { t, formatDateTime } = useTranslation();
@@ -40,9 +41,10 @@ export default function Notifications() {
     emptyPageData,
   );
 
-  const notifications = [...pageData.alerts, ...pageData.systemNotifications];
+  const safePageData = pageData && typeof pageData === "object" ? pageData : emptyPageData;
+  const notifications = [...asArray(safePageData.alerts), ...asArray(safePageData.systemNotifications)];
 
-  const activityLogs = pageData.activityLogs;
+  const activityLogs = asArray(safePageData.activityLogs);
 
   const dangerCount = notifications.filter(
     (item) => item.type === "danger",
@@ -202,14 +204,14 @@ export default function Notifications() {
             {activityLogs.map((log) => (
               <div className="activity-log-item" key={log.id}>
                 <div>
-                  <b>{log.action}</b>
-                  <p>{log.description}</p>
+                  <b>{log.action || "-"}</b>
+                  <p>{log.description || "-"}</p>
                 </div>
 
                 <div>
-                  <span>{log.branch}</span>
+                  <span>{log.branch || "-"}</span>
                   <small>
-                    {formatDateTime(log.createdAt)}
+                    {log.createdAt ? formatDateTime(log.createdAt) : "-"}
                   </small>
                 </div>
               </div>

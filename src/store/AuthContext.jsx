@@ -94,7 +94,7 @@ export function AuthProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [applyUser, logout]);
+  }, [applyUser, hydrateBranches, logout]);
 
   useEffect(() => {
     window.addEventListener(AUTH_EVENT, logout);
@@ -111,9 +111,11 @@ export function AuthProvider({ children }) {
       applyUser(authenticatedUser);
       return authenticatedUser;
     } catch (error) {
-      throw new Error(error.message || "Login yoki parol noto'g'ri");
+      throw new Error(error.message || "Login yoki parol noto'g'ri", {
+        cause: error,
+      });
     }
-  }, [applyUser]);
+  }, [applyUser, hydrateBranches]);
 
   const setActiveBranch = useCallback((branchName) => {
     const allowedBranches = [ALL_BRANCHES_LABEL, ...getBranchNames()];

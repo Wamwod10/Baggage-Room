@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Briefcase,
@@ -49,6 +49,7 @@ const emptyDashboardData = {
   activityLogs: [],
   smartAlerts: [],
 };
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 export default function Dashboard() {
   const { t, formatMoney } = useTranslation();
@@ -79,9 +80,17 @@ export default function Dashboard() {
     }));
   }, [effectiveBranch, refreshKey], emptyDashboardData);
 
+  const safeData = data && typeof data === "object" ? data : emptyDashboardData;
+  const safeStats = safeData.stats || emptyDashboardData.stats;
+  const orders = asArray(safeData.orders);
+  const lockers = asArray(safeData.lockers);
+  const currentShifts = asArray(safeData.currentShifts);
+  const activityLogs = asArray(safeData.activityLogs);
+  const smartAlerts = asArray(safeData.smartAlerts);
+
   const branches = (effectiveBranch ? [effectiveBranch] : getBranchNames()).map(
     (branch) => {
-      const branchOrders = data.orders.filter((order) => order.branch === branch);
+      const branchOrders = orders.filter((order) => order.branch === branch);
       const revenue = branchOrders.reduce(
         (sum, order) =>
           sum +
@@ -92,7 +101,7 @@ export default function Dashboard() {
       );
       const active = branchOrders.filter((order) => order.status === "Aktiv").length;
       const delayed = branchOrders.filter((order) => order.status === "Kechikdi").length;
-      const freeLockers = (data.lockers || []).filter(
+      const freeLockers = lockers.filter(
         (locker) => locker.branch === branch && locker.status === "Bosh",
       ).length;
 
@@ -106,56 +115,56 @@ export default function Dashboard() {
     },
   );
 
-  const activities = data.activityLogs
+  const activities = activityLogs
     .slice(0, 5)
     .map((log) => `${log.description}`);
 
   const statCards = [
     {
       title: t("Bugungi savdo"),
-      value: formatMoney(data.stats.revenue),
+      value: formatMoney(safeStats.revenue),
       icon: TrendingUp,
       action: () => navigate("/sales-history"),
     },
     {
       title: t("Aktiv baggage"),
-      value: `${data.stats.active} ${t("ta")}`,
+      value: `${safeStats.active} ${t("ta")}`,
       icon: Briefcase,
       action: () => navigate("/active-baggage"),
     },
     {
       title: t("Bugungi klientlar"),
-      value: `${data.stats.ordersCount} ${t("ta")}`,
+      value: `${safeStats.ordersCount} ${t("ta")}`,
       icon: Users,
       action: () => navigate("/sales-history"),
     },
     {
       title: t("Sof foyda"),
-      value: formatMoney(data.stats.netProfit),
+      value: formatMoney(safeStats.netProfit),
       icon: Wallet,
       action: () => navigate("/expenses"),
     },
     {
       title: t("Qarz"),
-      value: formatMoney(data.stats.debt),
+      value: formatMoney(safeStats.debt),
       icon: AlertTriangle,
       action: () => navigate("/active-baggage"),
     },
     {
       title: t("Bosh yacheyka"),
-      value: `${data.stats.freeLockers} ${t("ta")}`,
+      value: `${safeStats.freeLockers} ${t("ta")}`,
       icon: Archive,
       action: () => navigate("/new-baggage"),
     },
     {
       title: t("Kechikkan"),
-      value: `${data.stats.delayedLockers} ${t("ta")}`,
+      value: `${safeStats.delayedLockers} ${t("ta")}`,
       icon: Clock3,
       action: () => navigate("/active-baggage"),
     },
     {
       title: t("Inkassa"),
-      value: formatMoney(data.stats.inkassa),
+      value: formatMoney(safeStats.inkassa),
       icon: CreditCard,
       action: () => navigate("/shifts"),
     },
@@ -223,22 +232,22 @@ export default function Dashboard() {
               <span>{t("Kassa holati")}</span>
               <h2>
                 {effectiveBranch
-                  ? data.currentShift
+                  ? safeData.currentShift
                     ? t("Kassa ochiq")
                     : t("Kassa yopiq")
-                  : `${data.currentShifts.length} ${t("ta kassa ochiq")}`}
+                  : `${currentShifts.length} ${t("ta kassa ochiq")}`}
               </h2>
               <p>
-                {effectiveBranch && data.currentShift
-                  ? `${t(data.currentShift.branch)} · ${data.currentShift.admin}`
+                {effectiveBranch && safeData.currentShift
+                  ? `${t(safeData.currentShift.branch || "Ma'lumot yo'q")} - ${safeData.currentShift.admin || "-"}`
                   : effectiveBranch
                     ? t("Hozir ochiq shift mavjud emas")
                     : t("Barcha filiallar bo'yicha umumiy holat")}
               </p>
             </div>
 
-            <b className={data.currentShifts.length ? "open" : "closed"}>
-              {data.currentShifts.length ? t("Opened") : t("Closed")}
+            <b className={currentShifts.length ? "open" : "closed"}>
+              {currentShifts.length ? t("Opened") : t("Closed")}
             </b>
           </div>
 
@@ -282,33 +291,33 @@ export default function Dashboard() {
               <div className="payment-list">
                 <div>
                   <span>{t("Naqd")}</span>
-                  <b>{formatMoney(data.stats.cash)}</b>
+                  <b>{formatMoney(safeStats.cash)}</b>
                 </div>
                 <div>
                   <span>{t("Karta")}</span>
-                  <b>{formatMoney(data.stats.card)}</b>
+                  <b>{formatMoney(safeStats.card)}</b>
                 </div>
                 <div>
                   <span>Click/Payme</span>
-                  <b>{formatMoney(data.stats.clickPayme)}</b>
+                  <b>{formatMoney(safeStats.clickPayme)}</b>
                 </div>
                 <div>
                   <span>{t("Qarz")}</span>
-                  <b>{formatMoney(data.stats.debt)}</b>
+                  <b>{formatMoney(safeStats.debt)}</b>
                 </div>
                 <div>
                   <span>{t("Inkassa")}</span>
-                  <b>{formatMoney(data.stats.inkassa)}</b>
+                  <b>{formatMoney(safeStats.inkassa)}</b>
                 </div>
                 <div>
                   <span>{t("Cash in")}</span>
-                  <b>{formatMoney(data.stats.cashMovementIn)}</b>
+                  <b>{formatMoney(safeStats.cashMovementIn)}</b>
                 </div>
                 <div>
                   <span>{t("Cash out")}</span>
-                  <b>{formatMoney(data.stats.cashMovementOut)}</b>
+                  <b>{formatMoney(safeStats.cashMovementOut)}</b>
                 </div>
-                {Object.entries(data.stats.currencyTotals || {}).map(([currency, amount]) => (
+                {Object.entries(safeStats.currencyTotals || {}).map(([currency, amount]) => (
                   <div key={currency}>
                     <span>{currency}</span>
                     <b>{formatMoneyByCurrency(amount, currency)}</b>
@@ -316,7 +325,7 @@ export default function Dashboard() {
                 ))}
                 <div>
                   <span>{t("O'tkazma")}</span>
-                  <b>{formatMoney(data.stats.transfer)}</b>
+                  <b>{formatMoney(safeStats.transfer)}</b>
                 </div>
               </div>
             </div>
@@ -358,13 +367,13 @@ export default function Dashboard() {
               </div>
 
               <div className="alert-list">
-                {data.smartAlerts.slice(0, 4).map((item) => (
+                {smartAlerts.slice(0, 4).map((item) => (
                   <div className={`alert ${item.type}`} key={item.id}>
                     {item.title}: {item.message}
                   </div>
                 ))}
 
-                {data.smartAlerts.length === 0 && (
+                {smartAlerts.length === 0 && (
                   <StateBlock
                     type="bell"
                     compact
@@ -380,3 +389,4 @@ export default function Dashboard() {
     </section>
   );
 }
+

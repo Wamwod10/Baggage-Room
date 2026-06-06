@@ -387,6 +387,56 @@ body.dark .header-notification-dropdown {
     color-mix(in srgb, var(--dropdown-bg) 98%, #020617) !important;
 }
 
+.modal-backdrop,
+.receipt-preview-backdrop,
+.active-modal-backdrop,
+.receipt-backdrop,
+.order-modal-backdrop,
+.locker-modal-backdrop,
+.locker-service-backdrop,
+.shift-report-backdrop {
+  background: var(--modal-backdrop-bg) !important;
+  backdrop-filter: var(--modal-backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--modal-backdrop-blur) !important;
+}
+
+.modal,
+.receipt-preview-modal,
+.active-modal,
+.order-modal,
+.locker-modal,
+.locker-service-modal {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 14%, transparent), transparent 46%),
+    var(--modal-surface-bg) !important;
+  border-color: color-mix(in srgb, var(--glass-edge) 86%, transparent) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 20%, transparent),
+    var(--shadow-panel) !important;
+  backdrop-filter: var(--glass-blur-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur-strong) !important;
+}
+
+.glass-select__menu,
+.header-branch-menu,
+.header-search-results,
+.header-notification-dropdown {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent 46%),
+    color-mix(in srgb, var(--dropdown-bg) 99%, var(--surface-strong)) !important;
+  backdrop-filter: blur(54px) saturate(205%) !important;
+  -webkit-backdrop-filter: blur(54px) saturate(205%) !important;
+}
+
+body.dark .glass-select__menu,
+body.dark .header-branch-menu,
+body.dark .header-search-results,
+body.dark .header-notification-dropdown {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 44%),
+    color-mix(in srgb, var(--dropdown-bg) 94%, #0b0d14) !important;
+}
+
 .header-branch-menu button:hover,
 .header-search-results button:hover,
 .notification-dropdown-item:hover {

@@ -46,6 +46,7 @@ const cashTypeMap = {
   MANUAL_CORRECTION: "manual correction",
 };
 
+const fallbackText = "-";
 const toPaymentType = (payment) => reversePaymentMap[payment] || payment || "CASH";
 const toStatusLabel = (status) => statusMap[status] || status;
 const toLockerStatusLabel = (status) => lockerStatusMap[status] || status;
@@ -67,8 +68,8 @@ const mapLocker = (locker) => {
   return {
     ...locker,
     branch,
-    number: locker.number,
-    size: locker.size,
+    number: locker.number ?? fallbackText,
+    size: locker.size || fallbackText,
     status: toLockerStatusLabel(locker.status),
     apiStatus: locker.status,
     activeOrderId: locker.currentOrderId,
@@ -93,25 +94,25 @@ const mapOrder = (order) => {
 
   return {
     ...order,
-    id: order.id,
-    orderNumber: order.orderNumber,
-    displayId: order.orderNumber,
-    client: order.clientName,
-    phone: order.phone,
-    passport: order.passport,
-    branch,
+    id: order.id || order.orderNumber || fallbackText,
+    orderNumber: order.orderNumber || order.id || fallbackText,
+    displayId: order.orderNumber || order.id || fallbackText,
+    client: order.clientName || order.client || fallbackText,
+    phone: order.phone || fallbackText,
+    passport: order.passport || "",
+    branch: branch || fallbackText,
     branchId: order.branchId,
     status: toStatusLabel(order.status),
     apiStatus: order.status,
-    payment: paymentMap[order.paymentType] || order.paymentType,
-    paymentType: order.paymentType,
+    payment: paymentMap[order.paymentType] || order.paymentType || fallbackText,
+    paymentType: order.paymentType || "CASH",
     checkIn: order.checkIn,
     checkOut: order.plannedCheckOut,
     plannedCheckOut: order.plannedCheckOut,
     pickupAt: order.realPickupTime,
     lockers,
     count: lockers.length,
-    size: lockers.map((locker) => locker.size).join(", "),
+    size: lockers.map((locker) => locker.size).filter(Boolean).join(", ") || order.size || fallbackText,
     calculatedAmount: order.calculatedAmount,
     discount: order.discountAmount,
     discountAmount: order.discountAmount,
@@ -120,60 +121,114 @@ const mapOrder = (order) => {
     realPaidAmount: order.realPaidAmount,
     overtimeAmount: order.overtimeAmount,
     overtimeHours: order.overtimeHours,
-    currency: order.currency,
+    currency: order.currency || "UZS",
     note: order.note,
     cancelReason: order.cancelReason,
     debtAmount: order.debt?.status === "OPEN" ? order.debt.amount : 0,
     debtId: order.debt?.id,
     debtStatus: order.debt?.status,
-    admin: order.createdBy?.name,
+    admin: order.createdBy?.name || order.createdBy?.login || order.admin || fallbackText,
   };
 };
 
-const mapExpense = (expense) => ({
+const mapExpense = (expense = {}) => ({
   ...expense,
-  branch: branchService.getBranchName(expense.branch),
-  admin: expense.createdBy?.name,
+  branch: branchService.getBranchName(expense.branch) || expense.branch || fallbackText,
+  category: expense.category || fallbackText,
+  amount: Number(expense.amount || 0),
+  currency: expense.currency || "UZS",
+  admin: expense.createdBy?.name || expense.createdBy?.login || fallbackText,
 });
 
-const mapInkassa = (item) => ({
+const mapInkassa = (item = {}) => ({
   ...item,
-  branch: branchService.getBranchName(item.branch),
-  receiver: item.receiverName,
-  admin: item.createdBy?.name,
+  branch: branchService.getBranchName(item.branch) || item.branch || fallbackText,
+  receiver: item.receiverName || item.receiver || fallbackText,
+  receiverName: item.receiverName || item.receiver || fallbackText,
+  amount: Number(item.amount || 0),
+  currency: item.currency || "UZS",
+  admin: item.createdBy?.name || item.createdBy?.login || fallbackText,
 });
 
-const mapCashMovement = (item) => ({
+const mapCashMovement = (item = {}) => ({
   ...item,
-  branch: branchService.getBranchName(item.branch),
-  type: cashDirectionMap[item.direction] || item.direction,
-  source: cashTypeMap[item.type] || item.type,
-  payment: paymentMap[item.paymentType] || item.paymentType,
-  orderNumber: item.order?.orderNumber,
-  client: item.order?.clientName,
-  admin: item.createdBy?.name,
+  branch: branchService.getBranchName(item.branch) || item.branch || fallbackText,
+  type: cashDirectionMap[item.direction] || item.direction || fallbackText,
+  source: cashTypeMap[item.type] || item.type || fallbackText,
+  payment: paymentMap[item.paymentType] || item.paymentType || fallbackText,
+  amount: Number(item.amount || 0),
+  currency: item.currency || "UZS",
+  orderNumber: item.order?.orderNumber || fallbackText,
+  client: item.order?.clientName || fallbackText,
+  admin: item.createdBy?.name || item.createdBy?.login || fallbackText,
 });
 
-const mapShift = (shift) => ({
-  ...shift,
-  branch: branchService.getBranchName(shift.branch),
-  openedBy: shift.openedBy?.name,
-  closedBy: shift.closedBy?.name,
-  totalExpense: shift.expenseAmount,
-  totalInkassa: shift.inkassaAmount,
-  expectedCash: shift.systemExpectedCash,
-});
+const mapShift = (shift) => {
+  if (!shift) return null;
+  const openedByName = shift.openedBy?.name || shift.openedBy?.login || shift.admin || fallbackText;
+  const closedByName = shift.closedBy?.name || shift.closedBy?.login || shift.closedByName || fallbackText;
+  const acceptedCash = Number(shift.acceptedCash ?? shift.acceptedAmount ?? 0);
+  const openingCash = Number(shift.openingCash || 0);
+  const expenseAmount = Number(shift.expenseAmount ?? shift.totalExpense ?? 0);
+  const inkassaAmount = Number(shift.inkassaAmount ?? shift.totalInkassa ?? 0);
+  const totalRevenue = Number(shift.totalRevenue || 0);
+  const debtAmount = Number(shift.debtAmount ?? shift.totalDebt ?? 0);
+  const systemExpectedCash = Number(
+    shift.systemExpectedCash ??
+      shift.expectedCash ??
+      shift.cashLeft ??
+      openingCash + acceptedCash,
+  );
 
-const mapNotification = (notification) => ({
+  return {
+    ...shift,
+    branch: branchService.getBranchName(shift.branch) || shift.branch || fallbackText,
+    admin: openedByName,
+    openedBy: openedByName,
+    openedByName,
+    openedByLogin: shift.openedBy?.login || "",
+    closedBy: closedByName,
+    closedByName,
+    closedByLogin: shift.closedBy?.login || "",
+    acceptedFromName: shift.acceptedFromName || shift.receivedFrom || fallbackText,
+    receivedFrom: shift.acceptedFromName || shift.receivedFrom || fallbackText,
+    acceptedCash,
+    acceptedAmount: acceptedCash,
+    openingCash,
+    closingCash: Number(shift.closingCash || 0),
+    totalRevenue,
+    cashRevenue: Number(shift.cashRevenue || 0),
+    cardRevenue: Number(shift.cardRevenue || 0),
+    transferRevenue: Number(shift.transferRevenue || 0),
+    debtAmount,
+    totalDebt: debtAmount,
+    expenseAmount,
+    totalExpense: expenseAmount,
+    inkassaAmount,
+    totalInkassa: inkassaAmount,
+    systemExpectedCash,
+    expectedCash: systemExpectedCash,
+    cashLeft: Number(shift.cashLeft ?? shift.closingCash ?? systemExpectedCash),
+    netProfit: Number(shift.netProfit ?? totalRevenue - expenseAmount),
+    status: shift.status || "OPEN",
+    shiftTime: shift.shiftTime || fallbackText,
+  };
+};
+
+const mapNotification = (notification = {}) => ({
   ...notification,
-  branch: branchService.getBranchName(notification.branch),
+  id: notification.id || `${notification.type || "INFO"}-${notification.createdAt || notification.title || "notification"}`,
+  title: notification.title || fallbackText,
+  message: notification.message || fallbackText,
+  branch: branchService.getBranchName(notification.branch) || notification.branch || fallbackText,
   read: notification.isRead,
   type: String(notification.type || "INFO").toLowerCase(),
 });
 
-const mapTariff = (tariff) => ({
+const mapTariff = (tariff = {}) => ({
   ...tariff,
-  branch: branchService.getBranchName(tariff.branch),
+  branch: branchService.getBranchName(tariff.branch) || tariff.branch || fallbackText,
+  size: tariff.size || fallbackText,
 });
 
 export {

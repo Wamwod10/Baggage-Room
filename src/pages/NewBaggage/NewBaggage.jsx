@@ -239,10 +239,15 @@ export default function NewBaggage() {
 
     const locker = serviceLocker;
     const reason = serviceReason.trim();
-    await lockerService.block(locker.branch, locker.number, {
-      reason,
-      admin: user?.fullName,
-    });
+    try {
+      await lockerService.block(locker.branch, locker.number, {
+        reason,
+        admin: user?.fullName,
+      });
+    } catch (error) {
+      setMessage(error.message || t("Yacheykani servisga o'tkazishda xatolik yuz berdi."));
+      return;
+    }
     if (selectedLocker?.id === locker.id) {
       setSelectedLocker(null);
       setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));
@@ -259,9 +264,14 @@ export default function NewBaggage() {
   };
 
   const handleUnblockLocker = async (locker) => {
-    await lockerService.unblock(locker.branch, locker.number, {
-      admin: user?.fullName,
-    });
+    try {
+      await lockerService.unblock(locker.branch, locker.number, {
+        admin: user?.fullName,
+      });
+    } catch (error) {
+      setMessage(error.message || t("Yacheykani qaytarishda xatolik yuz berdi."));
+      return;
+    }
     setRefreshKey((value) => value + 1);
   };
 

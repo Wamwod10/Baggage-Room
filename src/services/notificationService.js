@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { getItems, mapNotification } from "./apiMappers";
+import { asArray, getData, getItems, mapNotification } from "./apiMappers";
 
 const notificationService = {
   async getAlerts(branchName = null) {
@@ -17,18 +17,18 @@ const notificationService = {
 
   async getSmartAlerts(branchName = null) {
     const alerts = await this.getAlerts(branchName);
-    return alerts.filter((item) => !item.isRead).slice(0, 20);
+    return asArray(alerts).filter((item) => !item.isRead).slice(0, 20);
   },
 
   async markRead(id) {
     const response = await apiClient.patch(`/notifications/${id}/read`);
-    return mapNotification(response.data ?? response);
+    return mapNotification(getData(response));
   },
 
   async markAllRead(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.patch("/notifications/read-all", { branchId });
-    return response.data ?? response;
+    return getData(response);
   },
 
   async checkDelayedTelegramAlerts() {
@@ -40,7 +40,7 @@ const notificationService = {
       this.getSmartAlerts(branchName),
       this.getActivityLogs(branchName),
     ]);
-    return { alerts, systemNotifications: alerts, activityLogs };
+    return { alerts: asArray(alerts), systemNotifications: [], activityLogs: asArray(activityLogs) };
   },
 };
 

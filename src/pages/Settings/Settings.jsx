@@ -72,7 +72,7 @@ const tariffHours = [1, 12, 24, 48, 72];
 const tariffSizes = ["S", "M", "L"];
 
 export default function Settings() {
-  const { t, language, setLanguage, formatDateTime } = useTranslation();
+  const { t, language, setLanguage } = useTranslation();
   const branchNames = getBranchNames();
   const [settings, setSettings] = useState(fallbackSettings);
   const [message, setMessage] = useState("");
@@ -254,8 +254,8 @@ export default function Settings() {
 
     try {
       const tariffUpdates = [];
-      for (const [branch, tariff] of Object.entries(settings.branchTariffs || {})) {
-        for (const [size, values] of Object.entries(tariff.sizes || {})) {
+      for (const [, tariff] of Object.entries(settings.branchTariffs || {})) {
+        for (const [, values] of Object.entries(tariff.sizes || {})) {
           if (!values.id) continue;
           tariffUpdates.push(
             settingsService.updateTariff(values.id, {
@@ -302,8 +302,8 @@ export default function Settings() {
       });
       setLanguage(savedSettings.language);
       setMessage(t("Settings saqlandi"));
-    } catch {
-      setMessage(t("Settings saqlashda xatolik yuz berdi."));
+    } catch (error) {
+      setMessage(error.message || t("Settings saqlashda xatolik yuz berdi."));
     }
   };
 
@@ -329,8 +329,8 @@ export default function Settings() {
       await telegramService.test(firstBranch.id);
 
       setTestStatus(t("Test xabar Telegram groupga yuborildi"));
-    } catch {
-      setTestStatus(t("Telegram bilan ulanishda xatolik yuz berdi"));
+    } catch (error) {
+      setTestStatus(error.message || t("Telegram bilan ulanishda xatolik yuz berdi"));
     }
   };
 

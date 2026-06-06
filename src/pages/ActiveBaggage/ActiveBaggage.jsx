@@ -194,12 +194,18 @@ export default function ActiveBaggage() {
       return;
     }
 
-    const updatedOrder = await baggageService.pickup(pickupOrder.id, {
-      ...pickupForm,
-      overtimeAmount: pickupOrder.overtimeAmount || 0,
-      debtPaidAmount: pickupOrder.debtAmount || undefined,
-      admin: user?.fullName,
-    });
+    let updatedOrder;
+    try {
+      updatedOrder = await baggageService.pickup(pickupOrder.id, {
+        ...pickupForm,
+        overtimeAmount: pickupOrder.overtimeAmount || 0,
+        debtPaidAmount: pickupOrder.debtAmount || undefined,
+        admin: user?.fullName,
+      });
+    } catch (error) {
+      setFormError(error.message || t("Pickup tasdiqlashda xatolik yuz berdi."));
+      return;
+    }
 
     setRefreshKey((value) => value + 1);
     setPickupOrder(null);
@@ -215,13 +221,18 @@ export default function ActiveBaggage() {
   };
 
   const handleCloseDebt = async (order) => {
-    await baggageService.closeDebt(order.id, {
-      amount: order.debtAmount,
-      payment: "Naqd",
-      currency: order.currency,
-      admin: user?.fullName,
-      note: "Debt closed from active baggage",
-    });
+    try {
+      await baggageService.closeDebt(order.id, {
+        amount: order.debtAmount,
+        payment: "Naqd",
+        currency: order.currency,
+        admin: user?.fullName,
+        note: "Debt closed from active baggage",
+      });
+    } catch (error) {
+      setFormError(error.message || t("Qarz yopishda xatolik yuz berdi."));
+      return;
+    }
     const updatedOrder = { ...order, debtAmount: 0 };
     setRefreshKey((value) => value + 1);
 
@@ -246,7 +257,13 @@ export default function ActiveBaggage() {
       return;
     }
 
-    const cancelledOrder = await baggageService.cancel(cancelOrder.id, cancelReason.trim());
+    let cancelledOrder;
+    try {
+      cancelledOrder = await baggageService.cancel(cancelOrder.id, cancelReason.trim());
+    } catch (error) {
+      setFormError(error.message || t("Orderni bekor qilishda xatolik yuz berdi."));
+      return;
+    }
 
     setRefreshKey((value) => value + 1);
     setSelectedOrder(null);
@@ -261,7 +278,13 @@ export default function ActiveBaggage() {
   };
 
   const handleReprint = async (orderId) => {
-    const order = await baggageService.reprint(orderId);
+    let order;
+    try {
+      order = await baggageService.reprint(orderId);
+    } catch (error) {
+      setFormError(error.message || t("Chekni qayta chiqarishda xatolik yuz berdi."));
+      return;
+    }
 
     setRefreshKey((value) => value + 1);
     setReceiptOrder(order);
@@ -300,10 +323,16 @@ export default function ActiveBaggage() {
       return;
     }
 
-    const updatedOrder = await baggageService.transfer(transferOrder.id, {
-      ...transferForm,
-      admin: user?.fullName || "Admin",
-    });
+    let updatedOrder;
+    try {
+      updatedOrder = await baggageService.transfer(transferOrder.id, {
+        ...transferForm,
+        admin: user?.fullName || "Admin",
+      });
+    } catch (error) {
+      setFormError(error.message || t("Transfer saqlashda xatolik yuz berdi."));
+      return;
+    }
     const transfer = updatedOrder.transferHistory?.at(-1);
 
     setRefreshKey((value) => value + 1);
