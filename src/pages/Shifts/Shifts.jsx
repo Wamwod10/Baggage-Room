@@ -240,6 +240,23 @@ export default function Shifts() {
       setPendingAction("");
     };
 
+    if (!handoverTo.trim()) {
+      fail(t("Kimga topshirilishini kiriting."));
+      return;
+    }
+
+    if (closingCash === "") {
+      fail(t("Closing cash summasini kiriting."));
+      return;
+    }
+
+    const closingCashAmount = Number(closingCash);
+
+    if (!Number.isFinite(closingCashAmount)) {
+      fail(t("Closing cash summasini to'g'ri kiriting."));
+      return;
+    }
+
     if (closingCash !== "" && Number(closingCash) < 0) {
       fail(t("Closing cash manfiy bo'lishi mumkin emas."));
       return;
