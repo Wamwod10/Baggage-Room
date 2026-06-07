@@ -48,8 +48,10 @@ const emptyDashboardData = {
   currentShifts: [],
   activityLogs: [],
   smartAlerts: [],
+  branchSummary: [],
 };
 const asArray = (value) => (Array.isArray(value) ? value : []);
+const toNumber = (value) => Number(value ?? 0) || 0;
 
 export default function Dashboard() {
   const { t, formatMoney } = useTranslation();
@@ -81,15 +83,23 @@ export default function Dashboard() {
   }, [effectiveBranch, refreshKey], emptyDashboardData);
 
   const safeData = data && typeof data === "object" ? data : emptyDashboardData;
-  const safeStats = safeData.stats || emptyDashboardData.stats;
+  const safeStats = { ...emptyDashboardData.stats, ...(safeData.stats || {}) };
   const orders = asArray(safeData.orders);
   const lockers = asArray(safeData.lockers);
   const currentShifts = asArray(safeData.currentShifts);
   const activityLogs = asArray(safeData.activityLogs);
   const smartAlerts = asArray(safeData.smartAlerts);
 
-  const branches = (effectiveBranch ? [effectiveBranch] : getBranchNames()).map(
-    (branch) => {
+  const summaryBranches = asArray(safeData.branchSummary);
+  const branches = summaryBranches.length
+    ? summaryBranches.map((branch) => ({
+        name: branch.name || "-",
+        revenue: toNumber(branch.revenue),
+        active: toNumber(branch.active ?? branch.activeOrders),
+        delayed: toNumber(branch.delayed ?? branch.delayedOrders),
+        freeLockers: toNumber(branch.freeLockers ?? branch.emptyLockers),
+      }))
+    : (effectiveBranch ? [effectiveBranch] : getBranchNames()).map((branch) => {
       const branchOrders = orders.filter((order) => order.branch === branch);
       const revenue = branchOrders.reduce(
         (sum, order) =>
@@ -112,8 +122,7 @@ export default function Dashboard() {
         delayed,
         freeLockers,
       };
-    },
-  );
+    });
 
   const activities = activityLogs
     .slice(0, 5)

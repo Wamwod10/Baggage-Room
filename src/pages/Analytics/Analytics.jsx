@@ -178,7 +178,7 @@ export default function Analytics() {
   }, []);
 
   const safeData = data && typeof data === "object" ? data : emptyAnalyticsData;
-  const overview = safeData.overview || emptyAnalyticsData.overview;
+  const overview = { ...emptyAnalyticsData.overview, ...(safeData.overview || {}) };
   const dailyRevenue = Array.isArray(safeData.dailyRevenue) ? safeData.dailyRevenue : [];
   const paymentAnalytics = Array.isArray(safeData.paymentAnalytics) ? safeData.paymentAnalytics : [];
   const branchComparison = Array.isArray(safeData.branchComparison) ? safeData.branchComparison : [];
