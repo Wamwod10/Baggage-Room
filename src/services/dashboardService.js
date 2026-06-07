@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { asArray, getArrayData, getData, getItems, mapCashMovement, mapLocker, mapNotification, mapOrder, mapShift } from "./apiMappers";
+import { asArray, getArrayData, getData, getItems, mapActivityLog, mapCashMovement, mapLocker, mapNotification, mapOrder, mapShift } from "./apiMappers";
 
 const toNumber = (value) => Number(value ?? 0) || 0;
 
@@ -66,7 +66,7 @@ const dashboardService = {
       ...mapDashboard(getData(dashboard, {})),
       orders: getItems(orders).map(mapOrder).filter(Boolean),
       notifications: getItems(notifications).map(mapNotification),
-      activityLogs: getItems(audit),
+      activityLogs: getItems(audit).map(mapActivityLog),
       cashMovements: getItems(cash).map(mapCashMovement),
       lockers: getArrayData(lockers).map(mapLocker).filter(Boolean),
     };
@@ -79,7 +79,7 @@ const dashboardService = {
   async getLiveActivity(limit = 8, branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/audit", { params: { branchId, limit } });
-    return getItems(response);
+    return getItems(response).map(mapActivityLog);
   },
 };
 

@@ -49,6 +49,22 @@ const fallbackText = "-";
 const toPaymentType = (payment) => reversePaymentMap[payment] || payment || "CASH";
 const toStatusLabel = (status) => statusMap[status] || status;
 const toLockerStatusLabel = (status) => lockerStatusMap[status] || status;
+const toDisplayText = (value, fallback = fallbackText) => {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (["string", "number", "boolean"].includes(typeof value)) return String(value);
+  if (typeof value === "object") {
+    return (
+      value.displayName ||
+      value.name ||
+      value.login ||
+      value.title ||
+      value.message ||
+      value.id ||
+      fallback
+    );
+  }
+  return fallback;
+};
 const unwrapData = (payload) => payload?.data ?? payload ?? null;
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const getItems = (payload) => {
@@ -227,6 +243,17 @@ const mapNotification = (notification = {}) => ({
   type: String(notification.type || "INFO").toLowerCase(),
 });
 
+const mapActivityLog = (log = {}) => ({
+  ...log,
+  id: log.id || `${log.action || "ACTIVITY"}-${log.createdAt || Math.random()}`,
+  action: toDisplayText(log.action),
+  description: toDisplayText(log.description, toDisplayText(log.action)),
+  branch:
+    branchService.getBranchName(log.branch) ||
+    toDisplayText(log.branch, log.branchId || fallbackText),
+  user: toDisplayText(log.user),
+});
+
 const mapTariff = (tariff = {}) => ({
   ...tariff,
   branch: branchService.getBranchName(tariff.branch) || tariff.branch || fallbackText,
@@ -238,6 +265,7 @@ export {
   getArrayData,
   getData,
   getItems,
+  mapActivityLog,
   mapCashMovement,
   mapExpense,
   mapInkassa,

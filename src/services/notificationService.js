@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { asArray, getData, getItems, mapNotification } from "./apiMappers";
+import { asArray, getData, getItems, mapActivityLog, mapNotification } from "./apiMappers";
 
 const notificationService = {
   async getAlerts(branchName = null) {
@@ -12,7 +12,7 @@ const notificationService = {
   async getActivityLogs(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/audit", { params: { branchId, limit: 100 } });
-    return getItems(response);
+    return getItems(response).map(mapActivityLog);
   },
 
   async getSmartAlerts(branchName = null) {
