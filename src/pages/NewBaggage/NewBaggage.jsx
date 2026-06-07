@@ -76,6 +76,7 @@ export default function NewBaggage() {
   const [serviceReason, setServiceReason] = useState("");
   const [message, setMessage] = useState("");
   const [customerHistory, setCustomerHistory] = useState(emptyCustomerHistory);
+  const [savingAction, setSavingAction] = useState("");
 
   const {
     data: pageData = { lockers: [], orders: [], orderCount: 0 },
@@ -98,45 +99,71 @@ export default function NewBaggage() {
     { lockers: [], orders: [], orderCount: 0 },
   );
 
-  const safePageData = pageData && typeof pageData === "object" ? pageData : { lockers: [], orders: [], orderCount: 0 };
-  const pageLockers = asArray(safePageData.lockers);
-  const pageOrders = asArray(safePageData.orders);
-  const selectedLockers = asArray(form.lockers);
-  const safeCustomerHistory = customerHistory && typeof customerHistory === "object" && !Array.isArray(customerHistory)
-    ? customerHistory
-    : {
-        ...emptyCustomerHistory,
-        orders: asArray(customerHistory),
-        activeOrders: asArray(customerHistory).filter((order) => order.status === "Aktiv" || order.status === "Kechikdi"),
-        visits: asArray(customerHistory).length,
-      };
-  const customerActiveOrders = asArray(safeCustomerHistory.activeOrders);
-  const customerDuplicateOrders = asArray(safeCustomerHistory.duplicateOrders);
-  const branchTariffHours = asArray(branchTariff.tariffs).length ? asArray(branchTariff.tariffs) : [1, 12, 24, 48, 72];
-  const currencies = asArray(settings.currencies).length ? asArray(settings.currencies) : ["UZS", "USD", "RUB", "EUR"];
-  const nextOrderId = `BR-${String(Number(safePageData.orderCount || 0) + 1).padStart(6, "0")}`;
-  const selectedHours = Math.max(
-    1,
-    Number(form.tariffPreset === "custom" ? form.customHours : form.tariffPreset) || 1,
+  const safePageData = useMemo(
+    () => (pageData && typeof pageData === "object" ? pageData : { lockers: [], orders: [], orderCount: 0 }),
+    [pageData],
+  );
+  const pageLockers = useMemo(() => asArray(safePageData.lockers), [safePageData.lockers]);
+  const pageOrders = useMemo(() => asArray(safePageData.orders), [safePageData.orders]);
+  const selectedLockers = useMemo(() => asArray(form.lockers), [form.lockers]);
+  const safeCustomerHistory = useMemo(() => {
+    if (customerHistory && typeof customerHistory === "object" && !Array.isArray(customerHistory)) {
+      return customerHistory;
+    }
+
+    const orders = asArray(customerHistory);
+    return {
+      ...emptyCustomerHistory,
+      orders,
+      activeOrders: orders.filter((order) => order.status === "Aktiv" || order.status === "Kechikdi"),
+      visits: orders.length,
+    };
+  }, [customerHistory]);
+  const customerActiveOrders = useMemo(() => asArray(safeCustomerHistory.activeOrders), [safeCustomerHistory.activeOrders]);
+  const customerDuplicateOrders = useMemo(() => asArray(safeCustomerHistory.duplicateOrders), [safeCustomerHistory.duplicateOrders]);
+  const branchTariffHours = useMemo(() => {
+    const tariffHours = asArray(branchTariff.tariffs);
+    return tariffHours.length ? tariffHours : [1, 12, 24, 48, 72];
+  }, [branchTariff.tariffs]);
+  const currencies = useMemo(() => {
+    const configuredCurrencies = asArray(settings.currencies);
+    return configuredCurrencies.length ? configuredCurrencies : ["UZS", "USD", "RUB", "EUR"];
+  }, [settings.currencies]);
+  const nextOrderId = useMemo(
+    () => `BR-${String(Number(safePageData.orderCount || 0) + 1).padStart(6, "0")}`,
+    [safePageData.orderCount],
+  );
+  const selectedHours = useMemo(
+    () => Math.max(
+      1,
+      Number(form.tariffPreset === "custom" ? form.customHours : form.tariffPreset) || 1,
+    ),
+    [form.customHours, form.tariffPreset],
   );
   const isCustomTariff = form.tariffPreset === "custom";
-  const originalAmountUZS = baggageService.calculateTariff({
-    branch: currentBranch,
-    lockers: selectedLockers,
-    hours: selectedHours,
-    isCustom: isCustomTariff,
-  });
-  const exchangeRate = Number(settings.exchangeRates?.[form.currency] || 1);
-  const calculatedAmount = convertFromUZS(
-    originalAmountUZS,
-    form.currency,
-    settings.exchangeRates,
+  const originalAmountUZS = useMemo(
+    () => baggageService.calculateTariff({
+      branch: currentBranch,
+      lockers: selectedLockers,
+      hours: selectedHours,
+      isCustom: isCustomTariff,
+    }),
+    [currentBranch, isCustomTariff, selectedHours, selectedLockers],
   );
-  const discount = Number(form.discount || 0);
-  const finalAmount = Math.max(calculatedAmount - discount, 0);
-  const realPaidAmount = form.finalEdit
-    ? Number(form.realPaidAmount || 0)
-    : finalAmount;
+  const exchangeRate = useMemo(
+    () => Number(settings.exchangeRates?.[form.currency] || 1),
+    [form.currency, settings.exchangeRates],
+  );
+  const calculatedAmount = useMemo(
+    () => convertFromUZS(originalAmountUZS, form.currency, settings.exchangeRates),
+    [form.currency, originalAmountUZS, settings.exchangeRates],
+  );
+  const discount = useMemo(() => Number(form.discount || 0), [form.discount]);
+  const finalAmount = useMemo(() => Math.max(calculatedAmount - discount, 0), [calculatedAmount, discount]);
+  const realPaidAmount = useMemo(
+    () => (form.finalEdit ? Number(form.realPaidAmount || 0) : finalAmount),
+    [finalAmount, form.finalEdit, form.realPaidAmount],
+  );
   const checkOut = useMemo(() => {
     const date = new Date(form.checkIn || new Date());
     date.setHours(date.getHours() + selectedHours);
@@ -182,20 +209,32 @@ export default function NewBaggage() {
       });
   }, [pageLockers, currentBranch, filter, search]);
 
-  const branchLockers = pageLockers.filter(
-    (locker) => locker.branch === currentBranch,
+  const branchLockers = useMemo(
+    () => pageLockers.filter((locker) => locker.branch === currentBranch),
+    [currentBranch, pageLockers],
   );
-  const freeLockers = branchLockers.filter((locker) => locker.status === "Bosh");
-  const selectedOrder =
-    selectedLocker?.activeOrder ||
-    pageOrders.find((order) => order.orderNumber === selectedLocker?.activeOrderId || order.id === selectedLocker?.activeOrderId) ||
-    null;
-  const lockerStats = {
+  const freeLockers = useMemo(
+    () => branchLockers.filter((locker) => locker.status === "Bosh"),
+    [branchLockers],
+  );
+  const ordersByKey = useMemo(() => {
+    const lookup = new Map();
+    for (const order of pageOrders) {
+      if (order?.id) lookup.set(order.id, order);
+      if (order?.orderNumber) lookup.set(order.orderNumber, order);
+    }
+    return lookup;
+  }, [pageOrders]);
+  const selectedOrder = useMemo(
+    () => selectedLocker?.activeOrder || ordersByKey.get(selectedLocker?.activeOrderId) || null,
+    [ordersByKey, selectedLocker],
+  );
+  const lockerStats = useMemo(() => ({
     total: branchLockers.length,
     free: branchLockers.filter((locker) => locker.status === "Bosh").length,
     busy: branchLockers.filter((locker) => locker.status === "Band").length,
     delayed: branchLockers.filter((locker) => locker.status === "Kechikkan").length,
-  };
+  }), [branchLockers]);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({
@@ -256,11 +295,9 @@ export default function NewBaggage() {
     setServiceReason("");
     setRefreshKey((value) => value + 1);
 
-    try {
-      await telegramService.sendLockerBlock(locker, reason);
-    } catch {
+    void telegramService.sendLockerBlock(locker, reason).catch(() => {
       // Telegram is best-effort from the local frontend.
-    }
+    });
   };
 
   const handleUnblockLocker = async (locker) => {
@@ -276,37 +313,53 @@ export default function NewBaggage() {
   };
 
   const handleSave = async (print = false) => {
+    if (savingAction) return;
+    const nextAction = print ? "print" : "save";
+    setSavingAction(nextAction);
+    setMessage("");
+
+    const fail = (text) => {
+      setMessage(text);
+      setSavingAction("");
+    };
     const phoneRegex = /^\+?\d[\d\s-]{8,}$/;
 
     if (!form.client.trim()) {
-      setMessage(t("Ism familiya majburiy."));
+      fail(t("Ism familiya majburiy."));
       return;
     }
 
     if (!phoneRegex.test(form.phone.trim())) {
-      setMessage(t("Telefon raqamini to'g'ri kiriting. Masalan: +998 90 123 45 67"));
+      fail(t("Telefon raqamini to'g'ri kiriting. Masalan: +998 90 123 45 67"));
       return;
     }
 
     if (!selectedLockers.length) {
-      setMessage(t("Kamida bitta bosh yacheyka tanlang."));
+      fail(t("Kamida bitta bosh yacheyka tanlang."));
       return;
     }
 
     if (discount < 0 || discount > calculatedAmount) {
-      setMessage(t("Skidka manfiy bo'lmasligi va umumiy summadan oshmasligi kerak."));
+      fail(t("Skidka manfiy bo'lmasligi va umumiy summadan oshmasligi kerak."));
       return;
     }
 
     if (realPaidAmount !== finalAmount && !form.paymentReason.trim()) {
-      setMessage(t("Summani o'zgartirish sababini kiriting."));
+      fail(t("Summani o'zgartirish sababini kiriting."));
       return;
     }
 
-    const currentShift = await shiftService.getCurrent(currentBranch);
+    let currentShift;
+
+    try {
+      currentShift = await shiftService.getCurrent(currentBranch);
+    } catch (error) {
+      fail(error?.message || t("Ochiq shiftni tekshirishda xatolik yuz berdi."));
+      return;
+    }
 
     if (!currentShift) {
-      setMessage(t("Avval kassani oching. Ochiq shift topilmadi."));
+      fail(t("Avval kassani oching. Ochiq shift topilmadi."));
       return;
     }
 
@@ -344,7 +397,7 @@ export default function NewBaggage() {
         printed: print,
       });
     } catch (error) {
-      setMessage(error?.message || t("Orderni saqlashda xatolik yuz berdi."));
+      fail(error?.message || t("Orderni saqlashda xatolik yuz berdi."));
       return;
     }
 
@@ -361,6 +414,7 @@ export default function NewBaggage() {
     setSelectedLocker(null);
     setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));
     setRefreshKey((value) => value + 1);
+    setSavingAction("");
   };
 
   const getStatusLabel = (status) => {
@@ -625,13 +679,13 @@ export default function NewBaggage() {
             </div>
           </div>
           <div className="panel-save-actions">
-            <button className="save-btn" type="button" onClick={() => handleSave(false)}>
+            <button className="save-btn" type="button" onClick={() => handleSave(false)} disabled={Boolean(savingAction)}>
               <Save size={17} />
-              {t("Save")}
+              {savingAction === "save" ? t("Loading") : t("Save")}
             </button>
-            <button className="print-btn" type="button" onClick={() => handleSave(true)}>
+            <button className="print-btn" type="button" onClick={() => handleSave(true)} disabled={Boolean(savingAction)}>
               <Printer size={17} />
-              {t("Saqlash + Chek")}
+              {savingAction === "print" ? t("Loading") : t("Saqlash + Chek")}
             </button>
           </div>
         </div>
@@ -713,7 +767,7 @@ export default function NewBaggage() {
             !error && (
               <div className="locker-grid">
                 {lockers.map((locker) => {
-                  const activeOrderObj = pageOrders.find((o) => o.orderNumber === locker.activeOrderId || o.id === locker.activeOrderId);
+                  const activeOrderObj = ordersByKey.get(locker.activeOrderId);
                   const lockerOrderLabel = activeOrderObj?.orderNumber || "-";
                   return (
                     <article

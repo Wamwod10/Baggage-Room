@@ -77,6 +77,16 @@
   }
 }
 
+.expense-message {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--success-soft) 70%, var(--surface-strong));
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 18%, transparent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .expense-title,
 .expense-list-head {
   display: flex;

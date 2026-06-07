@@ -11,8 +11,8 @@ export default function Login() {
   const { login } = useAuth();
 
   const [form, setForm] = useState({
-    username: "rahbariyat",
-    password: "Admin@12345",
+    username: "",
+    password: "",
   });
 
   const [error, setError] = useState("");
@@ -31,7 +31,10 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (loading) return;
+
     setLoading(true);
+    setError("");
 
     try {
       await login(form);
@@ -69,6 +72,7 @@ export default function Login() {
                 value={form.username}
                 onChange={handleChange}
                 placeholder={t("Login kiriting")}
+                autoComplete="username"
               />
             </div>
           </label>
@@ -83,6 +87,7 @@ export default function Login() {
                 value={form.password}
                 onChange={handleChange}
                 placeholder={t("Parol kiriting")}
+                autoComplete="current-password"
               />
             </div>
           </label>
@@ -94,16 +99,6 @@ export default function Login() {
             <ArrowRight size={18} />
           </button>
         </form>
-
-        <div className="login-demo">
-          <p>{t("Loginlar")}:</p>
-          <span>rahbariyat / Admin@12345</span>
-          <span>toshkent_airport / Admin@12345</span>
-          <span>toshkent_shimoliy / Admin@12345</span>
-          <span>toshkent_janubiy / Admin@12345</span>
-          <span>samarqand_vokzal / Admin@12345</span>
-          <span>samarqand_airport / Admin@12345</span>
-        </div>
       </section>
     </main>
   );

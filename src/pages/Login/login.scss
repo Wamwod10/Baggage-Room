@@ -155,23 +155,6 @@
   }
 }
 
-.login-demo {
-  margin-top: 20px;
-  padding: 16px;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
-  border: 1px solid transparent;
-  display: grid;
-  gap: 6px;
-  color: var(--text-muted);
-  font-size: 15px;
-
-  p {
-    font-weight: 600;
-    color: var(--text-soft);
-  }
-}
-
 @media (max-width: 520px) {
   .login-page {
     padding: 16px;

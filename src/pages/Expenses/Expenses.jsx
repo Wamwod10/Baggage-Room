@@ -23,11 +23,12 @@ export default function Expenses() {
   const { t, formatMoney, formatDateTime } = useTranslation();
   const { effectiveBranch } = useAuth();
   const branchNames = getBranchNames();
-  const availableBranches = effectiveBranch ? [effectiveBranch] : branchNames;
-  const defaultBranch = availableBranches[0] || "";
+  const defaultBranch = (effectiveBranch ? [effectiveBranch] : branchNames)[0] || "";
   const [refreshKey, setRefreshKey] = useState(0);
   const [form, setForm] = useState(() => getInitialForm(defaultBranch));
   const [formError, setFormError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     data: expenses = [],
@@ -40,10 +41,20 @@ export default function Expenses() {
     [],
   );
 
+  const safeExpenses = useMemo(() => asArray(expenses), [expenses]);
   const totalExpense = useMemo(() => {
-    return asArray(expenses).reduce((sum, item) => sum + Number(item?.amount || 0), 0);
-  }, [expenses]);
-  const safeExpenses = asArray(expenses);
+    return safeExpenses.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
+  }, [safeExpenses]);
+  const branchOptions = useMemo(() => {
+    return effectiveBranch ? [effectiveBranch] : branchNames;
+  }, [branchNames, effectiveBranch]);
+  const categoryOptions = useMemo(() => [
+    "Printer qog'ozi",
+    t("Cleaning"),
+    t("Internet"),
+    t("Taxi"),
+    t("Other"),
+  ], [t]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -56,31 +67,43 @@ export default function Expenses() {
 
   const handleAddExpense = async (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setFormError("");
+    setStatusMessage("");
+
+    const fail = (text) => {
+      setFormError(text);
+      setIsSubmitting(false);
+    };
 
     const amount = Number(form.amount);
 
     if (!form.category.trim()) {
-      setFormError("Kategoriya tanlanishi kerak.");
+      fail("Kategoriya tanlanishi kerak.");
       return;
     }
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      setFormError("Harajat summasi 0 dan katta bo'lishi kerak.");
+      fail("Harajat summasi 0 dan katta bo'lishi kerak.");
       return;
     }
 
     const branch = effectiveBranch || form.branch || defaultBranch;
 
     try {
-      await expenseService.create({
+      const createdExpense = await expenseService.create({
         ...form,
         branch,
         amount,
         currency: form.currency || "UZS",
       });
+      setStatusMessage(`${createdExpense?.category || form.category} saqlandi: ${formatMoney(amount)}`);
     } catch (error) {
-      setFormError(error.message || "Harajatni saqlashda xatolik yuz berdi.");
+      fail(error.message || "Harajatni saqlashda xatolik yuz berdi.");
       return;
+    } finally {
+      setIsSubmitting(false);
     }
 
     setRefreshKey((value) => value + 1);
@@ -119,6 +142,7 @@ export default function Expenses() {
           </div>
 
           {formError && <div className="form-error">{formError}</div>}
+          {statusMessage && <div className="expense-message">{statusMessage}</div>}
 
           <label>
             <span>{t("Kategoriya")}</span>
@@ -127,11 +151,9 @@ export default function Expenses() {
               value={form.category}
               onChange={handleChange}
             >
-              <option>Printer qog'ozi</option>
-              <option>{t("Cleaning")}</option>
-              <option>{t("Internet")}</option>
-              <option>{t("Taxi")}</option>
-              <option>{t("Other")}</option>
+              {categoryOptions.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
             </GlassSelect>
           </label>
 
@@ -165,7 +187,7 @@ export default function Expenses() {
               onChange={handleChange}
               disabled={Boolean(effectiveBranch)}
             >
-              {availableBranches.map((branch) => (
+              {branchOptions.map((branch) => (
                 <option key={branch} value={branch}>
                   {t(branch)}
                 </option>
@@ -183,9 +205,9 @@ export default function Expenses() {
             />
           </label>
 
-          <button type="submit" className="expense-submit">
+          <button type="submit" className="expense-submit" disabled={isSubmitting}>
             <Plus size={17} />
-            {t("Qo'shish")}
+            {isSubmitting ? t("Loading") : t("Qo'shish")}
           </button>
         </form>
 

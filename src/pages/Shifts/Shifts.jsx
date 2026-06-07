@@ -10,7 +10,6 @@ import {
 import shiftService from "../../services/shiftService";
 import financeService from "../../services/financeService";
 import { useAuth } from "../../store/AuthContext";
-import telegramService from "../../services/telegramService";
 import { getBranchByName, getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
@@ -55,6 +54,7 @@ export default function Shifts() {
   const [reportShift, setReportShift] = useState(null);
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [pendingAction, setPendingAction] = useState("");
 
   const {
     data: shiftData = emptyShiftData,
@@ -144,18 +144,28 @@ export default function Shifts() {
       .join(" / ") || formatMoney(0);
 
   const handleOpenShift = async () => {
+    if (pendingAction) return;
+    setPendingAction("open");
+    setFormError("");
+    setStatusMessage("");
+
+    const fail = (text) => {
+      setFormError(text);
+      setPendingAction("");
+    };
+
     if (!adminName.trim()) {
-      setFormError(t("Admin ismini kiriting."));
+      fail(t("Admin ismini kiriting."));
       return;
     }
 
     if (!selectedShiftTime) {
-      setFormError(t("Shift vaqtini tanlang."));
+      fail(t("Shift vaqtini tanlang."));
       return;
     }
 
     if (openingCash !== "" && Number(openingCash) < 0) {
-      setFormError(t("Opening cash manfiy bo'lishi mumkin emas."));
+      fail(t("Opening cash manfiy bo'lishi mumkin emas."));
       return;
     }
 
@@ -179,30 +189,21 @@ export default function Shifts() {
       setStatusMessage(`${t("Kassa ochildi")}.`);
     } catch (error) {
       setFormError(error.message || t("Kassani ochishda xatolik yuz berdi."));
-    }
-  };
-
-  const sendInkassaNotification = async (item) => {
-    try {
-      await telegramService.sendInkassa(item);
-    } catch {
-      // Telegram is best-effort.
+    } finally {
+      setPendingAction("");
     }
   };
 
   const createInkassaRecord = async ({ recipient, amount }) => {
     if (!currentShift) throw new Error(t("Bu filialda ochiq smena yo'q"));
 
-    const item = await financeService.createInkassa({
+    return financeService.createInkassa({
       branch: branchName,
       admin: currentShift?.admin || adminName || "Admin",
       recipient: recipient.trim(),
       amount,
       currency: "UZS",
     });
-
-    await sendInkassaNotification(item);
-    return item;
   };
 
   const validateInkassa = (recipient, amountValue) => {
@@ -220,15 +221,25 @@ export default function Shifts() {
   };
 
   const handleCloseShift = async () => {
+    if (pendingAction) return;
+    setPendingAction("close");
+    setFormError("");
+    setStatusMessage("");
+
+    const fail = (text) => {
+      setFormError(text);
+      setPendingAction("");
+    };
+
     if (closingCash !== "" && Number(closingCash) < 0) {
-      setFormError(t("Closing cash manfiy bo'lishi mumkin emas."));
+      fail(t("Closing cash manfiy bo'lishi mumkin emas."));
       return;
     }
 
     const closeInkassaAmount = Number(closingInkassaAmount || 0);
 
     if (closingInkassaAmount !== "" && (!Number.isFinite(closeInkassaAmount) || closeInkassaAmount < 0)) {
-      setFormError(t("Inkassa summasi manfiy bo'lishi mumkin emas."));
+      fail(t("Inkassa summasi manfiy bo'lishi mumkin emas."));
       return;
     }
 
@@ -236,7 +247,7 @@ export default function Shifts() {
       const inkassaError = validateInkassa(closingInkassaRecipient, closeInkassaAmount);
 
       if (inkassaError) {
-        setFormError(inkassaError);
+        fail(inkassaError);
         return;
       }
     }
@@ -265,20 +276,32 @@ export default function Shifts() {
       setStatusMessage(`${t("Kassa yopildi")}.`);
     } catch (error) {
       setFormError(error.message || t("Kassani yopishda xatolik yuz berdi."));
+    } finally {
+      setPendingAction("");
     }
   };
 
   const handleInkassa = async () => {
+    if (pendingAction) return;
+    setPendingAction("inkassa");
+    setFormError("");
+    setStatusMessage("");
+
+    const fail = (text) => {
+      setFormError(text);
+      setPendingAction("");
+    };
+
     const amount = Number(inkassaAmount || 0);
     const inkassaError = validateInkassa(inkassaRecipient, amount);
 
     if (!currentShift) {
-      setFormError(t("Bu filialda ochiq smena yo'q"));
+      fail(t("Bu filialda ochiq smena yo'q"));
       return;
     }
 
     if (inkassaError) {
-      setFormError(inkassaError);
+      fail(inkassaError);
       return;
     }
 
@@ -295,6 +318,8 @@ export default function Shifts() {
       refreshData();
     } catch (error) {
       setFormError(error.message || t("Inkassa saqlashda xatolik yuz berdi."));
+    } finally {
+      setPendingAction("");
     }
   };
 
@@ -437,9 +462,9 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
                 <span>{t("Opening cash")}</span>
                 <input type="number" min="0" value={openingCash} onChange={(event) => setOpeningCash(event.target.value)} placeholder={t("Masalan: 200000")} />
               </label>
-              <button className="open-shift-btn" onClick={handleOpenShift}>
+              <button className="open-shift-btn" onClick={handleOpenShift} disabled={Boolean(pendingAction)}>
                 <PlayCircle size={17} />
-                {t("Kassani ochish")}
+                {pendingAction === "open" ? t("Loading") : t("Kassani ochish")}
               </button>
             </div>
           ) : (
@@ -472,9 +497,9 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
                   <input type="number" min="0" value={closingInkassaAmount} onChange={(event) => setClosingInkassaAmount(event.target.value)} placeholder={t("Masalan: 500000")} />
                 </label>
               </div>
-              <button className="close-shift-btn" onClick={handleCloseShift}>
+              <button className="close-shift-btn" onClick={handleCloseShift} disabled={Boolean(pendingAction)}>
                 <Square size={16} />
-                {t("Kassani yopish")}
+                {pendingAction === "close" ? t("Loading") : t("Kassani yopish")}
               </button>
             </div>
           )}
@@ -514,7 +539,9 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
                 <span>{t("Summa")}</span>
                 <input type="number" min="0" value={inkassaAmount} onChange={(event) => setInkassaAmount(event.target.value)} placeholder={t("Masalan: 500000")} />
               </label>
-              <button type="button" onClick={handleInkassa}>{t("Inkassa qilish")}</button>
+              <button type="button" onClick={handleInkassa} disabled={Boolean(pendingAction)}>
+                {pendingAction === "inkassa" ? t("Loading") : t("Inkassa qilish")}
+              </button>
             </div>
           )}
         </div>
