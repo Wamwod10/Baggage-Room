@@ -23,6 +23,7 @@ import "./shifts.scss";
 const emptyShiftData = {
   shifts: [],
   currentShift: null,
+  branchName: "",
 };
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const fallback = (value, empty = "-") =>
@@ -63,22 +64,30 @@ export default function Shifts() {
     retry,
   } = usePageResource(
     async () => {
+      const requestedBranch = branchName;
       const [shifts, currentShift] = await Promise.all([
-        shiftService.getAll(branchName),
-        shiftService.getCurrent(branchName),
+        shiftService.getAll(requestedBranch),
+        shiftService.getCurrent(requestedBranch),
       ]);
-      return { shifts: asArray(shifts), currentShift: currentShift || null };
+      return { branchName: requestedBranch, shifts: asArray(shifts), currentShift: currentShift || null };
     },
     [effectiveBranch, branchName, refreshKey],
     emptyShiftData,
   );
 
   const safeShiftData = shiftData && typeof shiftData === "object" ? shiftData : emptyShiftData;
-  const shifts = asArray(safeShiftData.shifts);
-  const currentShift = safeShiftData.currentShift || null;
+  const isCurrentBranchData = safeShiftData.branchName === branchName;
+  const shifts = isCurrentBranchData ? asArray(safeShiftData.shifts) : [];
+  const currentShift = isCurrentBranchData ? safeShiftData.currentShift || null : null;
   const selectedShiftTime = shiftOptions.some((item) => item.label === shiftTime)
     ? shiftTime
     : shiftOptions[0]?.label || "";
+
+  useEffect(() => {
+    setFormError("");
+    setStatusMessage("");
+    setShiftTime(shiftOptions[0]?.label || "");
+  }, [branchName, shiftOptions]);
 
   useEffect(() => {
     if (!reportShift) return;
@@ -360,7 +369,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
           <p>{t("Kassani ochish, yopish, inkassa va daily reportlarni boshqarish")}</p>
         </div>
 
-        <button className="shift-refresh-btn" onClick={refreshData}>
+        <button type="button" className="shift-refresh-btn" onClick={refreshData}>
           <RefreshCcw size={16} />
           {t("Refresh")}
         </button>
@@ -462,7 +471,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
                 <span>{t("Opening cash")}</span>
                 <input type="number" min="0" value={openingCash} onChange={(event) => setOpeningCash(event.target.value)} placeholder={t("Masalan: 200000")} />
               </label>
-              <button className="open-shift-btn" onClick={handleOpenShift} disabled={Boolean(pendingAction)}>
+              <button type="button" className="open-shift-btn" onClick={handleOpenShift} disabled={Boolean(pendingAction)}>
                 <PlayCircle size={17} />
                 {pendingAction === "open" ? t("Loading") : t("Kassani ochish")}
               </button>
@@ -497,7 +506,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
                   <input type="number" min="0" value={closingInkassaAmount} onChange={(event) => setClosingInkassaAmount(event.target.value)} placeholder={t("Masalan: 500000")} />
                 </label>
               </div>
-              <button className="close-shift-btn" onClick={handleCloseShift} disabled={Boolean(pendingAction)}>
+              <button type="button" className="close-shift-btn" onClick={handleCloseShift} disabled={Boolean(pendingAction)}>
                 <Square size={16} />
                 {pendingAction === "close" ? t("Loading") : t("Kassani yopish")}
               </button>
@@ -600,7 +609,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
                 <h2>{t("Daily report preview")}</h2>
                 <p>{t("Telegramga yuboriladigan hisobot formati")}</p>
               </div>
-              <button onClick={() => setReportShift(null)}>{t("Close")}</button>
+              <button type="button" onClick={() => setReportShift(null)}>{t("Close")}</button>
             </div>
 
             <div className="telegram-report-box">
@@ -617,7 +626,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
               <p>{t("Kassada qolgan")}: {formatMoney(reportShift.cashLeft || reportShift.closingCash)}</p>
             </div>
 
-            <button className="report-copy-btn" onClick={handleCopyReport}>
+            <button type="button" className="report-copy-btn" onClick={handleCopyReport}>
               {t("Copy report")}
             </button>
           </div>
