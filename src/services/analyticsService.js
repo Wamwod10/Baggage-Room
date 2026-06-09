@@ -1,6 +1,7 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { asArray, getData, paymentMap } from "./apiMappers";
+import { getTashkentDateKeyOffset } from "../utils/formatDate";
 
 const toNumber = (value) => Number(value ?? 0) || 0;
 
@@ -14,23 +15,15 @@ const objectToChart = (object, keyName, valueName) =>
 const periodToParams = (period) => {
   if (period === "all") return {};
 
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  const start = new Date(end);
-
   if (period === "today") {
-    start.setHours(0, 0, 0, 0);
+    return { dateFrom: getTashkentDateKeyOffset(0), dateTo: getTashkentDateKeyOffset(0) };
   } else if (period === "7d") {
-    start.setDate(start.getDate() - 6);
-    start.setHours(0, 0, 0, 0);
+    return { dateFrom: getTashkentDateKeyOffset(-6), dateTo: getTashkentDateKeyOffset(0) };
   } else if (period === "30d") {
-    start.setDate(start.getDate() - 29);
-    start.setHours(0, 0, 0, 0);
+    return { dateFrom: getTashkentDateKeyOffset(-29), dateTo: getTashkentDateKeyOffset(0) };
   } else {
     return {};
   }
-
-  return { dateFrom: start.toISOString(), dateTo: end.toISOString() };
 };
 
 const objectKeys = (...objects) => [...new Set(objects.flatMap((object) => Object.keys(object || {})))];

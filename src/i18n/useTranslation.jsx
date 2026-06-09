@@ -8,6 +8,7 @@ import {
   normalizeLanguage,
   translate,
 } from "./translations";
+import { formatTashkentDateTime } from "../utils/formatDate";
 
 const I18nContext = createContext(null);
 
@@ -50,8 +51,7 @@ export function I18nProvider({ children }) {
 
     const formatDateTime = (valueToFormat) => {
       if (!valueToFormat) return "-";
-      const date = new Date(valueToFormat);
-      return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString(locale);
+      return formatTashkentDateTime(valueToFormat, locale);
     };
 
     return {

@@ -16,7 +16,8 @@ import shiftService from "../../services/shiftService";
 import settingsService from "../../services/settingsService";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
-import { convertFromUZS, formatMoneyByCurrency } from "../../utils/currency";
+import { formatMoneyByCurrency } from "../../utils/currency";
+import { addHoursToIso, formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import telegramService from "../../services/telegramService";
@@ -26,19 +27,13 @@ import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import "./newBaggage.scss";
 
-const toInputDateTime = (date = new Date()) => {
-  const copy = new Date(date);
-  copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
-  return copy.toISOString().slice(0, 16);
-};
-
 const getInitialForm = (defaultBranch, defaultCurrency = "UZS") => ({
   client: "",
   phone: "",
   passport: "",
   branch: defaultBranch,
   lockers: [],
-  checkIn: toInputDateTime(),
+  checkIn: formatTashkentInputDateTime(),
   tariffPreset: "1",
   customHours: "",
   currency: defaultCurrency,
@@ -65,7 +60,6 @@ export default function NewBaggage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [branch, setBranch] = useState(defaultBranch);
   const currentBranch = effectiveBranch || branch;
-  const branchTariff = settings.branchTariffs?.[currentBranch] || {};
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(() =>
@@ -79,28 +73,29 @@ export default function NewBaggage() {
   const [savingAction, setSavingAction] = useState("");
 
   const {
-    data: pageData = { lockers: [], orders: [], orderCount: 0 },
+    data: pageData = { lockers: [], orders: [], orderCount: 0, tariffs: [] },
     isLoading,
     error,
     retry,
   } = usePageResource(
     async () => {
-      const [lockers, orders, allOrders] = await Promise.all([
+      const [lockers, orders, allOrders, tariffs] = await Promise.all([
         lockerService.getAll(effectiveBranch || branch),
         baggageService.getAll(effectiveBranch || branch),
         baggageService.getAll(),
+        settingsService.getTariffs(effectiveBranch || branch),
       ]);
       const safeLockers = asArray(lockers);
       const safeOrders = asArray(orders);
       const safeAllOrders = asArray(allOrders);
-      return { lockers: safeLockers, orders: safeOrders, orderCount: safeAllOrders.length };
+      return { lockers: safeLockers, orders: safeOrders, orderCount: safeAllOrders.length, tariffs };
     },
     [effectiveBranch, branch, refreshKey],
-    { lockers: [], orders: [], orderCount: 0 },
+    { lockers: [], orders: [], orderCount: 0, tariffs: [] },
   );
 
   const safePageData = useMemo(
-    () => (pageData && typeof pageData === "object" ? pageData : { lockers: [], orders: [], orderCount: 0 }),
+    () => (pageData && typeof pageData === "object" ? pageData : { lockers: [], orders: [], orderCount: 0, tariffs: [] }),
     [pageData],
   );
   const pageLockers = useMemo(() => asArray(safePageData.lockers), [safePageData.lockers]);
@@ -121,10 +116,11 @@ export default function NewBaggage() {
   }, [customerHistory]);
   const customerActiveOrders = useMemo(() => asArray(safeCustomerHistory.activeOrders), [safeCustomerHistory.activeOrders]);
   const customerDuplicateOrders = useMemo(() => asArray(safeCustomerHistory.duplicateOrders), [safeCustomerHistory.duplicateOrders]);
-  const branchTariffHours = useMemo(() => {
-    const tariffHours = asArray(branchTariff.tariffs);
-    return tariffHours.length ? tariffHours : [1, 12, 24, 48, 72];
-  }, [branchTariff.tariffs]);
+  const tariffBySize = useMemo(() => {
+    const rows = asArray(safePageData.tariffs).filter((tariff) => tariff.branch === currentBranch);
+    return Object.fromEntries(rows.map((tariff) => [tariff.size, tariff]));
+  }, [currentBranch, safePageData.tariffs]);
+  const branchTariffHours = [1, 12, 24, 48, 72];
   const currencies = useMemo(() => {
     const configuredCurrencies = asArray(settings.currencies);
     return configuredCurrencies.length ? configuredCurrencies : ["UZS", "USD", "RUB", "EUR"];
@@ -141,23 +137,25 @@ export default function NewBaggage() {
     [form.customHours, form.tariffPreset],
   );
   const isCustomTariff = form.tariffPreset === "custom";
-  const originalAmountUZS = useMemo(
-    () => baggageService.calculateTariff({
-      branch: currentBranch,
-      lockers: selectedLockers,
-      hours: selectedHours,
-      isCustom: isCustomTariff,
-    }),
-    [currentBranch, isCustomTariff, selectedHours, selectedLockers],
-  );
+  const originalAmountUZS = useMemo(() => {
+    const priceForHours = (tariff, hours) => {
+      const h = Number(hours || 1);
+      if (!tariff) return 0;
+      if (h <= 1) return Number(tariff.price1h || 0);
+      if (h <= 12) return Number(tariff.price12h || 0);
+      if (h <= 24) return Number(tariff.price24h || 0);
+      if (h <= 48) return Number(tariff.price48h || 0);
+      if (h <= 72) return Number(tariff.price72h || 0);
+      return Number(tariff.price72h || 0) + Math.ceil((h - 72) / 24) * Number(tariff.after72hPrice || 0);
+    };
+
+    return selectedLockers.reduce((total, locker) => total + priceForHours(tariffBySize[locker.size], selectedHours), 0);
+  }, [selectedHours, selectedLockers, tariffBySize]);
   const exchangeRate = useMemo(
     () => Number(settings.exchangeRates?.[form.currency] || 1),
     [form.currency, settings.exchangeRates],
   );
-  const calculatedAmount = useMemo(
-    () => convertFromUZS(originalAmountUZS, form.currency, settings.exchangeRates),
-    [form.currency, originalAmountUZS, settings.exchangeRates],
-  );
+  const calculatedAmount = originalAmountUZS;
   const discount = useMemo(() => Number(form.discount || 0), [form.discount]);
   const finalAmount = useMemo(() => Math.max(calculatedAmount - discount, 0), [calculatedAmount, discount]);
   const realPaidAmount = useMemo(
@@ -165,9 +163,7 @@ export default function NewBaggage() {
     [finalAmount, form.finalEdit, form.realPaidAmount],
   );
   const checkOut = useMemo(() => {
-    const date = new Date(form.checkIn || new Date());
-    date.setHours(date.getHours() + selectedHours);
-    return date.toISOString();
+    return addHoursToIso(parseTashkentInputToIso(form.checkIn), selectedHours);
   }, [form.checkIn, selectedHours]);
 
   useEffect(() => {
@@ -339,6 +335,11 @@ export default function NewBaggage() {
       return;
     }
 
+    if (selectedLockers.some((locker) => !tariffBySize[locker.size])) {
+      fail(t("Tanlangan yacheyka razmeri uchun backend tarifi topilmadi."));
+      return;
+    }
+
     if (discount < 0 || discount > calculatedAmount) {
       fail(t("Skidka manfiy bo'lmasligi va umumiy summadan oshmasligi kerak."));
       return;
@@ -374,7 +375,7 @@ export default function NewBaggage() {
         lockers: selectedLockers,
         size: selectedLockers.map((locker) => locker.size).join(", "),
         count: selectedLockers.length,
-        checkIn: new Date(form.checkIn).toISOString(),
+        checkIn: parseTashkentInputToIso(form.checkIn),
         checkOut,
         tariffHours: selectedHours,
         tariffMode: isCustomTariff ? "custom" : "preset",

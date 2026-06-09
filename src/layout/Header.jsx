@@ -14,6 +14,7 @@ import notificationService from "../services/notificationService";
 import settingsService from "../services/settingsService";
 import { ALL_BRANCHES_LABEL, getBranchNames } from "../utils/branches";
 import { useTranslation } from "../i18n/useTranslation";
+import { getTashkentClock } from "../utils/formatDate";
 import "./header.scss";
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
@@ -67,14 +68,7 @@ export default function Header({ onMenuClick }) {
   const safeResults = asArray(results);
   const alertCount = safeHeaderAlerts.length;
   const liveDate = useMemo(() => {
-    const pad = (value) => String(value).padStart(2, "0");
-
-    return {
-      date: `${pad(currentDate.getDate())}.${pad(
-        currentDate.getMonth() + 1,
-      )}.${currentDate.getFullYear()}`,
-      time: `${pad(currentDate.getHours())}:${pad(currentDate.getMinutes())}`,
-    };
+    return getTashkentClock(currentDate);
   }, [currentDate]);
 
   useEffect(() => {

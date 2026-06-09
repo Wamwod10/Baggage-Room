@@ -1,5 +1,6 @@
 ﻿import { getBranchNames, isKnownBranch } from "./branches";
 import { convertFromUZS } from "./currency";
+import { getTashkentDateKey } from "./formatDate";
 
 const ORDERS_KEY = "br_orders";
 const EXPENSES_KEY = "br_expenses";
@@ -18,24 +19,17 @@ export const LOCKER_STATUSES = {
   SERVICE: "Servisda",
 };
 
-const commonSmallLockers = [1, 4, 5, 6, 9, 13, 14, 15, 16, 17, 18, 19];
+const commonSmallLockers = [1, 4, 5, 6, 9, 13, 14, 15, 16, 17, 18];
 const commonMediumLockers = [2, 3, 7, 8, 11, 12, 19, 20];
 const commonLargeLockers = [10, 21];
-
-const airportMediumLockers = [
-  ...Array.from({ length: 10 }, (_, index) => index + 1),
-  ...Array.from({ length: 8 }, (_, index) => index + 12),
-  ...Array.from({ length: 8 }, (_, index) => index + 21),
-  ...Array.from({ length: 4 }, (_, index) => index + 32),
-];
 
 const uniqueLockerNumbers = (...groups) => [...new Set(groups.flat())].sort((a, b) => a - b);
 
 const lockerPresetByBranch = {
   "Toshkent xalqaro aeroport": {
-    S: [29, 30, 31, 36, 37, 38, 39, 40, 41, 42, 43, 44],
-    M: airportMediumLockers,
-    L: [11, 20],
+    L: [...Array.from({ length: 29 }, (_, index) => index + 1), 33, 34, 35, 36],
+    S: [30, 31, 32, 37, 38, 39],
+    M: [40, 41, 42, 43, 44, 45],
   },
 };
 
@@ -70,61 +64,24 @@ export const buildDefaultLockers = (branch) => {
 
 const DEFAULT_TARIFFS = [1, 12, 24, 48, 72];
 
-const makeSizeTariff = (one, twelve, day, twoDays, threeDays, after72) => ({
-  1: one,
-  12: twelve,
-  24: day,
-  48: twoDays,
-  72: threeDays,
-  after72,
+const emptySizeTariff = () => ({ 1: 0, 12: 0, 24: 0, 48: 0, 72: 0, after72: 0 });
+const getDefaultTariffTable = () => ({
+  S: emptySizeTariff(),
+  M: emptySizeTariff(),
+  L: emptySizeTariff(),
 });
-
-const AIRPORT_TASHKENT_TARIFFS = {
-  S: makeSizeTariff(20000, 100000, 160000, 240000, 300000, 100000),
-  M: makeSizeTariff(30000, 120000, 200000, 300000, 380000, 120000),
-  L: makeSizeTariff(40000, 180000, 300000, 450000, 550000, 180000),
-};
-
-const STATION_TARIFFS = {
-  S: makeSizeTariff(4000, 40000, 75000, 120000, 180000, 30000),
-  M: makeSizeTariff(6000, 55000, 100000, 160000, 240000, 40000),
-  L: makeSizeTariff(8000, 75000, 140000, 240000, 360000, 50000),
-};
-
-const AIRPORT_SAMARKAND_TARIFFS = {
-  S: makeSizeTariff(20000, 100000, 150000, 200000, 250000, 30000),
-  M: makeSizeTariff(30000, 150000, 250000, 300000, 400000, 40000),
-  L: makeSizeTariff(40000, 200000, 300000, 400000, 500000, 50000),
-};
-
-const cloneTariffTable = (table) =>
-  Object.fromEntries(
-    Object.entries(table).map(([size, tariff]) => [size, { ...tariff }]),
-  );
-
-const getDefaultTariffTable = (branch) => {
-  if (branch === "Toshkent xalqaro aeroport") {
-    return cloneTariffTable(AIRPORT_TASHKENT_TARIFFS);
-  }
-
-  if (branch === "Samarqand xalqaro aeroport") {
-    return cloneTariffTable(AIRPORT_SAMARKAND_TARIFFS);
-  }
-
-  return cloneTariffTable(STATION_TARIFFS);
-};
 
 const DEFAULT_SETTINGS = {
   language: "uzLatn",
   theme: "light",
   pricing: {
-    S: 10000,
-    M: 15000,
-    L: 20000,
-    Small: 10000,
-    Medium: 15000,
-    Large: 20000,
-    XL: 25000,
+    S: 0,
+    M: 0,
+    L: 0,
+    Small: 0,
+    Medium: 0,
+    Large: 0,
+    XL: 0,
   },
   branchTariffs: {},
   currencies: CURRENCIES,
@@ -135,7 +92,7 @@ const DEFAULT_SETTINGS = {
     RUB: 140,
     EUR: 13500,
   },
-  overtimePerHour: 10000,
+  overtimePerHour: 0,
   lockers: {},
   googleSheets: {
     enabled: false,
@@ -446,13 +403,7 @@ const getOneHourPrice = (branch, size = "M") => {
   const settings = getSettings();
   const branchTariff = settings.branchTariffs?.[branch] || {};
   const sizeKey = ["S", "M", "L"].includes(size) ? size : String(size || "M").slice(0, 1).toUpperCase();
-  return Number(
-    branchTariff.sizes?.[sizeKey]?.[1] ||
-      branchTariff.oneHourPrice ||
-      settings.pricing?.[sizeKey] ||
-      settings.overtimePerHour ||
-      0,
-  );
+  return Number(branchTariff.sizes?.[sizeKey]?.[1] || branchTariff.oneHourPrice || 0);
 };
 
 const calculateSizeTariff = (branch, size, hours, isCustom = false) => {
@@ -462,11 +413,7 @@ const calculateSizeTariff = (branch, size, hours, isCustom = false) => {
   const tariff = settings.branchTariffs?.[branch]?.sizes?.[sizeKey];
 
   if (!tariff) {
-    return getOneHourPrice(branch, sizeKey) * hourCount;
-  }
-
-  if (isCustom) {
-    return Number(tariff[1] || 0) * hourCount;
+    return 0;
   }
 
   if (hourCount <= 1) return Number(tariff[1] || 0);
@@ -1079,7 +1026,7 @@ export function getDashboardStats(branchName = null) {
   const lockers = getLockers(branchName);
   const inkassas = getInkassa(branchName);
   const cashMovements = getCashMovements(branchName);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTashkentDateKey();
 
   const todayOrders = orders.filter((order) => order.createdAt?.startsWith(today));
   const todayExpenses = expenses.filter((expense) => expense.createdAt?.startsWith(today));

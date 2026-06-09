@@ -52,14 +52,13 @@ const baggageService = {
       discountReason: data.discountReason || "",
       realPaidAmount: Number(data.realPaidAmount ?? data.finalAmount ?? 0),
       realPaidReason: data.paymentReason || "",
-      checkIn: data.checkIn ? new Date(data.checkIn).toISOString() : undefined,
-      plannedCheckOut: data.checkOut ? new Date(data.checkOut).toISOString() : undefined,
+      checkIn: data.checkIn,
+      plannedCheckOut: data.checkOut,
       note: data.note || "",
       lockerIds,
       items: lockers.map((locker) => ({
         lockerId: locker.id || locker.lockerId,
         tariffHours: Number(locker.tariffHours || data.tariffHours || data.hours || 1),
-        originalPrice: locker.originalPrice ?? locker.price,
         discountAmount: locker.discountAmount || 0,
         currency: locker.currency || data.currency || "UZS",
       })).filter((locker) => locker.lockerId),
@@ -115,9 +114,9 @@ const baggageService = {
     return mapOrder(getData(response));
   },
 
-  calculateTariff({ lockers = [], hours = 1 }) {
+  calculateTariff({ lockers = [] }) {
     const safeLockers = asArray(lockers);
-    return safeLockers.reduce((sum, locker) => sum + Number(locker.price || locker.originalPrice || 0), 0) || Number(hours || 1) * safeLockers.length * 20000;
+    return safeLockers.reduce((sum, locker) => sum + Number(locker.price || locker.originalPrice || 0), 0);
   },
 
   async getCustomerHistory({ phone, passport, branchName }) {
