@@ -111,7 +111,7 @@ export default function SalesHistory() {
   };
 
   const lockerLabel = (order) =>
-    asArray(order.lockers).map((locker) => `#${locker.number || "-"} ${locker.size || "-"}`).join(", ") ||
+    asArray(order.lockers).map((locker) => `#${locker.number || "-"} ${locker.size || "-"} x${locker.count || 1}`).join(", ") ||
     `${order.size || "-"} / ${order.count || 0} ${t("ta")}`;
 
   const formatCurrency = (order, amount) =>
@@ -128,7 +128,7 @@ export default function SalesHistory() {
           ? formatMoneyByCurrency(locker.price, locker.currency || order.currency)
           : "Narx topilmadi";
 
-        return `#${locker.number} / ${locker.size}: ${price}`;
+        return `#${locker.number} / ${locker.size} x${locker.count || 1}: ${price}`;
       })
       .join("; ");
   };
@@ -282,12 +282,12 @@ export default function SalesHistory() {
 
               <div>
                 <span>{t("Overtime")}</span>
-                <b>{formatMoney(selectedOrder.overtimeAmount)}</b>
+                <b>{formatCurrency(selectedOrder, selectedOrder.overtimeAmount)}</b>
               </div>
 
               <div>
                 <span>{t("Total")}</span>
-                <b>{formatMoney(getTotalPrice(selectedOrder))}</b>
+                <b>{formatCurrency(selectedOrder, getTotalPrice(selectedOrder))}</b>
               </div>
 
               <div>
@@ -465,7 +465,7 @@ export default function SalesHistory() {
                     ? formatDateTime(item.realPickupTime)
                     : "-"}
                 </span>
-                <small>{t("Overtime")}: {formatMoney(item.overtimeAmount)}</small>
+                <small>{t("Overtime")}: {formatCurrency(item, item.overtimeAmount)}</small>
               </div>
 
               <div>

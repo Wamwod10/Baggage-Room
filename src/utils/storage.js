@@ -63,13 +63,18 @@ export const buildDefaultLockers = (branch) => {
 };
 
 const DEFAULT_TARIFFS = [1, 12, 24, 48, 72];
+const XL_BRANCHES = new Set([
+  "Toshkent Shimoliy vokzal",
+  "Toshkent Janubiy vokzal",
+  "Samarqand vokzal",
+]);
 
 const emptySizeTariff = () => ({ 1: 0, 12: 0, 24: 0, 48: 0, 72: 0, after72: 0 });
-const getDefaultTariffTable = () => ({
-  S: emptySizeTariff(),
-  M: emptySizeTariff(),
-  L: emptySizeTariff(),
-});
+const getDefaultTariffTable = (branch) =>
+  ["S", "M", "L", ...(XL_BRANCHES.has(branch) ? ["XL"] : [])].reduce((result, size) => {
+    result[size] = emptySizeTariff();
+    return result;
+  }, {});
 
 const DEFAULT_SETTINGS = {
   language: "uzLatn",
@@ -193,7 +198,7 @@ const normalizeSettings = (settings = {}) => {
   Object.keys(branchTariffs).forEach((branch) => {
     const saved = savedBranchTariffs[branch] || {};
     const defaultSizes = branchTariffs[branch].sizes;
-    const sizes = ["S", "M", "L"].reduce((result, size) => {
+    const sizes = Object.keys(defaultSizes).reduce((result, size) => {
       const savedSize = saved.sizes?.[size] || saved[size] || {};
       const fallbackHourly = Number(saved.oneHourPrice || defaultSizes[size]?.[1] || 0);
 
@@ -402,14 +407,14 @@ export function addCashMovement(movement) {
 const getOneHourPrice = (branch, size = "M") => {
   const settings = getSettings();
   const branchTariff = settings.branchTariffs?.[branch] || {};
-  const sizeKey = ["S", "M", "L"].includes(size) ? size : String(size || "M").slice(0, 1).toUpperCase();
+  const sizeKey = ["S", "M", "L", "XL"].includes(size) ? size : String(size || "M").slice(0, 1).toUpperCase();
   return Number(branchTariff.sizes?.[sizeKey]?.[1] || branchTariff.oneHourPrice || 0);
 };
 
 const calculateSizeTariff = (branch, size, hours, isCustom = false) => {
   const hourCount = Math.max(1, Math.ceil(Number(hours || 1)));
   const settings = getSettings();
-  const sizeKey = ["S", "M", "L"].includes(size) ? size : String(size || "M").slice(0, 1).toUpperCase();
+  const sizeKey = ["S", "M", "L", "XL"].includes(size) ? size : String(size || "M").slice(0, 1).toUpperCase();
   const tariff = settings.branchTariffs?.[branch]?.sizes?.[sizeKey];
 
   if (!tariff) {

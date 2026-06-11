@@ -146,7 +146,7 @@ export default function ReceiptPreview({ order, onClose }) {
                   >
                     <span className="receipt-locker-meta">
                       <strong>
-                        #{locker.number} / {locker.size || "-"}
+                        #{locker.number} / {locker.size || "-"} x{locker.count || 1}
                       </strong>
                       <small>
                         {formatTariffHours(getTariffHours(locker))}
@@ -178,7 +178,7 @@ export default function ReceiptPreview({ order, onClose }) {
             <div className="receipt-row">
               <span>{t("Jami")}</span>
               <b>
-                {order.count || lockers.length || 0} {t("ta")}
+                {order.count || lockers.reduce((total, locker) => total + Number(locker.count || 1), 0) || 0} {t("ta")}
               </b>
             </div>
 

@@ -20,7 +20,7 @@ import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
-import { formatMoneyByCurrency } from "../../utils/currency";
+import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -45,7 +45,7 @@ const lockerPriceLabel = (order) => {
         ? formatCurrency(locker.price, locker.currency || order.currency)
         : "Narx topilmadi";
 
-      return `#${locker.number} / ${locker.size}: ${price}`;
+      return `#${locker.number} / ${locker.size} x${locker.count || 1}: ${price}`;
     })
     .join("; ");
 };
@@ -171,7 +171,7 @@ export default function ActiveBaggage() {
     setPickupForm({
       payment: order.payment === "Qarz" ? "Naqd" : order.payment || "Naqd",
       currency: order.currency || "UZS",
-      realPaidAmount: String(getPickupExpectedTotal(order)),
+      realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(order), order.currency || "UZS")),
       paymentReason: "",
     });
     setFormError("");
@@ -186,7 +186,7 @@ export default function ActiveBaggage() {
     }
 
     if (
-      Number(pickupForm.realPaidAmount || 0) !==
+      toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS") !==
         getPickupExpectedTotal(pickupOrder) &&
       !pickupForm.paymentReason.trim()
     ) {
@@ -292,9 +292,10 @@ export default function ActiveBaggage() {
 
   const openTransfer = (order) => {
     const orderLockers = asArray(order.lockers);
+    const firstLocker = orderLockers[0];
     setTransferOrder(order);
     setTransferForm({
-      fromNumber: String(orderLockers[0]?.number || ""),
+      fromNumber: String(firstLocker?.number || ""),
       toNumber: "",
       reason: "",
     });
@@ -303,15 +304,10 @@ export default function ActiveBaggage() {
 
   const transferTargets = useMemo(() => {
     if (!transferOrder) return [];
-    const fromLocker = asArray(transferOrder.lockers).find(
-      (locker) => Number(locker.number) === Number(transferForm.fromNumber),
-    );
-
     return pageLockers.filter(
       (locker) =>
         locker.branch === transferOrder.branch &&
-        locker.status === "Bosh" &&
-        (!fromLocker || locker.size === fromLocker.size),
+        locker.status === "Bosh",
     );
   }, [pageLockers, transferForm.fromNumber, transferOrder]);
 
@@ -355,7 +351,7 @@ export default function ActiveBaggage() {
       : Number(order.finalPrice || 0) + Number(order.overtimeAmount || 0);
 
   const lockerLabel = (order) =>
-    asArray(order.lockers).map((locker) => `#${locker.number} ${locker.size}`).join(", ") ||
+    asArray(order.lockers).map((locker) => `#${locker.number} ${locker.size} x${locker.count || 1}`).join(", ") ||
     `${order.size} / ${order.count} ${t("ta")}`;
 
   return (
@@ -461,7 +457,7 @@ export default function ActiveBaggage() {
                 <div>
                   <span>{lockerLabel(order)}</span>
                   <small>
-                    {asArray(order.lockers).length || order.count || 1} {t("ta")}
+                    {order.count || asArray(order.lockers).reduce((total, locker) => total + Number(locker.count || 1), 0) || 1} {t("ta")}
                   </small>
                 </div>
 
@@ -641,9 +637,9 @@ export default function ActiveBaggage() {
               <label>
                 <span>{t("Old")}</span>
                 <GlassSelect value={transferForm.fromNumber} onChange={(event) => setTransferForm((prev) => ({ ...prev, fromNumber: event.target.value, toNumber: "" }))}>
-                  {asArray(transferOrder.lockers).map((locker) => (
+                  {[...new Map(asArray(transferOrder.lockers).map((locker) => [Number(locker.number), locker])).values()].map((locker) => (
                     <option key={locker.number} value={locker.number}>
-                      #{locker.number} {locker.size}
+                      #{locker.number}
                     </option>
                   ))}
                 </GlassSelect>

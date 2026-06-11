@@ -69,7 +69,12 @@ const fallbackSettings = {
 };
 
 const tariffHours = [1, 12, 24, 48, 72];
-const tariffSizes = ["S", "M", "L"];
+const XL_BRANCHES = new Set([
+  "Toshkent Shimoliy vokzal",
+  "Toshkent Janubiy vokzal",
+  "Samarqand vokzal",
+]);
+const tariffSizesForBranch = (branch) => ["S", "M", "L", ...(XL_BRANCHES.has(branch) ? ["XL"] : [])];
 
 export default function Settings() {
   const { t, language, setLanguage } = useTranslation();
@@ -410,12 +415,13 @@ export default function Settings() {
               <div className="branch-settings-list">
                 {branchNames.map((branch) => {
                   const tariff = settings.branchTariffs?.[branch] || {};
+                  const tariffSizes = tariffSizesForBranch(branch);
 
                   return (
                     <div className="branch-tariff-card" key={branch}>
                       <div className="branch-tariff-head">
                         <h3>{t(branch)}</h3>
-                        <span>S / M / L</span>
+                        <span>{tariffSizes.join(" / ")}</span>
                       </div>
 
                       <div className="tariff-table">

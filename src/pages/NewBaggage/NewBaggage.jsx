@@ -16,7 +16,7 @@ import shiftService from "../../services/shiftService";
 import settingsService from "../../services/settingsService";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
-import { formatMoneyByCurrency } from "../../utils/currency";
+import { convertFromUZS, formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { addHoursToIso, formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
@@ -33,6 +33,7 @@ const getInitialForm = (defaultBranch, defaultCurrency = "UZS") => ({
   passport: "",
   branch: defaultBranch,
   lockers: [],
+  baggageCounts: {},
   checkIn: formatTashkentInputDateTime(),
   tariffPreset: "1",
   customHours: "",
@@ -47,6 +48,11 @@ const getInitialForm = (defaultBranch, defaultCurrency = "UZS") => ({
 
 const emptyCustomerHistory = { visits: 0, orders: [], activeOrders: [], duplicateOrders: [] };
 const asArray = (value) => (Array.isArray(value) ? value : []);
+const XL_BRANCHES = new Set([
+  "Toshkent Shimoliy vokzal",
+  "Toshkent Janubiy vokzal",
+  "Samarqand vokzal",
+]);
 
 export default function NewBaggage() {
   const { t, formatDateTime } = useTranslation();
@@ -101,6 +107,10 @@ export default function NewBaggage() {
   const pageLockers = useMemo(() => asArray(safePageData.lockers), [safePageData.lockers]);
   const pageOrders = useMemo(() => asArray(safePageData.orders), [safePageData.orders]);
   const selectedLockers = useMemo(() => asArray(form.lockers), [form.lockers]);
+  const baggageCounts = useMemo(
+    () => (form.baggageCounts && typeof form.baggageCounts === "object" ? form.baggageCounts : {}),
+    [form.baggageCounts],
+  );
   const safeCustomerHistory = useMemo(() => {
     if (customerHistory && typeof customerHistory === "object" && !Array.isArray(customerHistory)) {
       return customerHistory;
@@ -121,6 +131,10 @@ export default function NewBaggage() {
     return Object.fromEntries(rows.map((tariff) => [tariff.size, tariff]));
   }, [currentBranch, safePageData.tariffs]);
   const branchTariffHours = [1, 12, 24, 48, 72];
+  const baggageSizes = useMemo(
+    () => ["S", "M", "L", ...(XL_BRANCHES.has(currentBranch) ? ["XL"] : [])],
+    [currentBranch],
+  );
   const currencies = useMemo(() => {
     const configuredCurrencies = asArray(settings.currencies);
     return configuredCurrencies.length ? configuredCurrencies : ["UZS", "USD", "RUB", "EUR"];
@@ -137,6 +151,25 @@ export default function NewBaggage() {
     [form.customHours, form.tariffPreset],
   );
   const isCustomTariff = form.tariffPreset === "custom";
+  const exchangeRate = useMemo(
+    () => (form.currency === "UZS" ? 1 : Number(settings.exchangeRates?.[form.currency] || 0)),
+    [form.currency, settings.exchangeRates],
+  );
+  const baggageItems = useMemo(() => {
+    const locker = selectedLockers[0];
+    if (!locker) return [];
+
+    return baggageSizes
+      .map((size) => ({
+        lockerId: locker.id || locker.lockerId,
+        number: locker.number,
+        size,
+        count: Number(baggageCounts[size] || 0),
+        currency: form.currency,
+        tariffHours: selectedHours,
+      }))
+      .filter((item) => item.count > 0);
+  }, [baggageCounts, baggageSizes, form.currency, selectedHours, selectedLockers]);
   const originalAmountUZS = useMemo(() => {
     const priceForHours = (tariff, hours) => {
       const h = Number(hours || 1);
@@ -149,18 +182,21 @@ export default function NewBaggage() {
       return Number(tariff.price72h || 0) + Math.ceil((h - 72) / 24) * Number(tariff.after72hPrice || 0);
     };
 
-    return selectedLockers.reduce((total, locker) => total + priceForHours(tariffBySize[locker.size], selectedHours), 0);
-  }, [selectedHours, selectedLockers, tariffBySize]);
-  const exchangeRate = useMemo(
-    () => Number(settings.exchangeRates?.[form.currency] || 1),
-    [form.currency, settings.exchangeRates],
+    return baggageItems.reduce((total, item) => total + priceForHours(tariffBySize[item.size], selectedHours) * item.count, 0);
+  }, [baggageItems, selectedHours, tariffBySize]);
+  const calculatedAmount = useMemo(
+    () => convertFromUZS(originalAmountUZS, form.currency, settings.exchangeRates),
+    [form.currency, originalAmountUZS, settings.exchangeRates],
   );
-  const calculatedAmount = originalAmountUZS;
-  const discount = useMemo(() => Number(form.discount || 0), [form.discount]);
+  const discount = useMemo(() => toMinorUnits(form.discount || 0, form.currency), [form.currency, form.discount]);
   const finalAmount = useMemo(() => Math.max(calculatedAmount - discount, 0), [calculatedAmount, discount]);
   const realPaidAmount = useMemo(
-    () => (form.finalEdit ? Number(form.realPaidAmount || 0) : finalAmount),
-    [finalAmount, form.finalEdit, form.realPaidAmount],
+    () => (form.finalEdit ? toMinorUnits(form.realPaidAmount || 0, form.currency) : finalAmount),
+    [finalAmount, form.currency, form.finalEdit, form.realPaidAmount],
+  );
+  const totalBaggageCount = useMemo(
+    () => baggageItems.reduce((total, item) => total + Number(item.count || 0), 0),
+    [baggageItems],
   );
   const checkOut = useMemo(() => {
     return addHoursToIso(parseTashkentInputToIso(form.checkIn), selectedHours);
@@ -209,10 +245,6 @@ export default function NewBaggage() {
     () => pageLockers.filter((locker) => locker.branch === currentBranch),
     [currentBranch, pageLockers],
   );
-  const freeLockers = useMemo(
-    () => branchLockers.filter((locker) => locker.status === "Bosh"),
-    [branchLockers],
-  );
   const ordersByKey = useMemo(() => {
     const lookup = new Map();
     for (const order of pageOrders) {
@@ -239,29 +271,28 @@ export default function NewBaggage() {
     }));
   };
 
+  const updateBaggageCount = (size, delta) => {
+    setForm((prev) => {
+      const counts = prev.baggageCounts && typeof prev.baggageCounts === "object" ? prev.baggageCounts : {};
+      const nextCount = Math.max(0, Number(counts[size] || 0) + delta);
+      return {
+        ...prev,
+        baggageCounts: {
+          ...counts,
+          [size]: nextCount,
+        },
+      };
+    });
+  };
+
   const openOrderPanel = (locker) => {
     setForm({
       ...getInitialForm(currentBranch, settings.defaultCurrency || "UZS"),
       lockers: [{ id: locker.id, lockerId: locker.id, number: locker.number, size: locker.size, price: locker.price }],
+      baggageCounts: {},
     });
     setSelectedLocker(locker);
     setMessage("");
-  };
-
-  const toggleLocker = (locker) => {
-    if (locker.status !== "Bosh") return;
-
-    setForm((prev) => {
-      const previousLockers = asArray(prev.lockers);
-      const exists = previousLockers.some(
-        (item) => Number(item.number) === Number(locker.number),
-      );
-      const lockers = exists
-        ? previousLockers.filter((item) => Number(item.number) !== Number(locker.number))
-        : [...previousLockers, { id: locker.id, lockerId: locker.id, number: locker.number, size: locker.size, price: locker.price }];
-
-      return { ...prev, lockers };
-    });
   };
 
   const openServiceModal = (locker) => {
@@ -335,8 +366,18 @@ export default function NewBaggage() {
       return;
     }
 
-    if (selectedLockers.some((locker) => !tariffBySize[locker.size])) {
-      fail(t("Tanlangan yacheyka razmeri uchun backend tarifi topilmadi."));
+    if (!totalBaggageCount) {
+      fail(t("Kamida bitta bagaj razmerini tanlang."));
+      return;
+    }
+
+    if (baggageItems.some((item) => !tariffBySize[item.size])) {
+      fail(t("Tanlangan bagaj razmeri uchun backend tarifi topilmadi."));
+      return;
+    }
+
+    if (form.currency !== "UZS" && (!Number.isFinite(exchangeRate) || exchangeRate <= 0)) {
+      fail(t("Tanlangan valyuta uchun kurs kiritilmagan."));
       return;
     }
 
@@ -373,8 +414,9 @@ export default function NewBaggage() {
         passport: form.passport.trim(),
         branch: currentBranch,
         lockers: selectedLockers,
-        size: selectedLockers.map((locker) => locker.size).join(", "),
-        count: selectedLockers.length,
+        baggageItems,
+        size: baggageItems.map((item) => `${item.size} x${item.count}`).join(", "),
+        count: totalBaggageCount,
         checkIn: parseTashkentInputToIso(form.checkIn),
         checkOut,
         tariffHours: selectedHours,
@@ -391,7 +433,7 @@ export default function NewBaggage() {
         difference: realPaidAmount - finalAmount,
         currency: form.currency,
         payment: form.payment,
-        debtAmount: form.payment === "Qarz" ? realPaidAmount : 0,
+        debtAmount: form.payment === "Qarz" ? finalAmount - realPaidAmount : 0,
         paymentEditReason: form.paymentReason.trim(),
         note: form.note,
         admin: user?.fullName || "Admin",
@@ -538,7 +580,7 @@ export default function NewBaggage() {
               <span>{t("Tanlangan")}</span>
               <h2>{selectedLockers.map((item) => `#${item.number}`).join(", ")}</h2>
             </div>
-            <b>{selectedLockers.map((item) => item.size).join("/")}</b>
+            <b>{totalBaggageCount || 0} {t("ta")}</b>
           </div>
 
           <div className="panel-mini-actions">
@@ -580,22 +622,39 @@ export default function NewBaggage() {
           </div>
 
           <div className="panel-section">
-            <h3>{t("Yacheykalar")}</h3>
-            <div className="locker-pick-list">
-              {freeLockers.map((locker) => {
-                const active = selectedLockers.some((item) => Number(item.number) === Number(locker.number));
+            <h3>{t("Bagaj razmerlari")}</h3>
+            <div className="baggage-size-picker">
+              {baggageSizes.map((size) => {
+                const count = Number(baggageCounts[size] || 0);
                 return (
-                  <button
-                    type="button"
-                    key={locker.id}
-                    className={active ? "active" : ""}
-                    onClick={() => toggleLocker(locker)}
-                  >
-                    #{locker.number} {locker.size}
-                  </button>
+                  <div className="baggage-size-control" key={size}>
+                    <button
+                      type="button"
+                      className={count > 0 ? "active" : ""}
+                      onClick={() => updateBaggageCount(size, 1)}
+                    >
+                      <span>{size}</span>
+                      <b>{count}</b>
+                    </button>
+                    <button
+                      type="button"
+                      className="baggage-size-minus"
+                      onClick={() => updateBaggageCount(size, -1)}
+                      disabled={!count}
+                      aria-label={`${size} -`}
+                    >
+                      -
+                    </button>
+                  </div>
                 );
               })}
             </div>
+            {baggageItems.length > 0 && (
+              <div className="baggage-size-summary">
+                <span>{t("Yacheyka")}: #{selectedLockers[0]?.number || "-"}</span>
+                <b>{baggageItems.map((item) => `${item.size}: ${item.count} ${t("ta")}`).join(" / ")}</b>
+              </div>
+            )}
           </div>
 
           <div className="panel-section">
@@ -647,7 +706,7 @@ export default function NewBaggage() {
                 <input
                   type="number"
                   min="0"
-                  value={form.finalEdit ? form.realPaidAmount : finalAmount}
+                  value={form.finalEdit ? form.realPaidAmount : fromMinorUnits(finalAmount, form.currency)}
                   onFocus={() => updateForm("finalEdit", true)}
                   onChange={(event) => updateForm("realPaidAmount", event.target.value)}
                 />
@@ -709,13 +768,10 @@ export default function NewBaggage() {
       </div>
 
       {error && (
-        <StateBlock
-          type="error"
-          title={t("Yacheykalar yuklanmadi")}
-          description={t("Local yacheyka ma'lumotlarini o'qishda xatolik yuz berdi.")}
-          actionLabel={t("Qayta urinish")}
-          onAction={retry}
-        />
+        <div className="local-message">
+          {error?.message || t("Ma'lumotlarni yuklashda xatolik yuz berdi.")}
+          <button type="button" onClick={retry}>{t("Qayta urinish")}</button>
+        </div>
       )}
 
       {message && <div className="local-message">{message}</div>}
@@ -760,41 +816,39 @@ export default function NewBaggage() {
             </div>
           </div>
 
-          {isLoading && !error ? (
+          {isLoading ? (
             <div className="card new-baggage-loading">
               <ListSkeleton rows={5} />
             </div>
           ) : (
-            !error && (
-              <div className="locker-grid">
-                {lockers.map((locker) => {
-                  const activeOrderObj = ordersByKey.get(locker.activeOrderId);
-                  const lockerOrderLabel = activeOrderObj?.orderNumber || "-";
-                  return (
-                    <article
-                      className={`locker-card card ${locker.status} ${selectedLocker?.id === locker.id ? "selected" : ""}`}
-                      key={locker.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleCardClick(locker)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          handleCardClick(locker);
-                        }
-                      }}
-                    >
-                      <div className="locker-card-head">
-                        <h2>#{locker.number}</h2>
-                        <b className="locker-size-badge">{locker.size}</b>
-                      </div>
-                      <div className={`locker-status-badge ${locker.status}`}>{getStatusLabel(locker.status)}</div>
-                      {locker.activeOrderId && <div className="locker-order-link">{lockerOrderLabel}</div>}
-                    </article>
-                  );
-                })}
-              </div>
-            )
+            <div className="locker-grid">
+              {lockers.map((locker) => {
+                const activeOrderObj = ordersByKey.get(locker.activeOrderId);
+                const lockerOrderLabel = activeOrderObj?.orderNumber || "-";
+                return (
+                  <article
+                    className={`locker-card card ${locker.status} ${selectedLocker?.id === locker.id ? "selected" : ""}`}
+                    key={locker.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleCardClick(locker)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleCardClick(locker);
+                      }
+                    }}
+                  >
+                    <div className="locker-card-head">
+                      <h2>#{locker.number}</h2>
+                      <b className="locker-size-badge">{locker.size}</b>
+                    </div>
+                    <div className={`locker-status-badge ${locker.status}`}>{getStatusLabel(locker.status)}</div>
+                    {locker.activeOrderId && <div className="locker-order-link">{lockerOrderLabel}</div>}
+                  </article>
+                );
+              })}
+            </div>
           )}
         </div>
 

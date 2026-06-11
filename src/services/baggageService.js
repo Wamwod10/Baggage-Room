@@ -37,8 +37,16 @@ const baggageService = {
     const branchId = await branchService.getBranchIdByName(data.branch);
     const lockers = asArray(data.lockers);
     const lockerIds = lockers.map((locker) => locker.id || locker.lockerId).filter(Boolean);
+    const baggageItems = asArray(data.baggageItems).length
+      ? asArray(data.baggageItems)
+      : lockers.map((locker) => ({
+        lockerId: locker.id || locker.lockerId,
+        size: locker.size,
+        count: 1,
+      }));
     if (!branchId) throw new Error("Filial tanlanmagan");
     if (!lockerIds.length) throw new Error("Kamida bitta yacheyka tanlang");
+    if (!baggageItems.length) throw new Error("Kamida bitta bagaj razmerini tanlang");
     const response = await apiClient.post("/orders", {
       branchId,
       clientName: data.client,
@@ -52,16 +60,19 @@ const baggageService = {
       discountReason: data.discountReason || "",
       realPaidAmount: Number(data.realPaidAmount ?? data.finalAmount ?? 0),
       realPaidReason: data.paymentReason || "",
+      exchangeRate: Number(data.exchangeRate || 1),
       checkIn: data.checkIn,
       plannedCheckOut: data.checkOut,
       note: data.note || "",
       lockerIds,
-      items: lockers.map((locker) => ({
-        lockerId: locker.id || locker.lockerId,
-        tariffHours: Number(locker.tariffHours || data.tariffHours || data.hours || 1),
-        discountAmount: locker.discountAmount || 0,
-        currency: locker.currency || data.currency || "UZS",
-      })).filter((locker) => locker.lockerId),
+      items: baggageItems.map((item) => ({
+        lockerId: item.lockerId || item.id || lockerIds[0],
+        size: item.size,
+        count: Number(item.count || 1),
+        tariffHours: Number(item.tariffHours || data.tariffHours || data.hours || 1),
+        discountAmount: item.discountAmount || 0,
+        currency: item.currency || data.currency || "UZS",
+      })).filter((item) => item.lockerId && item.size && Number(item.count || 0) > 0),
     });
     const responseData = getData(response, {});
     return mapOrder(responseData.order || responseData);
