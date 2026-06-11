@@ -3,7 +3,9 @@ import {
   Ban,
   Eye,
   Luggage,
+  Minus,
   MoveRight,
+  Plus,
   Printer,
   Save,
   Search,
@@ -53,6 +55,16 @@ const XL_BRANCHES = new Set([
   "Toshkent Janubiy vokzal",
   "Samarqand vokzal",
 ]);
+const priceForHours = (tariff, hours) => {
+  const h = Number(hours || 1);
+  if (!tariff) return 0;
+  if (h <= 1) return Number(tariff.price1h || 0);
+  if (h <= 12) return Number(tariff.price12h || 0);
+  if (h <= 24) return Number(tariff.price24h || 0);
+  if (h <= 48) return Number(tariff.price48h || 0);
+  if (h <= 72) return Number(tariff.price72h || 0);
+  return Number(tariff.price72h || 0) + Math.ceil((h - 72) / 24) * Number(tariff.after72hPrice || 0);
+};
 
 export default function NewBaggage() {
   const { t, formatDateTime } = useTranslation();
@@ -171,17 +183,6 @@ export default function NewBaggage() {
       .filter((item) => item.count > 0);
   }, [baggageCounts, baggageSizes, form.currency, selectedHours, selectedLockers]);
   const originalAmountUZS = useMemo(() => {
-    const priceForHours = (tariff, hours) => {
-      const h = Number(hours || 1);
-      if (!tariff) return 0;
-      if (h <= 1) return Number(tariff.price1h || 0);
-      if (h <= 12) return Number(tariff.price12h || 0);
-      if (h <= 24) return Number(tariff.price24h || 0);
-      if (h <= 48) return Number(tariff.price48h || 0);
-      if (h <= 72) return Number(tariff.price72h || 0);
-      return Number(tariff.price72h || 0) + Math.ceil((h - 72) / 24) * Number(tariff.after72hPrice || 0);
-    };
-
     return baggageItems.reduce((total, item) => total + priceForHours(tariffBySize[item.size], selectedHours) * item.count, 0);
   }, [baggageItems, selectedHours, tariffBySize]);
   const calculatedAmount = useMemo(
@@ -201,6 +202,11 @@ export default function NewBaggage() {
   const checkOut = useMemo(() => {
     return addHoursToIso(parseTashkentInputToIso(form.checkIn), selectedHours);
   }, [form.checkIn, selectedHours]);
+  const formatSizePrice = (size) => {
+    const amountUZS = priceForHours(tariffBySize[size], selectedHours);
+    const amount = convertFromUZS(amountUZS, form.currency, settings.exchangeRates);
+    return formatMoneyByCurrency(amount, form.currency);
+  };
 
   useEffect(() => {
     let active = true;
@@ -230,7 +236,6 @@ export default function NewBaggage() {
         const status = locker.status;
         const matchesFilter =
           filter === "all" ||
-          locker.size === filter ||
           (filter === "free" && status === "Bosh") ||
           (filter === "busy" && status === "Band") ||
           (filter === "delayed" && status === "Kechikkan") ||
@@ -477,13 +482,8 @@ export default function NewBaggage() {
     setSelectedLocker(locker);
   };
 
-  const sizeFilters = [
-    ["all", t("Hammasi")],
-    ["S", "S"],
-    ["M", "M"],
-    ["L", "L"],
-  ];
   const statusFilters = [
+    ["all", t("Hammasi")],
     ["free", t("Bo'sh")],
     ["busy", t("Band")],
     ["delayed", t("Kechikkan")],
@@ -509,7 +509,6 @@ export default function NewBaggage() {
               <span>{t("Yacheyka")}</span>
               <h2>#{selectedLocker.number}</h2>
             </div>
-            <b>{selectedLocker.size}</b>
           </div>
 
           <div className={`panel-status ${selectedLocker.status}`}>
@@ -622,29 +621,37 @@ export default function NewBaggage() {
           </div>
 
           <div className="panel-section">
-            <h3>{t("Bagaj razmerlari")}</h3>
+            <div className="baggage-size-head">
+              <h3>{t("Bagaj razmerlari")}</h3>
+              <span>{totalBaggageCount || 0} {t("ta")}</span>
+            </div>
             <div className="baggage-size-picker">
               {baggageSizes.map((size) => {
                 const count = Number(baggageCounts[size] || 0);
                 return (
                   <div className="baggage-size-control" key={size}>
-                    <button
-                      type="button"
-                      className={count > 0 ? "active" : ""}
-                      onClick={() => updateBaggageCount(size, 1)}
-                    >
-                      <span>{size}</span>
-                      <b>{count}</b>
-                    </button>
-                    <button
-                      type="button"
-                      className="baggage-size-minus"
-                      onClick={() => updateBaggageCount(size, -1)}
-                      disabled={!count}
-                      aria-label={`${size} -`}
-                    >
-                      -
-                    </button>
+                    <div className="baggage-size-info">
+                      <strong>{size}</strong>
+                      <span>{formatSizePrice(size)}</span>
+                    </div>
+                    <div className="baggage-size-stepper">
+                      <button
+                        type="button"
+                        onClick={() => updateBaggageCount(size, -1)}
+                        disabled={!count}
+                        aria-label={`${size} -`}
+                      >
+                        <Minus size={15} />
+                      </button>
+                      <b className={count > 0 ? "active" : ""}>{count}</b>
+                      <button
+                        type="button"
+                        onClick={() => updateBaggageCount(size, 1)}
+                        aria-label={`${size} +`}
+                      >
+                        <Plus size={15} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -802,12 +809,6 @@ export default function NewBaggage() {
 
             <div className="locker-filter-groups">
               <div className="locker-filter">
-                <span>{t("Size")}</span>
-                {sizeFilters.map(([value, label]) => (
-                  <button type="button" key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{label}</button>
-                ))}
-              </div>
-              <div className="locker-filter">
                 <span>{t("Status")}</span>
                 {statusFilters.map(([value, label]) => (
                   <button type="button" key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{label}</button>
@@ -841,7 +842,6 @@ export default function NewBaggage() {
                   >
                     <div className="locker-card-head">
                       <h2>#{locker.number}</h2>
-                      <b className="locker-size-badge">{locker.size}</b>
                     </div>
                     <div className={`locker-status-badge ${locker.status}`}>{getStatusLabel(locker.status)}</div>
                     {locker.activeOrderId && <div className="locker-order-link">{lockerOrderLabel}</div>}
@@ -874,7 +874,7 @@ export default function NewBaggage() {
             <div className="locker-service-head">
               <div>
                 <h2>{t("Yacheykani servisga olish")}</h2>
-                <p>#{serviceLocker.number} {serviceLocker.size}</p>
+                <p>#{serviceLocker.number}</p>
               </div>
               <button type="button" onClick={() => setServiceLocker(null)}>
                 {t("Close")}
