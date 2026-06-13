@@ -132,8 +132,8 @@ export default function Shifts() {
     }
 
     return {
-      orders: 0,
-      baggage: 0,
+      orders: Number(currentShift.ordersCount || currentShift.orders || 0),
+      baggage: Number(currentShift.ordersCount || currentShift.orders || 0),
       revenue: Number(currentShift.totalRevenue || 0),
       expenses: Number(currentShift.expenseAmount || currentShift.totalExpense || 0),
       netProfit: Number(currentShift.totalRevenue || 0) - Number(currentShift.expenseAmount || currentShift.totalExpense || 0),

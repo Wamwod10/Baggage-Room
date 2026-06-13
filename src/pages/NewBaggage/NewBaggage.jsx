@@ -195,8 +195,8 @@ export default function NewBaggage() {
   const discount = useMemo(() => toMinorUnits(form.discount || 0, form.currency), [form.currency, form.discount]);
   const finalAmount = useMemo(() => Math.max(calculatedAmount - discount, 0), [calculatedAmount, discount]);
   const realPaidAmount = useMemo(
-    () => (form.finalEdit ? toMinorUnits(form.realPaidAmount || 0, form.currency) : finalAmount),
-    [finalAmount, form.currency, form.finalEdit, form.realPaidAmount],
+    () => (form.finalEdit ? toMinorUnits(form.realPaidAmount || 0, form.currency) : form.payment === "Qarz" ? 0 : finalAmount),
+    [finalAmount, form.currency, form.finalEdit, form.payment, form.realPaidAmount],
   );
   const totalBaggageCount = useMemo(
     () => baggageItems.reduce((total, item) => total + Number(item.count || 0), 0),
@@ -399,7 +399,7 @@ export default function NewBaggage() {
       return;
     }
 
-    if (realPaidAmount !== finalAmount && !form.paymentReason.trim()) {
+    if (realPaidAmount !== finalAmount && form.payment !== "Qarz" && !form.paymentReason.trim()) {
       fail(t("Summani o'zgartirish sababini kiriting."));
       return;
     }
@@ -736,7 +736,7 @@ export default function NewBaggage() {
                 <span>{t("Real olingan summa")}</span>
                 <input
                   inputMode="decimal"
-                  value={formatNumberInput(form.finalEdit ? form.realPaidAmount : fromMinorUnits(finalAmount, form.currency), { decimal: form.currency !== "UZS" })}
+                  value={formatNumberInput(form.finalEdit ? form.realPaidAmount : form.payment === "Qarz" ? "0" : fromMinorUnits(finalAmount, form.currency), { decimal: form.currency !== "UZS" })}
                   onFocus={() => updateForm("finalEdit", true)}
                   onChange={(event) => updateForm("realPaidAmount", cleanNumericInput(event.target.value, { decimal: form.currency !== "UZS" }))}
                 />
