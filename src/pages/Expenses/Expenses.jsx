@@ -8,6 +8,7 @@ import { ListSkeleton } from "../../components/Skeleton/Skeleton";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
+import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./expenses.scss";
 
 const getInitialForm = (defaultBranch = getBranchNames()[0] || "") => ({
@@ -77,7 +78,7 @@ export default function Expenses() {
       setIsSubmitting(false);
     };
 
-    const amount = Number(form.amount);
+    const amount = Number(cleanNumericInput(form.amount, { decimal: form.currency !== "UZS" }));
 
     if (!form.category.trim()) {
       fail("Kategoriya tanlanishi kerak.");
@@ -161,10 +162,14 @@ export default function Expenses() {
             <span>{t("Summa")}</span>
             <input
               name="amount"
-              type="number"
-              min="1"
-              value={form.amount}
-              onChange={handleChange}
+              inputMode="decimal"
+              value={formatNumberInput(form.amount, { decimal: form.currency !== "UZS" })}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  amount: cleanNumericInput(event.target.value, { decimal: prev.currency !== "UZS" }),
+                }))
+              }
               placeholder="Masalan: 50000"
             />
           </label>

@@ -21,6 +21,7 @@ import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
 import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
+import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -606,7 +607,16 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("Real olingan summa")}</span>
-                <input type="number" min="0" value={pickupForm.realPaidAmount} onChange={(event) => setPickupForm((prev) => ({ ...prev, realPaidAmount: event.target.value }))} />
+                <input
+                  inputMode="decimal"
+                  value={formatNumberInput(pickupForm.realPaidAmount, { decimal: pickupForm.currency !== "UZS" })}
+                  onChange={(event) =>
+                    setPickupForm((prev) => ({
+                      ...prev,
+                      realPaidAmount: cleanNumericInput(event.target.value, { decimal: prev.currency !== "UZS" }),
+                    }))
+                  }
+                />
               </label>
               <label className="full">
                 <span>{t("Sabab")}</span>

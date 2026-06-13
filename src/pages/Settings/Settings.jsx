@@ -18,6 +18,7 @@ import usePageResource from "../../hooks/usePageResource";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "../../i18n/translations";
 import { useTranslation } from "../../i18n/useTranslation";
 import { getBranchNames } from "../../utils/branches";
+import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./settings.scss";
 
 const fallbackSettings = {
@@ -171,7 +172,7 @@ export default function Settings() {
   };
 
   const handleBranchTariffChange = (branch, size, key, value) => {
-    const amount = Number(value || 0);
+    const amount = Number(cleanNumericInput(value) || 0);
 
     if (!Number.isFinite(amount) || amount < 0) {
       setMessage(t("Tarif qiymati manfiy bo'lishi mumkin emas."));
@@ -439,9 +440,8 @@ export default function Settings() {
                             {tariffHours.map((hour) => (
                               <input
                                 key={hour}
-                                type="number"
-                                min="0"
-                                value={tariff.sizes?.[size]?.[hour] || 0}
+                                inputMode="numeric"
+                                value={formatNumberInput(tariff.sizes?.[size]?.[hour] || 0)}
                                 onChange={(event) =>
                                   handleBranchTariffChange(
                                     branch,
@@ -453,9 +453,8 @@ export default function Settings() {
                               />
                             ))}
                             <input
-                              type="number"
-                              min="0"
-                              value={tariff.sizes?.[size]?.after72 || 0}
+                              inputMode="numeric"
+                              value={formatNumberInput(tariff.sizes?.[size]?.after72 || 0)}
                               onChange={(event) =>
                                 handleBranchTariffChange(
                                   branch,
@@ -484,11 +483,10 @@ export default function Settings() {
                 <label>
                   <span>{t("Overtime per hour")}</span>
                   <input
-                    type="number"
-                    min="0"
-                    value={settings.overtimePerHour}
+                    inputMode="numeric"
+                    value={formatNumberInput(settings.overtimePerHour)}
                     onChange={(event) => {
-                      const value = Number(event.target.value || 0);
+                      const value = Number(cleanNumericInput(event.target.value) || 0);
 
                       if (!Number.isFinite(value) || value < 0) {
                         setMessage(
@@ -561,16 +559,15 @@ export default function Settings() {
                   <label key={currency}>
                     <span>{currency} / UZS</span>
                     <input
-                      type="number"
-                      min="0"
-                      value={settings.exchangeRates?.[currency] || 0}
+                      inputMode="numeric"
+                      value={formatNumberInput(settings.exchangeRates?.[currency] || 0)}
                       onChange={(event) =>
                         setSettings((prev) => ({
                           ...prev,
                           exchangeRates: {
                             ...(prev.exchangeRates || {}),
                             UZS: 1,
-                            [currency]: Number(event.target.value || 0),
+                            [currency]: Number(cleanNumericInput(event.target.value) || 0),
                           },
                         }))
                       }

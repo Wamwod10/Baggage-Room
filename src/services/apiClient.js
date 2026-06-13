@@ -3,6 +3,25 @@ import axios from "axios";
 const TOKEN_KEY = "br_token";
 const AUTH_EVENT = "br:unauthorized";
 const env = import.meta.env || {};
+const PRODUCTION_API_URL = "https://baggage-room-backend.onrender.com/api";
+
+const getBaseURL = () => {
+  const configuredUrl = String(env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+  const isProductionDomain =
+    typeof window !== "undefined" &&
+    ["qonoqbaggage.uz", "www.qonoqbaggage.uz"].includes(window.location.hostname);
+
+  if (
+    isProductionDomain &&
+    (!configuredUrl || configuredUrl.startsWith("http://") || configuredUrl.includes("localhost"))
+  ) {
+    return PRODUCTION_API_URL;
+  }
+
+  if (configuredUrl) return configuredUrl;
+
+  return "http://localhost:5000/api";
+};
 
 const readToken = () => {
   try {
@@ -30,7 +49,7 @@ const clearAuthStorage = () => {
 };
 
 const apiClient = axios.create({
-  baseURL: env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: getBaseURL(),
   headers: {
     "Content-Type": "application/json",
   },

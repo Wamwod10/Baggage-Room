@@ -18,6 +18,7 @@ import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import { formatMoneyByCurrency } from "../../utils/currency";
+import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./shifts.scss";
 
 const emptyShiftData = {
@@ -482,11 +483,11 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
               </label>
               <label>
                 <span>{t("Qabul qilingan summa")}</span>
-                <input type="number" min="0" value={acceptedAmount} onChange={(event) => setAcceptedAmount(event.target.value)} placeholder={t("Masalan: 200000")} />
+                <input inputMode="numeric" value={formatNumberInput(acceptedAmount)} onChange={(event) => setAcceptedAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 200000")} />
               </label>
               <label>
                 <span>{t("Opening cash")}</span>
-                <input type="number" min="0" value={openingCash} onChange={(event) => setOpeningCash(event.target.value)} placeholder={t("Masalan: 200000")} />
+                <input inputMode="numeric" value={formatNumberInput(openingCash)} onChange={(event) => setOpeningCash(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 200000")} />
               </label>
               <button type="button" className="open-shift-btn" onClick={handleOpenShift} disabled={Boolean(pendingAction)}>
                 <PlayCircle size={17} />
@@ -507,7 +508,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
               </label>
               <label>
                 <span>{t("Closing cash")}</span>
-                <input type="number" min="0" value={closingCash} onChange={(event) => setClosingCash(event.target.value)} placeholder={t("Masalan: 1500000")} />
+                <input inputMode="numeric" value={formatNumberInput(closingCash)} onChange={(event) => setClosingCash(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 1500000")} />
               </label>
               <div className="close-inkassa-panel">
                 <div className="close-inkassa-title">
@@ -520,7 +521,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
                 </label>
                 <label>
                   <span>{t("Summa")}</span>
-                  <input type="number" min="0" value={closingInkassaAmount} onChange={(event) => setClosingInkassaAmount(event.target.value)} placeholder={t("Masalan: 500000")} />
+                  <input inputMode="numeric" value={formatNumberInput(closingInkassaAmount)} onChange={(event) => setClosingInkassaAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 500000")} />
                 </label>
               </div>
               <button type="button" className="close-shift-btn" onClick={handleCloseShift} disabled={Boolean(pendingAction)}>
@@ -563,7 +564,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
               </label>
               <label>
                 <span>{t("Summa")}</span>
-                <input type="number" min="0" value={inkassaAmount} onChange={(event) => setInkassaAmount(event.target.value)} placeholder={t("Masalan: 500000")} />
+                <input inputMode="numeric" value={formatNumberInput(inkassaAmount)} onChange={(event) => setInkassaAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 500000")} />
               </label>
               <button type="button" onClick={handleInkassa} disabled={Boolean(pendingAction)}>
                 {pendingAction === "inkassa" ? t("Loading") : t("Inkassa qilish")}

@@ -20,6 +20,7 @@ import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
 import { convertFromUZS, formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { addHoursToIso, formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
+import { cleanNumericInput, cleanPhoneInput, formatNumberInput, formatPhoneInput } from "../../utils/inputFormat";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import telegramService from "../../services/telegramService";
@@ -55,6 +56,7 @@ const XL_BRANCHES = new Set([
   "Toshkent Janubiy vokzal",
   "Samarqand vokzal",
 ]);
+const MULTI_ORDER_LOCKER_BRANCHES = XL_BRANCHES;
 const priceForHours = (tariff, hours) => {
   const h = Number(hours || 1);
   if (!tariff) return 0;
@@ -206,6 +208,11 @@ export default function NewBaggage() {
     const amountUZS = priceForHours(tariffBySize[size], selectedHours);
     const amount = convertFromUZS(amountUZS, form.currency, settings.exchangeRates);
     return formatMoneyByCurrency(amount, form.currency);
+  };
+  const canCreateOrderOnLocker = (locker) => {
+    if (!locker) return false;
+    if (locker.status === "Bosh") return true;
+    return MULTI_ORDER_LOCKER_BRANCHES.has(currentBranch) && ["Band", "Kechikkan"].includes(locker.status);
   };
 
   useEffect(() => {
@@ -367,7 +374,7 @@ export default function NewBaggage() {
     }
 
     if (!selectedLockers.length) {
-      fail(t("Kamida bitta bosh yacheyka tanlang."));
+      fail(t("Kamida bitta yacheyka tanlang."));
       return;
     }
 
@@ -474,7 +481,7 @@ export default function NewBaggage() {
   };
 
   const handleCardClick = (locker) => {
-    if (locker.status === "Bosh") {
+    if (canCreateOrderOnLocker(locker)) {
       openOrderPanel(locker);
       return;
     }
@@ -496,12 +503,12 @@ export default function NewBaggage() {
         <div className="locker-panel-empty">
           <Luggage size={38} />
           <h2>{t("Yacheyka tanlang")}</h2>
-          <p>{t("Bo'sh yacheyka order yaratadi, band yacheyka order detail ko'rsatadi.")}</p>
+          <p>{t("Aeroportda bo'sh yacheyka, vokzallarda band yacheyka ham order yaratadi.")}</p>
         </div>
       );
     }
 
-    if (selectedLocker.status !== "Bosh") {
+    if (!canCreateOrderOnLocker(selectedLocker)) {
       return (
         <div className="locker-detail-panel">
           <div className="panel-locker-summary">
@@ -583,10 +590,12 @@ export default function NewBaggage() {
           </div>
 
           <div className="panel-mini-actions">
-            <button type="button" onClick={() => openServiceModal(selectedLocker)}>
-              <Wrench size={15} />
-              {t("Servisga o'tkazish")}
-            </button>
+            {selectedLocker.status === "Bosh" && (
+              <button type="button" onClick={() => openServiceModal(selectedLocker)}>
+                <Wrench size={15} />
+                {t("Servisga o'tkazish")}
+              </button>
+            )}
           </div>
 
           {customerActiveOrders.length > 0 && (
@@ -611,7 +620,12 @@ export default function NewBaggage() {
               </label>
               <label>
                 <span>{t("Telefon")}</span>
-                <input value={form.phone} onChange={(event) => updateForm("phone", event.target.value)} placeholder="+998 90 123 45 67" />
+                <input
+                  inputMode="tel"
+                  value={formatPhoneInput(form.phone)}
+                  onChange={(event) => updateForm("phone", cleanPhoneInput(event.target.value))}
+                  placeholder="+998 90 123 45 67"
+                />
               </label>
               <label>
                 <span>{t("Passport / ID")}</span>
@@ -683,7 +697,11 @@ export default function NewBaggage() {
               {form.tariffPreset === "custom" && (
                 <label>
                   <span>{t("Soat")}</span>
-                  <input type="number" min="1" value={form.customHours} onChange={(event) => updateForm("customHours", event.target.value)} />
+                  <input
+                    inputMode="numeric"
+                    value={formatNumberInput(form.customHours)}
+                    onChange={(event) => updateForm("customHours", cleanNumericInput(event.target.value))}
+                  />
                 </label>
               )}
               <label>
@@ -706,16 +724,19 @@ export default function NewBaggage() {
               </label>
               <label>
                 <span>{t("Skidka")}</span>
-                <input type="number" min="0" value={form.discount} onChange={(event) => updateForm("discount", event.target.value)} />
+                <input
+                  inputMode="decimal"
+                  value={formatNumberInput(form.discount, { decimal: form.currency !== "UZS" })}
+                  onChange={(event) => updateForm("discount", cleanNumericInput(event.target.value, { decimal: form.currency !== "UZS" }))}
+                />
               </label>
               <label>
                 <span>{t("Real olingan summa")}</span>
                 <input
-                  type="number"
-                  min="0"
-                  value={form.finalEdit ? form.realPaidAmount : fromMinorUnits(finalAmount, form.currency)}
+                  inputMode="decimal"
+                  value={formatNumberInput(form.finalEdit ? form.realPaidAmount : fromMinorUnits(finalAmount, form.currency), { decimal: form.currency !== "UZS" })}
                   onFocus={() => updateForm("finalEdit", true)}
-                  onChange={(event) => updateForm("realPaidAmount", event.target.value)}
+                  onChange={(event) => updateForm("realPaidAmount", cleanNumericInput(event.target.value, { decimal: form.currency !== "UZS" }))}
                 />
               </label>
               <label className="full">
