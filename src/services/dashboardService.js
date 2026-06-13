@@ -12,6 +12,8 @@ const mapDashboard = (data = {}) => ({
     totalOrders: toNumber(data.totalOrders),
     cancelledOrders: toNumber(data.cancelledOrders),
     netProfit: toNumber(data.netProfit),
+    cashOnHand: toNumber(data.cashOnHand ?? data.cashLeft),
+    cashLeft: toNumber(data.cashLeft ?? data.cashOnHand),
     cash: toNumber(data.paymentBreakdown?.CASH),
     card: toNumber(data.paymentBreakdown?.CARD),
     clickPayme: 0,

@@ -43,14 +43,16 @@ const analyticsService = {
     const finance = reportData.financeAnalytics || {};
     const revenueByDay = reportData.revenueByDay || {};
     const expensesByDay = reportData.expensesByDay || {};
+    const inkassaByDay = reportData.inkassaByDay || {};
     const ordersByDay = reportData.ordersByDay || {};
 
-    const dailyRevenue = objectKeys(revenueByDay, expensesByDay, ordersByDay).sort().map((date) => ({
+    const dailyRevenue = objectKeys(revenueByDay, expensesByDay, inkassaByDay, ordersByDay).sort().map((date) => ({
       date,
       label: date,
       revenue: toNumber(revenueByDay[date]),
-      profit: toNumber(revenueByDay[date]) - toNumber(expensesByDay[date]),
+      profit: toNumber(revenueByDay[date]) - toNumber(expensesByDay[date]) - toNumber(inkassaByDay[date]),
       expenses: toNumber(expensesByDay[date]),
+      inkassa: toNumber(inkassaByDay[date]),
       orders: toNumber(ordersByDay[date]),
     }));
     const paymentAnalytics = objectToChart(reportData.paymentAnalytics, "payment", "amount").map((item) => ({
@@ -69,6 +71,7 @@ const analyticsService = {
     const revenue = toNumber(finance.revenue ?? dashboardData.totalRevenue ?? dashboardData.todayRevenue);
     const totalExpenses = toNumber(finance.totalExpenses ?? dashboardData.totalExpenses ?? dashboardData.expenseAmount);
     const netProfit = toNumber(finance.netProfit ?? dashboardData.netProfit);
+    const cashOnHand = toNumber(finance.cashOnHand ?? dashboardData.cashOnHand ?? dashboardData.cashLeft);
     const totalOrders = toNumber(orderStats.totalOrders ?? dashboardData.totalOrders ?? dashboardData.todayOrders ?? dashboardData.todayClients);
 
     return {
@@ -76,6 +79,7 @@ const analyticsService = {
       overview: {
         revenue,
         netProfit,
+        cashOnHand,
         totalExpenses,
         totalOrders,
         activeOrders: toNumber(orderStats.activeOrders ?? dashboardData.activeOrders),
@@ -138,7 +142,9 @@ const analyticsService = {
       financeAnalytics: {
         revenue,
         totalExpenses,
+        totalInkassa: toNumber(finance.totalInkassa ?? finance.inkassa),
         netProfit,
+        cashOnHand,
         profitMargin: toNumber(finance.profitMargin),
         averageOrder: toNumber(finance.averageOrder),
         averageShiftRevenue: toNumber(finance.averageShiftRevenue),

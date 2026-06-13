@@ -29,6 +29,8 @@ const emptyDashboardData = {
     active: 0,
     ordersCount: 0,
     netProfit: 0,
+    cashOnHand: 0,
+    cashLeft: 0,
     cash: 0,
     card: 0,
     clickPayme: 0,
@@ -152,6 +154,12 @@ export default function Dashboard() {
       value: formatMoney(safeStats.netProfit),
       icon: Wallet,
       action: () => navigate("/expenses"),
+    },
+    {
+      title: t("Kassada qolgan"),
+      value: formatMoney(safeStats.cashLeft ?? safeStats.cashOnHand),
+      icon: Wallet,
+      action: () => navigate("/shifts"),
     },
     {
       title: t("Qarz"),

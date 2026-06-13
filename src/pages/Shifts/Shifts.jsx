@@ -136,14 +136,17 @@ export default function Shifts() {
       baggage: Number(currentShift.ordersCount || currentShift.orders || 0),
       revenue: Number(currentShift.totalRevenue || 0),
       expenses: Number(currentShift.expenseAmount || currentShift.totalExpense || 0),
-      netProfit: Number(currentShift.totalRevenue || 0) - Number(currentShift.expenseAmount || currentShift.totalExpense || 0),
+      netProfit:
+        Number(currentShift.totalRevenue || 0) -
+        Number(currentShift.expenseAmount || currentShift.totalExpense || 0) -
+        Number(currentShift.inkassaAmount || currentShift.totalInkassa || 0),
       cash: Number(currentShift.cashRevenue || 0),
       card: Number(currentShift.cardRevenue || 0),
       clickPayme: 0,
       transfer: Number(currentShift.transferRevenue || 0),
       debt: Number(currentShift.debtAmount || 0),
       inkassa: Number(currentShift.inkassaAmount || currentShift.totalInkassa || 0),
-      cashLeft: Number(currentShift.systemExpectedCash || currentShift.expectedCash || currentShift.openingCash || 0),
+      cashLeft: Number(currentShift.systemExpectedCash ?? currentShift.expectedCash ?? currentShift.openingCash ?? 0),
     };
   }, [currentShift, refreshKey]);
 
@@ -366,7 +369,7 @@ ${t("Qarz")}: ${formatCurrencyMap(shift.report?.debtByCurrency)}
 ${t("Oldingi smenadan qabul")}: ${formatMoney(shift.acceptedAmount)}
 ${t("Rasxod")}: ${formatMoney(shift.totalExpense)}
 ${t("Inkassa")}: ${formatMoney(shift.totalInkassa)}
-${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
+${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shift.systemExpectedCash ?? 0)}
 `.trim();
   };
 
@@ -641,7 +644,7 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft || shift.closingCash)}
               <p>{t("Oldingi smenadan qabul")}: {formatMoney(reportShift.acceptedAmount)}</p>
               <p>{t("Rasxod")}: {formatMoney(reportShift.totalExpense)}</p>
               <p>{t("Inkassa")}: {formatMoney(reportShift.totalInkassa)}</p>
-              <p>{t("Kassada qolgan")}: {formatMoney(reportShift.cashLeft || reportShift.closingCash)}</p>
+              <p>{t("Kassada qolgan")}: {formatMoney(reportShift.cashLeft ?? reportShift.closingCash ?? reportShift.systemExpectedCash ?? 0)}</p>
             </div>
 
             <button type="button" className="report-copy-btn" onClick={handleCopyReport}>

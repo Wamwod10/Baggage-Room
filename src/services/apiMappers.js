@@ -199,7 +199,7 @@ const mapShift = (shift) => {
     shift.systemExpectedCash ??
       shift.expectedCash ??
       shift.cashLeft ??
-      openingCash + acceptedCash,
+      openingCash + totalRevenue - expenseAmount - inkassaAmount,
   );
 
   return {
@@ -230,8 +230,8 @@ const mapShift = (shift) => {
     totalInkassa: inkassaAmount,
     systemExpectedCash,
     expectedCash: systemExpectedCash,
-    cashLeft: Number(shift.cashLeft ?? shift.closingCash ?? systemExpectedCash),
-    netProfit: Number(shift.netProfit ?? totalRevenue - expenseAmount),
+    cashLeft: Number(shift.cashLeft ?? systemExpectedCash ?? shift.closingCash ?? 0),
+    netProfit: Number(shift.netProfit ?? totalRevenue - expenseAmount - inkassaAmount),
     // do not assume OPEN when status is missing — keep actual status or null
     status: shift.status || null,
     shiftTime: shift.shiftTime || fallbackText,

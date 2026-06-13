@@ -37,7 +37,7 @@ const shiftService = {
     const current = await this.getCurrent(branchName);
     if (!current) throw new Error("Bu filialda ochiq smena yo'q");
     const response = await apiClient.post(`/shifts/${current.id}/close`, {
-      closingCash: Number(data.closingCash || data.cashLeft || 0),
+      closingCash: Number(data.closingCash ?? data.cashLeft ?? 0),
       handoverToName: data.handoverToName || data.handoverTo || "",
     });
     return mapShift(getData(response));

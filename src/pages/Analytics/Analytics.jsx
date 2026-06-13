@@ -231,6 +231,11 @@ export default function Analytics() {
       icon: Wallet,
     },
     {
+      title: t("Kassada qolgan"),
+      value: formatMoney(overview.cashOnHand ?? financeAnalytics?.cashOnHand ?? 0),
+      icon: Wallet,
+    },
+    {
       title: t("Jami orderlar"),
       value: `${overview.totalOrders} ${t("ta")}`,
       icon: BarChart3,
@@ -936,8 +941,18 @@ export default function Analytics() {
             </div>
 
             <div>
+              <span>{t("Inkassa")}</span>
+              <b>{formatMoney(financeAnalytics?.totalInkassa)}</b>
+            </div>
+
+            <div>
               <span>{t("Net profit")}</span>
               <b>{formatMoney(financeAnalytics?.netProfit)}</b>
+            </div>
+
+            <div>
+              <span>{t("Kassada qolgan")}</span>
+              <b>{formatMoney(financeAnalytics?.cashOnHand)}</b>
             </div>
 
             <div>
