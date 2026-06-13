@@ -421,6 +421,7 @@ const calculateSizeTariff = (branch, size, hours, isCustom = false) => {
     return 0;
   }
 
+  if (isCustom) return Number(tariff[1] || 0) * hourCount;
   if (hourCount <= 1) return Number(tariff[1] || 0);
   if (hourCount <= 12) return Number(tariff[12] || tariff[1] * hourCount || 0);
   if (hourCount <= 24) return Number(tariff[24] || tariff[1] * hourCount || 0);

@@ -57,9 +57,10 @@ const XL_BRANCHES = new Set([
   "Samarqand vokzal",
 ]);
 const MULTI_ORDER_LOCKER_BRANCHES = XL_BRANCHES;
-const priceForHours = (tariff, hours) => {
+const priceForHours = (tariff, hours, isCustom = false) => {
   const h = Number(hours || 1);
   if (!tariff) return 0;
+  if (isCustom) return Number(tariff.price1h || 0) * Math.max(1, Math.ceil(h || 1));
   if (h <= 1) return Number(tariff.price1h || 0);
   if (h <= 12) return Number(tariff.price12h || 0);
   if (h <= 24) return Number(tariff.price24h || 0);
@@ -185,8 +186,8 @@ export default function NewBaggage() {
       .filter((item) => item.count > 0);
   }, [baggageCounts, baggageSizes, form.currency, selectedHours, selectedLockers]);
   const originalAmountUZS = useMemo(() => {
-    return baggageItems.reduce((total, item) => total + priceForHours(tariffBySize[item.size], selectedHours) * item.count, 0);
-  }, [baggageItems, selectedHours, tariffBySize]);
+    return baggageItems.reduce((total, item) => total + priceForHours(tariffBySize[item.size], selectedHours, isCustomTariff) * item.count, 0);
+  }, [baggageItems, isCustomTariff, selectedHours, tariffBySize]);
   const calculatedAmount = useMemo(
     () => convertFromUZS(originalAmountUZS, form.currency, settings.exchangeRates),
     [form.currency, originalAmountUZS, settings.exchangeRates],
@@ -205,7 +206,7 @@ export default function NewBaggage() {
     return addHoursToIso(parseTashkentInputToIso(form.checkIn), selectedHours);
   }, [form.checkIn, selectedHours]);
   const formatSizePrice = (size) => {
-    const amountUZS = priceForHours(tariffBySize[size], selectedHours);
+    const amountUZS = priceForHours(tariffBySize[size], selectedHours, isCustomTariff);
     const amount = convertFromUZS(amountUZS, form.currency, settings.exchangeRates);
     return formatMoneyByCurrency(amount, form.currency);
   };
@@ -432,6 +433,7 @@ export default function NewBaggage() {
         checkIn: parseTashkentInputToIso(form.checkIn),
         checkOut,
         tariffHours: selectedHours,
+        customHours: isCustomTariff ? selectedHours : undefined,
         tariffMode: isCustomTariff ? "custom" : "preset",
         price: calculatedAmount,
         calculatedAmount,
