@@ -51,8 +51,6 @@ export default function Shifts() {
   const [handoverTo, setHandoverTo] = useState("");
   const [inkassaRecipient, setInkassaRecipient] = useState("");
   const [inkassaAmount, setInkassaAmount] = useState("");
-  const [closingInkassaRecipient, setClosingInkassaRecipient] = useState("");
-  const [closingInkassaAmount, setClosingInkassaAmount] = useState("");
   const [closingSalaryReceiver, setClosingSalaryReceiver] = useState("");
   const [closingSalaryAmount, setClosingSalaryAmount] = useState("");
   const [reportShift, setReportShift] = useState(null);
@@ -268,26 +266,11 @@ export default function Shifts() {
       return;
     }
 
-    const closeInkassaAmount = Number(closingInkassaAmount || 0);
     const closeSalaryAmount = Number(closingSalaryAmount || 0);
-
-    if (closingInkassaAmount !== "" && (!Number.isFinite(closeInkassaAmount) || closeInkassaAmount < 0)) {
-      fail(t("Inkassa summasi manfiy bo'lishi mumkin emas."));
-      return;
-    }
 
     if (closingSalaryAmount !== "" && (!Number.isFinite(closeSalaryAmount) || closeSalaryAmount < 0)) {
       fail(t("Oylik summasi manfiy bo'lishi mumkin emas."));
       return;
-    }
-
-    if (closeInkassaAmount > 0) {
-      const inkassaError = validateInkassa(closingInkassaRecipient, closeInkassaAmount);
-
-      if (inkassaError) {
-        fail(inkassaError);
-        return;
-      }
     }
 
     if (closeSalaryAmount > 0 && !closingSalaryReceiver.trim()) {
@@ -295,19 +278,12 @@ export default function Shifts() {
       return;
     }
 
-    if (closeInkassaAmount + closeSalaryAmount > currentStats.cashLeft) {
-      fail(t("Inkassa va oylik summasi kassada qolgan puldan oshmasligi kerak."));
+    if (closeSalaryAmount > currentStats.cashLeft) {
+      fail(t("Oylik summasi kassada qolgan puldan oshmasligi kerak."));
       return;
     }
 
     try {
-      if (closeInkassaAmount > 0) {
-        await createInkassaRecord({
-          recipient: closingInkassaRecipient,
-          amount: closeInkassaAmount,
-        });
-      }
-
       const closedShift = await shiftService.close(branchName, {
         closingCash,
         handoverTo: handoverTo.trim(),
@@ -317,8 +293,6 @@ export default function Shifts() {
 
       setClosingCash("");
       setHandoverTo("");
-      setClosingInkassaRecipient("");
-      setClosingInkassaAmount("");
       setClosingSalaryReceiver("");
       setClosingSalaryAmount("");
       setFormError("");
@@ -539,20 +513,6 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
               </label>
               <div className="close-inkassa-panel">
                 <div className="close-inkassa-title">
-                  <span>{t("Kassa yopishda inkassa")}</span>
-                  <small>{t("Ixtiyoriy")}</small>
-                </div>
-                <label>
-                  <span>{t("Inkassa kimga")}</span>
-                  <input value={closingInkassaRecipient} onChange={(event) => setClosingInkassaRecipient(event.target.value)} placeholder={t("Masalan: bosh kassir")} />
-                </label>
-                <label>
-                  <span>{t("Summa")}</span>
-                  <input inputMode="numeric" value={formatNumberInput(closingInkassaAmount)} onChange={(event) => setClosingInkassaAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 500000")} />
-                </label>
-              </div>
-              <div className="close-inkassa-panel">
-                <div className="close-inkassa-title">
                   <span>{t("Oylik")}</span>
                   <small>{t("Ixtiyoriy")}</small>
                 </div>
@@ -695,4 +655,3 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
     </section>
   );
 }
-
