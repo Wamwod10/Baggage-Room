@@ -192,6 +192,7 @@ const mapShift = (shift) => {
   const acceptedCash = Number(shift.acceptedCash ?? shift.acceptedAmount ?? 0);
   const openingCash = Number(shift.openingCash || 0);
   const expenseAmount = Number(shift.expenseAmount ?? shift.totalExpense ?? 0);
+  const salaryAmount = Number(shift.salaryAmount || 0);
   const inkassaAmount = Number(shift.inkassaAmount ?? shift.totalInkassa ?? 0);
   const totalRevenue = Number(shift.totalRevenue || 0);
   const debtAmount = Number(shift.debtAmount ?? shift.totalDebt ?? 0);
@@ -226,6 +227,8 @@ const mapShift = (shift) => {
     totalDebt: debtAmount,
     expenseAmount,
     totalExpense: expenseAmount,
+    salaryAmount,
+    salaryReceiver: shift.salaryReceiver || "",
     inkassaAmount,
     totalInkassa: inkassaAmount,
     systemExpectedCash,

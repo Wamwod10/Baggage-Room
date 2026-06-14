@@ -39,6 +39,8 @@ const shiftService = {
     const response = await apiClient.post(`/shifts/${current.id}/close`, {
       closingCash: Number(data.closingCash ?? data.cashLeft ?? 0),
       handoverToName: data.handoverToName || data.handoverTo || "",
+      salaryAmount: Number(data.salaryAmount || 0),
+      salaryReceiver: data.salaryReceiver || "",
     });
     return mapShift(getData(response));
   },

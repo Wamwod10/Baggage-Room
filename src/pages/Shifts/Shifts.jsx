@@ -53,6 +53,8 @@ export default function Shifts() {
   const [inkassaAmount, setInkassaAmount] = useState("");
   const [closingInkassaRecipient, setClosingInkassaRecipient] = useState("");
   const [closingInkassaAmount, setClosingInkassaAmount] = useState("");
+  const [closingSalaryReceiver, setClosingSalaryReceiver] = useState("");
+  const [closingSalaryAmount, setClosingSalaryAmount] = useState("");
   const [reportShift, setReportShift] = useState(null);
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
@@ -267,9 +269,15 @@ export default function Shifts() {
     }
 
     const closeInkassaAmount = Number(closingInkassaAmount || 0);
+    const closeSalaryAmount = Number(closingSalaryAmount || 0);
 
     if (closingInkassaAmount !== "" && (!Number.isFinite(closeInkassaAmount) || closeInkassaAmount < 0)) {
       fail(t("Inkassa summasi manfiy bo'lishi mumkin emas."));
+      return;
+    }
+
+    if (closingSalaryAmount !== "" && (!Number.isFinite(closeSalaryAmount) || closeSalaryAmount < 0)) {
+      fail(t("Oylik summasi manfiy bo'lishi mumkin emas."));
       return;
     }
 
@@ -280,6 +288,16 @@ export default function Shifts() {
         fail(inkassaError);
         return;
       }
+    }
+
+    if (closeSalaryAmount > 0 && !closingSalaryReceiver.trim()) {
+      fail(t("Oylik uchun kimga berilganini kiriting."));
+      return;
+    }
+
+    if (closeInkassaAmount + closeSalaryAmount > currentStats.cashLeft) {
+      fail(t("Inkassa va oylik summasi kassada qolgan puldan oshmasligi kerak."));
+      return;
     }
 
     try {
@@ -293,12 +311,16 @@ export default function Shifts() {
       const closedShift = await shiftService.close(branchName, {
         closingCash,
         handoverTo: handoverTo.trim(),
+        salaryAmount: closeSalaryAmount,
+        salaryReceiver: closingSalaryReceiver.trim(),
       });
 
       setClosingCash("");
       setHandoverTo("");
       setClosingInkassaRecipient("");
       setClosingInkassaAmount("");
+      setClosingSalaryReceiver("");
+      setClosingSalaryAmount("");
       setFormError("");
       refreshData();
       setReportShift(closedShift);
@@ -355,6 +377,7 @@ export default function Shifts() {
 
   const getReportText = (shift) => {
     if (!shift) return "";
+    const regularExpense = Math.max(Number(shift.totalExpense || 0) - Number(shift.salaryAmount || 0), 0);
 
     return `
 ${t("Smenani topshirdi")}:
@@ -367,7 +390,8 @@ Terminal: ${formatCurrencyMap(shift.report?.terminalByCurrency)}
 ${t("Qarz")}: ${formatCurrencyMap(shift.report?.debtByCurrency)}
 
 ${t("Oldingi smenadan qabul")}: ${formatMoney(shift.acceptedAmount)}
-${t("Rasxod")}: ${formatMoney(shift.totalExpense)}
+${t("Rasxod")}: ${formatMoney(regularExpense)}
+${t("Oylik")}: ${formatMoney(shift.salaryAmount)}
 ${t("Inkassa")}: ${formatMoney(shift.totalInkassa)}
 ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shift.systemExpectedCash ?? 0)}
 `.trim();
@@ -527,6 +551,20 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
                   <input inputMode="numeric" value={formatNumberInput(closingInkassaAmount)} onChange={(event) => setClosingInkassaAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 500000")} />
                 </label>
               </div>
+              <div className="close-inkassa-panel">
+                <div className="close-inkassa-title">
+                  <span>{t("Oylik")}</span>
+                  <small>{t("Ixtiyoriy")}</small>
+                </div>
+                <label>
+                  <span>{t("Kimga")}</span>
+                  <input value={closingSalaryReceiver} onChange={(event) => setClosingSalaryReceiver(event.target.value)} placeholder={t("Masalan: xodim ismi")} />
+                </label>
+                <label>
+                  <span>{t("Summa")}</span>
+                  <input inputMode="numeric" value={formatNumberInput(closingSalaryAmount)} onChange={(event) => setClosingSalaryAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 300000")} />
+                </label>
+              </div>
               <button type="button" className="close-shift-btn" onClick={handleCloseShift} disabled={Boolean(pendingAction)}>
                 <Square size={16} />
                 {pendingAction === "close" ? t("Loading") : t("Kassani yopish")}
@@ -642,7 +680,8 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
               <p>Terminal: {formatCurrencyMap(reportShift.report?.terminalByCurrency)}</p>
               <p>{t("Qarz")}: {formatCurrencyMap(reportShift.report?.debtByCurrency)}</p>
               <p>{t("Oldingi smenadan qabul")}: {formatMoney(reportShift.acceptedAmount)}</p>
-              <p>{t("Rasxod")}: {formatMoney(reportShift.totalExpense)}</p>
+              <p>{t("Rasxod")}: {formatMoney(Math.max(Number(reportShift.totalExpense || 0) - Number(reportShift.salaryAmount || 0), 0))}</p>
+              <p>{t("Oylik")}: {formatMoney(reportShift.salaryAmount)}</p>
               <p>{t("Inkassa")}: {formatMoney(reportShift.totalInkassa)}</p>
               <p>{t("Kassada qolgan")}: {formatMoney(reportShift.cashLeft ?? reportShift.closingCash ?? reportShift.systemExpectedCash ?? 0)}</p>
             </div>
