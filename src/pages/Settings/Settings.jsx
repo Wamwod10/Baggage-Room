@@ -6,6 +6,7 @@ import {
   Bell,
   Eye,
   EyeOff,
+  RotateCcw,
 } from "lucide-react";
 import settingsService from "../../services/settingsService";
 import telegramService from "../../services/telegramService";
@@ -17,6 +18,7 @@ import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "../../i18n/translations";
 import { useTranslation } from "../../i18n/useTranslation";
+import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./settings.scss";
@@ -79,11 +81,14 @@ const tariffSizesForBranch = (branch) => ["S", "M", "L", ...(XL_BRANCHES.has(bra
 
 export default function Settings() {
   const { t, language, setLanguage } = useTranslation();
+  const { isSuperAdmin } = useAuth();
   const branchNames = getBranchNames();
   const [settings, setSettings] = useState(fallbackSettings);
   const [message, setMessage] = useState("");
   const [testStatus, setTestStatus] = useState("");
   const [showToken, setShowToken] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [resetPending, setResetPending] = useState(false);
   const {
     data: loadedSettings,
     isLoading,
@@ -367,6 +372,28 @@ export default function Settings() {
       setTestStatus(t("Test xabar Telegram groupga yuborildi"));
     } catch (error) {
       setTestStatus(error.message || t("Telegram bilan ulanishda xatolik yuz berdi"));
+    }
+  };
+
+  const handleResetData = async () => {
+    if (resetPending || resetConfirmText !== "RESET") return;
+
+    const approved = window.confirm(t("Hamma order, smena, kassa va tarix ma'lumotlari o'chiriladi. Davom etasizmi?"));
+    if (!approved) return;
+
+    setResetPending(true);
+    setMessage("");
+
+    try {
+      const result = await settingsService.resetData(resetConfirmText);
+      setResetConfirmText("");
+      setMessage(
+        `${t("Data reset qilindi")}: ${Number(result?.after?.orders || 0)} ${t("order")}, ${Number(result?.after?.shifts || 0)} ${t("shift")}`,
+      );
+    } catch (error) {
+      setMessage(error.message || t("Data reset qilishda xatolik yuz berdi."));
+    } finally {
+      setResetPending(false);
     }
   };
 
@@ -860,6 +887,41 @@ export default function Settings() {
                 ))}
               </div>
             </div>
+
+            {isSuperAdmin && (
+              <div className="settings-card settings-card--danger card">
+                <div className="settings-title danger">
+                  <RotateCcw size={18} />
+                  <h2>{t("Reset data")}</h2>
+                </div>
+
+                <div className="reset-data-box">
+                  <div>
+                    <b>{t("Programmani 0 holatga qaytarish")}</b>
+                    <span>{t("Order, shift, kassa, qarz, xarajat, inkassa, notification va audit tarixlari o'chiriladi.")}</span>
+                    <span>{t("Filial, admin, yacheyka, tarif va Telegram sozlamalari saqlanadi.")}</span>
+                  </div>
+
+                  <label>
+                    <span>{t("Tasdiqlash uchun RESET yozing")}</span>
+                    <input
+                      value={resetConfirmText}
+                      onChange={(event) => setResetConfirmText(event.target.value)}
+                      placeholder="RESET"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleResetData}
+                    disabled={resetPending || resetConfirmText !== "RESET"}
+                  >
+                    <RotateCcw size={16} />
+                    {resetPending ? t("Loading") : t("Reset data")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )
       )}

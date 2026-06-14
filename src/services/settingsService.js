@@ -22,6 +22,11 @@ const settingsService = {
     const response = await apiClient.patch(`/tariffs/${id}`, data);
     return mapTariff(getData(response));
   },
+
+  async resetData(confirm) {
+    const response = await apiClient.post("/system/reset-data", { confirm });
+    return getData(response);
+  },
 };
 
 export default settingsService;

@@ -71,6 +71,14 @@
   }
 }
 
+.settings-card--danger {
+  grid-column: 1 / -1;
+  border-color: color-mix(in srgb, var(--danger) 24%, var(--glass-edge));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--danger-soft) 28%, transparent), transparent 56%),
+    var(--bg-card);
+}
+
 .settings-title {
   display: flex;
   align-items: center;
@@ -85,6 +93,13 @@
     font-size: 17px;
     font-weight: 700;
     margin: 0;
+  }
+
+  &.danger {
+    svg,
+    h2 {
+      color: var(--danger);
+    }
   }
 }
 
@@ -532,6 +547,67 @@
   }
 }
 
+.reset-data-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px auto;
+  gap: 12px;
+  align-items: end;
+
+  > div,
+  label {
+    min-height: 78px;
+    padding: 12px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface-muted) 66%, transparent);
+    border: 1px solid color-mix(in srgb, var(--danger) 10%, transparent);
+    display: grid;
+    gap: 6px;
+  }
+
+  b {
+    color: var(--text-main);
+    font-size: 15px;
+  }
+
+  span {
+    color: var(--text-soft);
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--danger) 18%, var(--glass-edge));
+    background-color: color-mix(in srgb, var(--surface-muted) 88%, transparent);
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 800;
+    outline: none;
+  }
+
+  button {
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 16px;
+    background: var(--danger);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 800;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+  }
+}
+
 @media (max-width: 1100px) {
   .telegram-form {
     grid-template-columns: 1fr;
@@ -539,7 +615,8 @@
 
   .branch-tariff-card,
   .telegram-branch-row,
-  .export-actions div {
+  .export-actions div,
+  .reset-data-box {
     grid-template-columns: 1fr;
   }
 }
