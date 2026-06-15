@@ -875,7 +875,12 @@ export default function NewBaggage() {
           )}
         </div>
 
-        <aside className={`locker-side-panel card ${selectedLocker ? "is-open" : ""}`} aria-hidden={!selectedLocker}>
+        <aside
+          className={`locker-side-panel card ${selectedLocker ? "is-open" : ""}`}
+          aria-hidden={!selectedLocker}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="side-panel-head">
             <div>
               <span>{t("Checkout")}</span>

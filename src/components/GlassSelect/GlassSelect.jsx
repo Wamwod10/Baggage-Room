@@ -109,6 +109,7 @@ export default function GlassSelect({
         type="button"
         className="glass-select__trigger"
         disabled={disabled}
+        onPointerDown={(event) => event.stopPropagation()}
         onClick={() => setOpen((current) => !current)}
       >
         <span>{selected?.label || ""}</span>
@@ -116,7 +117,13 @@ export default function GlassSelect({
       </button>
 
       {open && !disabled && createPortal(
-        <div className="glass-select__menu" ref={menuRef} style={menuStyle}>
+        <div
+          className="glass-select__menu"
+          ref={menuRef}
+          style={menuStyle}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           {options.map((option) => (
             <button
               type="button"

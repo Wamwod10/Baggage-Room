@@ -490,6 +490,20 @@ body.dark .settings-page select {
   border-color: color-mix(in srgb, var(--glass-edge) 120%, rgba(255, 255, 255, 0.16)) !important;
 }
 
+.locker-side-panel .panel-form-grid input,
+.locker-side-panel .panel-form-grid textarea {
+  background-color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.32) !important;
+  color: #172033 !important;
+}
+
+body.dark .locker-side-panel .panel-form-grid input,
+body.dark .locker-side-panel .panel-form-grid textarea {
+  background-color: rgba(72, 74, 84, 0.78) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-main) !important;
+}
+
 .glass-select__menu,
 .header-branch-menu,
 .header-search-results,
