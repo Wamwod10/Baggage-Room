@@ -13,6 +13,7 @@ import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import { formatMoneyByCurrency } from "../../utils/currency";
+import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 
 const hasLockerPrice = (locker) =>
   locker?.price !== undefined &&
@@ -84,7 +85,7 @@ export default function SalesHistory() {
 
       const matchPayment =
         payment === "Payment" ||
-        order.payment === payment ||
+        getPaymentLabel(order.payment) === getPaymentLabel(payment) ||
         (payment === "Qarz" && Number(order.debtAmount || 0) > 0);
 
       const matchStatus = status === "Status" || order.status === status;
@@ -242,7 +243,7 @@ export default function SalesHistory() {
 
               <div>
                 <span>{t("Payment")}</span>
-                <b>{t(selectedOrder.payment)} / {selectedOrder.currency || "UZS"}</b>
+                <b>{t(getPaymentLabel(selectedOrder.payment))} / {selectedOrder.currency || "UZS"}</b>
               </div>
 
               <div>
@@ -372,11 +373,9 @@ export default function SalesHistory() {
 
           <GlassSelect value={payment} onChange={(e) => setPayment(e.target.value)}>
             <option value="Payment">{t("Payment")}</option>
-            <option value="Naqd">{t("Naqd")}</option>
-            <option value="Karta">{t("Karta")}</option>
-            <option value="Click/Payme">Click/Payme</option>
-            <option>O‘tkazma</option>
-            <option value="Qarz">{t("Qarz")}</option>
+            {PAYMENT_OPTIONS.map((option) => (
+              <option value={option.value} key={option.value}>{t(option.label)}</option>
+            ))}
           </GlassSelect>
 
           <GlassSelect value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -456,7 +455,7 @@ export default function SalesHistory() {
 
               <div>
                 <b>{formatCurrency(item, getTotalPrice(item))}</b>
-                <small>{t(item.payment)}</small>
+                <small>{t(getPaymentLabel(item.payment))}</small>
               </div>
 
               <div>

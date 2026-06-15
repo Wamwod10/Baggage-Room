@@ -311,7 +311,7 @@ export default function Dashboard() {
                   <b>{formatMoney(safeStats.cash)}</b>
                 </div>
                 <div>
-                  <span>{t("Karta")}</span>
+                  <span>{t("Terminal")}</span>
                   <b>{formatMoney(safeStats.card)}</b>
                 </div>
                 <div>
@@ -340,10 +340,6 @@ export default function Dashboard() {
                     <b>{formatMoneyByCurrency(amount, currency)}</b>
                   </div>
                 ))}
-                <div>
-                  <span>{t("O'tkazma")}</span>
-                  <b>{formatMoney(safeStats.transfer)}</b>
-                </div>
               </div>
             </div>
 

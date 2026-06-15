@@ -4,6 +4,7 @@ import { useTranslation } from "../../i18n/useTranslation";
 import settingsService from "../../services/settingsService";
 import { printReceipt } from "../../utils/printReceipt";
 import { formatMoneyByCurrency } from "../../utils/currency";
+import { getPaymentLabel } from "../../utils/paymentLabels";
 import "./receiptPreview.scss";
 
 const hasLockerPrice = (locker) =>
@@ -205,7 +206,7 @@ export default function ReceiptPreview({ order, onClose }) {
 
             <div className="receipt-row">
               <span>{t("Payment type")}</span>
-              <b>{order.payment ? t(order.payment) : "-"}</b>
+              <b>{order.payment ? t(getPaymentLabel(order.payment)) : "-"}</b>
             </div>
 
             <div className="receipt-row">

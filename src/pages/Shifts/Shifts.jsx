@@ -38,8 +38,7 @@ export default function Shifts() {
     effectiveBranch || branchNames[0] || "",
   );
   const branchName = effectiveBranch || controlBranch;
-  const branchConfig = getBranchByName(branchName);
-  const shiftOptions = branchConfig?.shifts || [];
+  const shiftOptions = useMemo(() => getBranchByName(branchName)?.shifts || [], [branchName]);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [adminName, setAdminName] = useState("");
@@ -83,12 +82,6 @@ export default function Shifts() {
   const selectedShiftTime = shiftOptions.some((item) => item.label === shiftTime)
     ? shiftTime
     : shiftOptions[0]?.label || "";
-
-  useEffect(() => {
-    setFormError("");
-    setStatusMessage("");
-    setShiftTime(shiftOptions[0]?.label || "");
-  }, [branchName, shiftOptions]);
 
   useEffect(() => {
     if (!reportShift) return;
@@ -458,7 +451,16 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
             <div className="shift-form">
               <label>
                 <span>{t("Filial")}</span>
-                <GlassSelect value={branchName} onChange={(event) => setControlBranch(event.target.value)} disabled={Boolean(effectiveBranch)}>
+                <GlassSelect
+                  value={branchName}
+                  onChange={(event) => {
+                    setControlBranch(event.target.value);
+                    setFormError("");
+                    setStatusMessage("");
+                    setShiftTime(getBranchByName(event.target.value)?.shifts?.[0]?.label || "");
+                  }}
+                  disabled={Boolean(effectiveBranch)}
+                >
                   {(effectiveBranch ? [effectiveBranch] : branchNames).map((branch) => (
                     <option key={branch} value={branch}>{t(branch)}</option>
                   ))}
@@ -541,9 +543,8 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
 
           <div className="payment-breakdown-list">
             <div><span>{t("Naqd")}</span><b>{formatMoney(currentStats.cash)}</b></div>
-            <div><span>{t("Karta")}</span><b>{formatMoney(currentStats.card)}</b></div>
+            <div><span>{t("Terminal")}</span><b>{formatMoney(currentStats.card)}</b></div>
             <div><span>Click/Payme</span><b>{formatMoney(currentStats.clickPayme)}</b></div>
-            <div><span>{t("O'tkazma")}</span><b>{formatMoney(currentStats.transfer)}</b></div>
             <div><span>{t("Qarz")}</span><b className="danger">{formatMoney(currentStats.debt)}</b></div>
             <div><span>{t("Expenses")}</span><b className="danger">{formatMoney(currentStats.expenses)}</b></div>
             <div><span>{t("Inkassa")}</span><b className="danger">{formatMoney(currentStats.inkassa)}</b></div>

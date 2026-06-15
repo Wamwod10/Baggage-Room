@@ -19,16 +19,18 @@ const lockerStatusMap = {
 
 const paymentMap = {
   CASH: "Naqd",
-  CARD: "Karta",
-  TRANSFER: "O'tkazma",
+  CARD: "Terminal",
+  TRANSFER: "Terminal",
   DEBT: "Qarz",
 };
 
 const reversePaymentMap = {
   Naqd: "CASH",
   Karta: "CARD",
+  Terminal: "CARD",
   "Click/Payme": "CARD",
   "O'tkazma": "TRANSFER",
+  "O‘tkazma": "TRANSFER",
   Qarz: "DEBT",
 };
 

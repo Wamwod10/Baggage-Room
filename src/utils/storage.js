@@ -10,7 +10,7 @@ const SETTINGS_KEY = "br_settings";
 const CASH_MOVEMENTS_KEY = "br_cash_movements";
 const INKASSA_KEY = "br_inkassa";
 
-export const PAYMENT_TYPES = ["Naqd", "Karta", "Click/Payme", "O'tkazma", "Qarz"];
+export const PAYMENT_TYPES = ["Naqd", "Terminal", "Click/Payme", "Qarz"];
 export const CURRENCIES = ["UZS", "USD", "RUB", "EUR"];
 export const LOCKER_STATUSES = {
   FREE: "Bosh",
@@ -403,13 +403,6 @@ export function addCashMovement(movement) {
   });
   return newMovement;
 }
-
-const getOneHourPrice = (branch, size = "M") => {
-  const settings = getSettings();
-  const branchTariff = settings.branchTariffs?.[branch] || {};
-  const sizeKey = ["S", "M", "L", "XL"].includes(size) ? size : String(size || "M").slice(0, 1).toUpperCase();
-  return Number(branchTariff.sizes?.[sizeKey]?.[1] || branchTariff.oneHourPrice || 0);
-};
 
 const calculateSizeTariff = (branch, size, hours, isCustom = false) => {
   const hourCount = Math.max(1, Math.ceil(Number(hours || 1)));

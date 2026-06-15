@@ -9,6 +9,7 @@ import {
   Printer,
   Save,
   Search,
+  X,
   Wrench,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +22,7 @@ import { getBranchNames } from "../../utils/branches";
 import { convertFromUZS, formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { addHoursToIso, formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import { cleanNumericInput, cleanPhoneInput, formatNumberInput, formatPhoneInput } from "../../utils/inputFormat";
+import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import telegramService from "../../services/telegramService";
@@ -544,7 +546,7 @@ export default function NewBaggage() {
               </div>
               <div>
                 <span>{t("Payment")}</span>
-                <b>{selectedOrder.payment || "-"}</b>
+                <b>{getPaymentLabel(selectedOrder.payment)}</b>
               </div>
               <div>
                 <span>{t("Total")}</span>
@@ -717,11 +719,9 @@ export default function NewBaggage() {
               <label>
                 <span>{t("To'lov turi")}</span>
                 <GlassSelect value={form.payment} onChange={(event) => updateForm("payment", event.target.value)}>
-                  <option value="Naqd">{t("Naqd")}</option>
-                  <option value="Karta">{t("Karta")}</option>
-                  <option value="Click/Payme">Click/Payme</option>
-                  <option value="O'tkazma">{t("O'tkazma")}</option>
-                  <option value="Qarz">{t("Qarz")}</option>
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <option value={option.value} key={option.value}>{t(option.label)}</option>
+                  ))}
                 </GlassSelect>
               </label>
               <label>
@@ -806,7 +806,7 @@ export default function NewBaggage() {
 
       {message && <div className="local-message">{message}</div>}
 
-      <div className="locker-pos-layout">
+      <div className={`locker-pos-layout ${selectedLocker ? "has-panel" : ""}`}>
         <div className="locker-left">
           <div className="locker-stats">
             <div className="locker-stat total"><span>{t("Jami")}</span><b>{lockerStats.total}</b></div>
@@ -875,14 +875,25 @@ export default function NewBaggage() {
           )}
         </div>
 
-        <aside className="locker-side-panel card">
+        <aside className={`locker-side-panel card ${selectedLocker ? "is-open" : ""}`} aria-hidden={!selectedLocker}>
           <div className="side-panel-head">
             <div>
               <span>{t("Checkout")}</span>
               <h2>{selectedLocker ? `#${selectedLocker.number}` : t("Panel")}</h2>
             </div>
             {selectedLocker && (
-              <button type="button" onClick={() => setSelectedLocker(null)}>{t("Clear")}</button>
+              <button
+                className="side-panel-clear"
+                type="button"
+                onClick={() => {
+                  setSelectedLocker(null);
+                  setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));
+                }}
+                aria-label={t("Clear")}
+              >
+                <X size={17} />
+                <span>{t("Clear")}</span>
+              </button>
             )}
           </div>
           {renderOrderPanel()}

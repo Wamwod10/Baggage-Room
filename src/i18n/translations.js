@@ -139,10 +139,11 @@ const entries = [
   ["Bekor qilindi", "Bekor qilindi", "Бекор қилинди", "Отменено"],
   ["Barcha statuslar", "Barcha holatlar", "Барча ҳолатлар", "Все статусы"],
   ["Naqd", "Naqd", "Нақд", "Наличные"],
-  ["Karta", "Karta", "Карта", "Карта"],
+  ["Karta", "Terminal", "Терминал", "Терминал"],
+  ["Terminal", "Terminal", "Терминал", "Терминал"],
   ["Click/Payme", "Click/Payme", "Click/Payme", "Click/Payme"],
-  ["O'tkazma", "O'tkazma", "Ўтказма", "Перевод"],
-  ["O‘tkazma", "O'tkazma", "Ўтказма", "Перевод"],
+  ["O'tkazma", "Terminal", "Терминал", "Терминал"],
+  ["O‘tkazma", "Terminal", "Терминал", "Терминал"],
   ["Kategoriya", "Kategoriya", "Категория", "Категория"],
   ["Summa", "Summa", "Сумма", "Сумма"],
   ["Qo'shish", "Qo'shish", "Қўшиш", "Добавить"],
@@ -1068,7 +1069,7 @@ export const translations = entries.reduce(
 const normalizeLegacyKey = (key) => {
   const mojibakeTransfer = `O${String.fromCharCode(0x0432, 0x0402, 0x0098)}tkazma`;
 
-  if (key === mojibakeTransfer) return "O‘tkazma";
+  if (key === mojibakeTransfer) return "Terminal";
   return key;
 };
 

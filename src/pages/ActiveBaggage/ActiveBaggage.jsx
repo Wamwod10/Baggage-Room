@@ -22,6 +22,7 @@ import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
 import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
+import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -170,7 +171,7 @@ export default function ActiveBaggage() {
   const openPickup = (order) => {
     setPickupOrder(order);
     setPickupForm({
-      payment: order.payment === "Qarz" ? "Naqd" : order.payment || "Naqd",
+      payment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
       currency: order.currency || "UZS",
       realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(order), order.currency || "UZS")),
       paymentReason: "",
@@ -310,7 +311,7 @@ export default function ActiveBaggage() {
         locker.branch === transferOrder.branch &&
         locker.status === "Bosh",
     );
-  }, [pageLockers, transferForm.fromNumber, transferOrder]);
+  }, [pageLockers, transferOrder]);
 
   const handleTransfer = async () => {
     if (!transferOrder) return;
@@ -536,7 +537,7 @@ export default function ActiveBaggage() {
               <div><span>{t("Passport")}</span><b>{selectedOrder.passport || "-"}</b></div>
               <div><span>{t("Yacheykalar")}</span><b>{lockerLabel(selectedOrder)}</b></div>
               <div><span>{t("Yacheyka narxlari")}</span><b>{lockerPriceLabel(selectedOrder)}</b></div>
-              <div><span>{t("Payment")}</span><b>{t(selectedOrder.payment)}</b></div>
+              <div><span>{t("Payment")}</span><b>{t(getPaymentLabel(selectedOrder.payment))}</b></div>
               <div><span>{t("Currency")}</span><b>{selectedOrder.currency}</b></div>
               <div><span>{t("Status")}</span><b>{t(selectedOrder.status)}</b></div>
               <div><span>{t("Check-in")}</span><b>{formatDateTime(selectedOrder.checkIn)}</b></div>
@@ -589,11 +590,9 @@ export default function ActiveBaggage() {
               <label>
                 <span>{t("To'lov turi")}</span>
                 <GlassSelect value={pickupForm.payment} onChange={(event) => setPickupForm((prev) => ({ ...prev, payment: event.target.value }))}>
-                  <option value="Naqd">{t("Naqd")}</option>
-                  <option value="Karta">{t("Karta")}</option>
-                  <option value="Click/Payme">Click/Payme</option>
-                  <option value="O'tkazma">{t("O'tkazma")}</option>
-                  <option value="Qarz">{t("Qarz")}</option>
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <option value={option.value} key={option.value}>{t(option.label)}</option>
+                  ))}
                 </GlassSelect>
               </label>
               <label>

@@ -13,6 +13,7 @@ import baggageService from "../services/baggageService";
 import notificationService from "../services/notificationService";
 import settingsService from "../services/settingsService";
 import { ALL_BRANCHES_LABEL, getBranchNames } from "../utils/branches";
+import { getPaymentLabel } from "../utils/paymentLabels";
 import { useTranslation } from "../i18n/useTranslation";
 import { getTashkentClock } from "../utils/formatDate";
 import "./header.scss";
@@ -174,7 +175,7 @@ export default function Header({ onMenuClick }) {
                   </div>
 
                   <small>
-                    {t(order.branch || "Ma'lumot yo'q")} - {t(order.payment || "-")}
+                    {t(order.branch || "Ma'lumot yo'q")} - {t(getPaymentLabel(order.payment))}
                   </small>
                 </button>
               );
