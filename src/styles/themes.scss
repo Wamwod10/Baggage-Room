@@ -19,7 +19,7 @@ body.dark {
   --surface-table: rgba(255, 255, 255, 0.15);
   --glass-tint: rgba(255, 255, 255, 0.18);
   --glass-highlight: rgba(255, 255, 255, 0.22);
-  --glass-edge: rgba(255, 255, 255, 0.12);
+  --glass-edge: rgba(255, 255, 255, 0.075);
   --dropdown-bg: rgba(18, 18, 23, 0.88);
   --dropdown-item-hover: rgba(255, 255, 255, 0.17);
   --dropdown-shadow: 0 22px 58px rgba(0, 0, 0, 0.2);
@@ -27,8 +27,8 @@ body.dark {
   --modal-backdrop-blur: blur(56px) saturate(190%);
   --modal-surface-bg: rgba(18, 20, 28, 0.96);
 
-  --border: rgba(255, 255, 255, 0.1);
-  --border-soft: rgba(255, 255, 255, 0.062);
+  --border: rgba(255, 255, 255, 0.075);
+  --border-soft: rgba(255, 255, 255, 0.045);
 
   --text-main: rgba(255, 255, 255, 0.92);
   --text-soft: rgba(255, 255, 255, 0.74);

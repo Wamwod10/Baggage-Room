@@ -111,7 +111,7 @@ input,
 select,
 textarea {
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 120%, rgba(15, 23, 42, 0.14));
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 86%, rgba(15, 23, 42, 0.08));
   background-color: color-mix(in srgb, var(--surface-strong) 94%, #ffffff);
   color: var(--text-main);
   backdrop-filter: var(--glass-blur);
@@ -124,7 +124,7 @@ textarea {
   }
 
   &:focus {
-    border-color: color-mix(in srgb, var(--primary) 42%, var(--glass-edge));
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--glass-edge));
     background-color: color-mix(in srgb, var(--surface-strong) 98%, #ffffff);
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 26%, transparent),
@@ -214,7 +214,7 @@ body.dark input,
 body.dark select,
 body.dark textarea {
   background-color: color-mix(in srgb, var(--surface-muted) 88%, #0f172a);
-  border-color: color-mix(in srgb, var(--glass-edge) 120%, rgba(255, 255, 255, 0.16));
+  border-color: color-mix(in srgb, var(--glass-edge) 88%, rgba(255, 255, 255, 0.07));
   color: var(--text-main);
 
   &::placeholder {
@@ -351,7 +351,7 @@ button {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 13%, transparent), transparent 42%),
     var(--bg-card);
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 58%, transparent);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   backdrop-filter: var(--glass-blur);
@@ -359,11 +359,11 @@ button {
 }
 
 body.dark .card {
-  border-color: color-mix(in srgb, var(--glass-edge) 72%, transparent);
+  border-color: color-mix(in srgb, var(--glass-edge) 62%, transparent);
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, var(--glass-edge) 92%, var(--primary-soft));
+  border-color: color-mix(in srgb, var(--glass-edge) 72%, var(--primary-soft));
   transform: translateY(-1px);
 }
 
@@ -472,7 +472,7 @@ body.dark .header-notification-dropdown {
 .settings-page input,
 .settings-page textarea,
 .settings-page select {
-  border-color: color-mix(in srgb, var(--glass-edge) 120%, rgba(15, 23, 42, 0.16)) !important;
+  border-color: color-mix(in srgb, var(--glass-edge) 82%, rgba(15, 23, 42, 0.08)) !important;
   background-color: color-mix(in srgb, var(--surface-strong) 94%, #ffffff) !important;
   color: var(--text-main) !important;
 }
@@ -487,20 +487,20 @@ body.dark .settings-page input,
 body.dark .settings-page textarea,
 body.dark .settings-page select {
   background-color: color-mix(in srgb, var(--surface-muted) 88%, #0f172a) !important;
-  border-color: color-mix(in srgb, var(--glass-edge) 120%, rgba(255, 255, 255, 0.16)) !important;
+  border-color: color-mix(in srgb, var(--glass-edge) 86%, rgba(255, 255, 255, 0.07)) !important;
 }
 
 .locker-side-panel .panel-form-grid input,
 .locker-side-panel .panel-form-grid textarea {
   background-color: #f8fafc !important;
-  border-color: rgba(148, 163, 184, 0.32) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
   color: #172033 !important;
 }
 
 body.dark .locker-side-panel .panel-form-grid input,
 body.dark .locker-side-panel .panel-form-grid textarea {
   background-color: rgba(72, 74, 84, 0.78) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
   color: var(--text-main) !important;
 }
 

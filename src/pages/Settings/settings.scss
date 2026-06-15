@@ -48,7 +48,7 @@
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 12%, transparent), transparent 44%),
     var(--bg-card);
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 22%, transparent);
   box-shadow: var(--shadow-card);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -125,7 +125,7 @@
     width: 100%;
     height: 40px;
     border-radius: 16px;
-    border: 1px solid color-mix(in srgb, var(--glass-edge) 78%, transparent);
+    border: 1px solid color-mix(in srgb, var(--glass-edge) 44%, transparent);
     background-color: color-mix(in srgb, var(--surface-muted) 88%, transparent);
     color: var(--text-main);
     font-size: 14px;
@@ -147,7 +147,7 @@
   padding: 0 12px;
   border-radius: 16px;
   background: color-mix(in srgb, var(--surface-muted) 66%, transparent);
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 22%, transparent);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -168,7 +168,7 @@
   padding: 10px;
   border-radius: 20px;
   background: color-mix(in srgb, var(--surface-muted) 64%, transparent);
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 42%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 24%, transparent);
   overflow-x: auto;
 }
 
@@ -362,7 +362,7 @@
     height: 40px;
     padding: 0 12px;
     border-radius: 16px;
-    border: 1px solid color-mix(in srgb, var(--glass-edge) 78%, transparent);
+    border: 1px solid color-mix(in srgb, var(--glass-edge) 44%, transparent);
     background-color: color-mix(in srgb, var(--surface-muted) 88%, transparent);
     color: var(--text-main);
     font-size: 14px;
@@ -580,7 +580,7 @@
     height: 40px;
     padding: 0 12px;
     border-radius: 14px;
-    border: 1px solid color-mix(in srgb, var(--danger) 18%, var(--glass-edge));
+    border: 1px solid color-mix(in srgb, var(--danger) 10%, var(--glass-edge));
     background-color: color-mix(in srgb, var(--surface-muted) 88%, transparent);
     color: var(--text-main);
     font-size: 14px;
