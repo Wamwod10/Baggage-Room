@@ -1020,13 +1020,15 @@
   overflow: hidden;
   border-radius: 32px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 12%, transparent), transparent 42%),
-    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--cyan-soft) 22%, transparent), transparent 36%),
-    var(--bg-card);
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 72%, transparent);
-  box-shadow: var(--shadow-panel);
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent 36%),
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--cyan-soft) 16%, transparent), transparent 34%),
+    color-mix(in srgb, var(--modal-surface-bg) 96%, var(--bg-sidebar));
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 96%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--glass-highlight) 22%, transparent),
+    0 32px 92px rgba(2, 6, 23, 0.3);
+  backdrop-filter: blur(78px) saturate(230%);
+  -webkit-backdrop-filter: blur(78px) saturate(230%);
   opacity: 0;
   pointer-events: none;
   transform: translate3d(calc(100% + 34px), 0, 0);
@@ -1034,6 +1036,17 @@
     opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
+}
+
+body.dark .locker-side-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 34%),
+    radial-gradient(circle at 92% 0%, rgba(90, 200, 250, 0.1), transparent 34%),
+    rgba(24, 26, 34, 0.97);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 34px 96px rgba(0, 0, 0, 0.68);
 }
 
 .locker-side-panel.is-open {
@@ -1046,9 +1059,9 @@
   min-height: 76px;
   padding: 16px 18px;
   border-bottom: 0;
-  background: color-mix(in srgb, var(--surface-strong) 76%, transparent);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
+  backdrop-filter: blur(58px) saturate(220%);
+  -webkit-backdrop-filter: blur(58px) saturate(220%);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1084,6 +1097,10 @@
       color: currentColor;
     }
   }
+}
+
+body.dark .side-panel-head {
+  background: rgba(42, 44, 54, 0.94);
 }
 
 .panel-scroll,
@@ -1188,8 +1205,8 @@
 .panel-section {
   padding: 14px;
   border-radius: 24px;
-  background: color-mix(in srgb, var(--surface-muted) 52%, transparent);
-  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 68%, transparent);
 
   h3 {
     margin-bottom: 11px;
@@ -1197,6 +1214,11 @@
     font-size: 15px;
     font-weight: 760;
   }
+}
+
+body.dark .panel-section {
+  background: rgba(48, 50, 60, 0.82);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .panel-form-grid {
@@ -1225,8 +1247,8 @@
       width: 100%;
       border-radius: 16px;
       font-size: 14px;
-      border-color: color-mix(in srgb, var(--glass-edge) 26%, transparent);
-      background-color: color-mix(in srgb, var(--surface-muted) 72%, transparent);
+      border-color: color-mix(in srgb, var(--glass-edge) 92%, transparent);
+      background-color: color-mix(in srgb, var(--surface-strong) 92%, #ffffff);
     }
 
     input,
@@ -1245,6 +1267,16 @@
       padding: 9px 11px;
       resize: vertical;
     }
+  }
+}
+
+body.dark .panel-form-grid label {
+  input,
+  select,
+  .glass-select,
+  textarea {
+    background-color: rgba(72, 74, 84, 0.78);
+    border-color: rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -1297,12 +1329,19 @@
   border-radius: 16px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 10%, transparent), transparent 60%),
-    color-mix(in srgb, var(--surface-muted) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--glass-edge) 18%, transparent);
+    color-mix(in srgb, var(--surface-strong) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 72%, transparent);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
+}
+
+body.dark .baggage-size-control {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 60%),
+    rgba(62, 64, 74, 0.86);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .baggage-size-info {
@@ -1557,11 +1596,16 @@
   position: sticky;
   bottom: 0;
   padding: 13px 14px 14px;
-  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
-  border-top: 0;
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
+  background: color-mix(in srgb, var(--surface-strong) 96%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--glass-edge) 72%, transparent);
+  backdrop-filter: blur(64px) saturate(230%);
+  -webkit-backdrop-filter: blur(64px) saturate(230%);
   box-shadow: 0 -10px 28px rgba(2, 6, 23, 0.08);
+}
+
+body.dark .panel-footer {
+  background: rgba(31, 33, 42, 0.96);
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 .panel-totals {

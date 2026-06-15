@@ -497,8 +497,8 @@ body.dark .settings-page select {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--glass-highlight) 16%, transparent), transparent 46%),
     color-mix(in srgb, var(--dropdown-bg) 99%, var(--surface-strong)) !important;
-  backdrop-filter: blur(54px) saturate(205%) !important;
-  -webkit-backdrop-filter: blur(54px) saturate(205%) !important;
+  backdrop-filter: blur(72px) saturate(230%) !important;
+  -webkit-backdrop-filter: blur(72px) saturate(230%) !important;
 }
 
 body.dark .glass-select__menu,
@@ -506,8 +506,9 @@ body.dark .header-branch-menu,
 body.dark .header-search-results,
 body.dark .header-notification-dropdown {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 44%),
-    color-mix(in srgb, var(--dropdown-bg) 94%, #0b0d14) !important;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 44%),
+    rgba(22, 24, 32, 0.97) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
 .header-branch-menu button:hover,

@@ -12,11 +12,11 @@
 
 .card:has(.glass-select.is-open) {
   position: relative;
-  z-index: 2147483000;
+  z-index: 95;
 }
 
 .glass-select.is-open {
-  z-index: 2147483646;
+  z-index: 96;
 }
 
 .glass-select__trigger {
@@ -90,11 +90,8 @@
 }
 
 .glass-select__menu {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 2147483647;
+  position: fixed;
+  z-index: 240;
   max-height: min(260px, 42dvh);
   padding: 6px;
   border-radius: 18px;

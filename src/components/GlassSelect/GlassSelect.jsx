@@ -1,4 +1,5 @@
 import { Children, isValidElement, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import "./glassSelect.scss";
 
@@ -20,7 +21,9 @@ export default function GlassSelect({
   value,
 }) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState({});
   const selectRef = useRef(null);
+  const menuRef = useRef(null);
   const options = useMemo(
     () =>
       Children.toArray(children)
@@ -41,7 +44,10 @@ export default function GlassSelect({
 
   useEffect(() => {
     const handlePointerDown = (event) => {
-      if (!selectRef.current?.contains(event.target)) {
+      if (
+        !selectRef.current?.contains(event.target) &&
+        !menuRef.current?.contains(event.target)
+      ) {
         setOpen(false);
       }
     };
@@ -49,6 +55,38 @@ export default function GlassSelect({
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const updateMenuPosition = () => {
+      const rect = selectRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const viewportPadding = 12;
+      const availableWidth = window.innerWidth - viewportPadding * 2;
+      const width = Math.min(rect.width, availableWidth);
+      const left = Math.min(
+        Math.max(viewportPadding, rect.left),
+        window.innerWidth - width - viewportPadding,
+      );
+
+      setMenuStyle({
+        left,
+        top: rect.bottom + 8,
+        width,
+      });
+    };
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open]);
 
   const handleSelect = (option) => {
     if (option.disabled) return;
@@ -77,8 +115,8 @@ export default function GlassSelect({
         <ChevronDown size={16} />
       </button>
 
-      {open && !disabled && (
-        <div className="glass-select__menu">
+      {open && !disabled && createPortal(
+        <div className="glass-select__menu" ref={menuRef} style={menuStyle}>
           {options.map((option) => (
             <button
               type="button"
@@ -90,7 +128,8 @@ export default function GlassSelect({
               {option.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
