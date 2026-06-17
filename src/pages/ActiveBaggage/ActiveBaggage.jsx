@@ -36,7 +36,7 @@ const hasLockerPrice = (locker) =>
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
-const lockerPriceLabel = (order) => {
+const lockerPriceLabel = (order, t) => {
   const lockers = Array.isArray(order.lockers) ? order.lockers : [];
 
   if (!lockers.length) return "-";
@@ -45,7 +45,7 @@ const lockerPriceLabel = (order) => {
     .map((locker) => {
       const price = hasLockerPrice(locker)
         ? formatCurrency(locker.price, locker.currency || order.currency)
-        : "Narx topilmadi";
+        : t("Narx topilmadi");
 
       return `#${locker.number} / ${locker.size} x${locker.count || 1}: ${price}`;
     })
@@ -442,32 +442,32 @@ export default function ActiveBaggage() {
             !error &&
             activeOrders.map((order) => (
               <div className="active-table-row" key={order.id}>
-                <div>
+                <div data-label={t("Order")}>
                   <b>{order.orderNumber || "-"}</b>
                   <small>{formatDateTime(order.checkIn)}</small>
                 </div>
 
-                <div>
+                <div data-label={t("Client")}>
                   <b>{order.client}</b>
                   <small>{order.phone}</small>
                 </div>
 
-                <div>
+                <div data-label={t("Filial")}>
                   <span>{t(order.branch)}</span>
                 </div>
 
-                <div>
+                <div data-label={t("Bagaj")}>
                   <span>{lockerLabel(order)}</span>
                   <small>
                     {order.count || asArray(order.lockers).reduce((total, locker) => total + Number(locker.count || 1), 0) || 1} {t("ta")}
                   </small>
                 </div>
 
-                <div>
+                <div data-label={t("Check-out")}>
                   <span>{formatDateTime(order.checkOut)}</span>
                 </div>
 
-                <div>
+                <div data-label={t("Narx")}>
                   <b>{formatCurrency(getTotalPrice(order), order.currency)}</b>
                   <small>
                     {t("Overtime")}: {formatCurrency(order.overtimeAmount, order.currency)}
@@ -479,13 +479,13 @@ export default function ActiveBaggage() {
                   )}
                 </div>
 
-                <div>
+                <div data-label={t("Status")}>
                   <span className={order.status === "Kechikdi" ? "status-pill danger" : "status-pill success"}>
                     {Number(order.debtAmount || 0) > 0 ? t("Qarz") : t(order.status)}
                   </span>
                 </div>
 
-                <div className="row-actions">
+                <div className="row-actions" data-label={t("Action")}>
                   <button type="button" className="icon-action view" onClick={() => setSelectedOrder(order)}>
                     <Eye size={16} />
                   </button>
@@ -536,7 +536,7 @@ export default function ActiveBaggage() {
               <div><span>{t("Filial")}</span><b>{t(selectedOrder.branch)}</b></div>
               <div><span>{t("Passport")}</span><b>{selectedOrder.passport || "-"}</b></div>
               <div><span>{t("Yacheykalar")}</span><b>{lockerLabel(selectedOrder)}</b></div>
-              <div><span>{t("Yacheyka narxlari")}</span><b>{lockerPriceLabel(selectedOrder)}</b></div>
+              <div><span>{t("Yacheyka narxlari")}</span><b>{lockerPriceLabel(selectedOrder, t)}</b></div>
               <div><span>{t("Payment")}</span><b>{t(getPaymentLabel(selectedOrder.payment))}</b></div>
               <div><span>{t("Currency")}</span><b>{selectedOrder.currency}</b></div>
               <div><span>{t("Status")}</span><b>{t(selectedOrder.status)}</b></div>

@@ -382,7 +382,7 @@ export default function Dashboard() {
               <div className="alert-list">
                 {smartAlerts.slice(0, 4).map((item) => (
                   <div className={`alert ${item.type}`} key={item.id}>
-                    {item.title}: {item.message}
+                    {t(item.title)}: {t(item.message)}
                   </div>
                 ))}
 

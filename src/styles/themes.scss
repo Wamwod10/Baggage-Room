@@ -11,28 +11,28 @@ body.dark {
   --bg-main: var(--app-gradient);
   --bg-sidebar: rgba(24, 27, 36, 0.82);
   --bg-header: rgba(13, 15, 22, 0.8);
-  --bg-card: rgba(255, 255, 255, 0.16);
-  --bg-soft: rgba(255, 255, 255, 0.11);
-  --surface: rgba(255, 255, 255, 0.16);
-  --surface-strong: rgba(255, 255, 255, 0.24);
-  --surface-muted: rgba(255, 255, 255, 0.13);
-  --surface-table: rgba(255, 255, 255, 0.15);
-  --glass-tint: rgba(255, 255, 255, 0.18);
-  --glass-highlight: rgba(255, 255, 255, 0.22);
-  --glass-edge: rgba(255, 255, 255, 0.075);
-  --dropdown-bg: rgba(18, 18, 23, 0.88);
+  --bg-card: rgba(255, 255, 255, 0.18);
+  --bg-soft: rgba(255, 255, 255, 0.13);
+  --surface: rgba(255, 255, 255, 0.18);
+  --surface-strong: rgba(255, 255, 255, 0.28);
+  --surface-muted: rgba(255, 255, 255, 0.15);
+  --surface-table: rgba(255, 255, 255, 0.18);
+  --glass-tint: rgba(255, 255, 255, 0.2);
+  --glass-highlight: rgba(255, 255, 255, 0.25);
+  --glass-edge: rgba(255, 255, 255, 0.12);
+  --dropdown-bg: rgba(18, 18, 23, 0.94);
   --dropdown-item-hover: rgba(255, 255, 255, 0.17);
   --dropdown-shadow: 0 22px 58px rgba(0, 0, 0, 0.2);
-  --modal-backdrop-bg: rgba(2, 6, 23, 0.82);
+  --modal-backdrop-bg: rgba(2, 6, 23, 0.88);
   --modal-backdrop-blur: blur(56px) saturate(190%);
-  --modal-surface-bg: rgba(18, 20, 28, 0.96);
+  --modal-surface-bg: rgba(18, 20, 28, 0.98);
 
-  --border: rgba(255, 255, 255, 0.075);
-  --border-soft: rgba(255, 255, 255, 0.045);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-soft: rgba(255, 255, 255, 0.075);
 
   --text-main: rgba(255, 255, 255, 0.92);
-  --text-soft: rgba(255, 255, 255, 0.74);
-  --text-muted: rgba(255, 255, 255, 0.58);
+  --text-soft: rgba(255, 255, 255, 0.8);
+  --text-muted: rgba(255, 255, 255, 0.66);
 
   --primary: #5ac8fa;
   --primary-hover: #7adaff;

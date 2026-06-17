@@ -72,6 +72,26 @@ const fallbackSettings = {
 };
 
 const tariffHours = [1, 12, 24, 48, 72];
+const telegramEventLabels = [
+  ["newOrder", "Yangi buyurtma xabari"],
+  ["shiftOpened", "Kassa ochilganda xabar"],
+  ["shiftClosed", "Smena yopilganda hisobot"],
+  ["orderCancelled", "Buyurtma bekor qilinganda xabar"],
+  ["delayedBaggage", "Kechikkan bagaj ogohlantirishi"],
+  ["overtimePayment", "Kechikish to'lovi"],
+  ["debtClosed", "Qarz yopildi"],
+  ["inkassa", "Inkassa"],
+  ["expenseAlerts", "Xarajat ogohlantirishlari"],
+  ["orderEdit", "Buyurtmani tahrirlash"],
+  ["lockerTransfer", "Yacheykani ko'chirish"],
+  ["lockerBlock", "Yacheykani servisga olish"],
+];
+const exportLabels = {
+  orders: "Buyurtmalar",
+  shifts: "Smenalar",
+  finance: "Moliya",
+  analytics: "Analitika",
+};
 const XL_BRANCHES = new Set([
   "Toshkent Shimoliy vokzal",
   "Toshkent Janubiy vokzal",
@@ -683,18 +703,7 @@ export default function Settings() {
 
               <div className="telegram-toggles">
                 {[
-                  ["newOrder", "Yangi order xabari"],
-                  ["shiftOpened", "Kassa ochilganda xabar"],
-                  ["shiftClosed", "Shift yopilganda report"],
-                  ["orderCancelled", "Order bekor qilinganda xabar"],
-                  ["delayedBaggage", "Kechikkan bagaj alert"],
-                  ["overtimePayment", "Overtime payment"],
-                  ["debtClosed", "Qarz yopildi"],
-                  ["inkassa", "Inkassa"],
-                  ["expenseAlerts", "Harajat alertlari"],
-                  ["orderEdit", "Order edit"],
-                  ["lockerTransfer", "Yacheyka transfer"],
-                  ["lockerBlock", "Yacheyka block"],
+                  ...telegramEventLabels,
                 ].map(([key, label]) => (
                   <label key={key}>
                     <input
@@ -868,7 +877,7 @@ export default function Settings() {
                         }))
                       }
                     />
-                    <span>{t("Export")} {key}</span>
+                    <span>{t("Export")} {t(exportLabels[key])}</span>
                   </label>
                 ))}
               </div>
@@ -876,7 +885,7 @@ export default function Settings() {
               <div className="export-actions">
                 {["orders", "shifts", "finance", "analytics"].map((key) => (
                   <div key={key}>
-                    <span>{t("Export")} {key}</span>
+                    <span>{t("Export")} {t(exportLabels[key])}</span>
                     <button type="button" onClick={() => exportService.exportJson(key)}>
                       JSON
                     </button>

@@ -151,7 +151,7 @@ export default function Notifications() {
               <Bell size={18} />
               <h2>{t("Alert center")}</h2>
             </div>
-            <span>{notifications.length} ta</span>
+            <span>{notifications.length} {t("ta")}</span>
           </div>
 
           <div className="notifications-list">
@@ -169,12 +169,12 @@ export default function Notifications() {
 
                 <div className="notification-content">
                   <div>
-                    <h3>{item.title}</h3>
+                    <h3>{t(item.title)}</h3>
                     <span className={`priority ${item.type}`}>
                       {getPriorityLabel(item.type)}
                     </span>
                   </div>
-                  <p>{item.message}</p>
+                  <p>{t(item.message)}</p>
                 </div>
               </div>
             ))}
@@ -189,7 +189,7 @@ export default function Notifications() {
               <ListChecks size={18} />
               <h2>{t("Activity logs")}</h2>
             </div>
-            <span>{activityLogs.length} ta</span>
+            <span>{activityLogs.length} {t("ta")}</span>
           </div>
 
           <div className="activity-log-list">
@@ -204,12 +204,12 @@ export default function Notifications() {
             {activityLogs.map((log) => (
               <div className="activity-log-item" key={log.id}>
                 <div>
-                  <b>{log.action || "-"}</b>
-                  <p>{log.description || "-"}</p>
+                  <b>{t(log.action || "-")}</b>
+                  <p>{t(log.description || "-")}</p>
                 </div>
 
                 <div>
-                  <span>{log.branch || "-"}</span>
+                  <span>{log.branch ? t(log.branch) : "-"}</span>
                   <small>
                     {log.createdAt ? formatDateTime(log.createdAt) : "-"}
                   </small>

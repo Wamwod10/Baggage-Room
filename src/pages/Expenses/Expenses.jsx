@@ -81,12 +81,12 @@ export default function Expenses() {
     const amount = Number(cleanNumericInput(form.amount, { decimal: form.currency !== "UZS" }));
 
     if (!form.category.trim()) {
-      fail("Kategoriya tanlanishi kerak.");
+      fail(t("Kategoriya tanlanishi kerak."));
       return;
     }
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      fail("Harajat summasi 0 dan katta bo'lishi kerak.");
+      fail(t("Xarajat summasi 0 dan katta bo'lishi kerak."));
       return;
     }
 
@@ -101,7 +101,7 @@ export default function Expenses() {
       });
       setStatusMessage(`${createdExpense?.category || form.category} saqlandi: ${formatMoney(amount)}`);
     } catch (error) {
-      fail(error.message || "Harajatni saqlashda xatolik yuz berdi.");
+      fail(error.message || t("Xarajatni saqlashda xatolik yuz berdi."));
       return;
     } finally {
       setIsSubmitting(false);
@@ -117,7 +117,7 @@ export default function Expenses() {
       await expenseService.delete(id);
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      setFormError(error.message || "Harajatni o'chirishda xatolik yuz berdi.");
+      setFormError(error.message || t("Xarajatni o'chirishda xatolik yuz berdi."));
     }
   };
 
@@ -170,7 +170,7 @@ export default function Expenses() {
                   amount: cleanNumericInput(event.target.value, { decimal: prev.currency !== "UZS" }),
                 }))
               }
-              placeholder="Masalan: 50000"
+              placeholder={t("Masalan: 50000")}
             />
           </label>
 
@@ -206,7 +206,7 @@ export default function Expenses() {
               name="note"
               value={form.note}
               onChange={handleChange}
-              placeholder="Izoh..."
+              placeholder={t("Izoh...")}
             />
           </label>
 

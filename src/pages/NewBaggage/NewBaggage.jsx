@@ -477,11 +477,11 @@ export default function NewBaggage() {
   };
 
   const getStatusLabel = (status) => {
-    if (status === "Bosh") return "BO'SH";
-    if (status === "Band") return "BAND";
-    if (status === "Kechikkan") return "KECHIKKAN";
-    if (status === "Servisda") return "SERVIS";
-    return String(status || "").toUpperCase();
+    if (status === "Bosh") return t("Bo'sh");
+    if (status === "Band") return t("Band");
+    if (status === "Kechikkan") return t("Kechikkan");
+    if (status === "Servisda") return t("Servisda");
+    return t(status || "-");
   };
 
   const handleCardClick = (locker) => {
@@ -546,7 +546,7 @@ export default function NewBaggage() {
               </div>
               <div>
                 <span>{t("Payment")}</span>
-                <b>{getPaymentLabel(selectedOrder.payment)}</b>
+                <b>{t(getPaymentLabel(selectedOrder.payment))}</b>
               </div>
               <div>
                 <span>{t("Total")}</span>

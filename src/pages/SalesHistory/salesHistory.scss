@@ -398,36 +398,8 @@
       text-transform: uppercase;
     }
 
-    > div:nth-child(1)::before {
-      content: "Order";
-    }
-
-    > div:nth-child(2)::before {
-      content: "Client";
-    }
-
-    > div:nth-child(3)::before {
-      content: "Filial";
-    }
-
-    > div:nth-child(4)::before {
-      content: "Bagaj";
-    }
-
-    > div:nth-child(5)::before {
-      content: "Payment";
-    }
-
-    > div:nth-child(6)::before {
-      content: "Pickup";
-    }
-
-    > div:nth-child(7)::before {
-      content: "Status";
-    }
-
-    > div:nth-child(8)::before {
-      content: "Action";
+    > div::before {
+      content: attr(data-label);
     }
 
     > div:nth-child(1),

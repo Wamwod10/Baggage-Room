@@ -352,8 +352,8 @@ ${fallback(shift.admin)} -> ${fallback(shift.handoverToName || shift.handoverTo)
 
 ${t("Bugungi")}:
 ${t("Umumiy savdo")}: ${formatMoney(shift.totalRevenue)}
-Cash: ${formatCurrencyMap(shift.report?.cashByCurrency)}
-Terminal: ${formatCurrencyMap(shift.report?.terminalByCurrency)}
+${t("Naqd")}: ${formatCurrencyMap(shift.report?.cashByCurrency)}
+${t("Terminal")}: ${formatCurrencyMap(shift.report?.terminalByCurrency)}
 ${t("Qarz")}: ${formatCurrencyMap(shift.report?.debtByCurrency)}
 
 ${t("Oldingi smenadan qabul")}: ${formatMoney(shift.acceptedAmount)}
@@ -367,9 +367,9 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
   const handleCopyReport = async () => {
     try {
       await navigator.clipboard.writeText(getReportText(reportShift));
-      setStatusMessage(t("Report copy qilindi"));
+      setStatusMessage(t("Hisobot nusxalandi"));
     } catch {
-      setStatusMessage(t("Copy qilishda xatolik"));
+      setStatusMessage(t("Nusxalashda xatolik yuz berdi"));
     }
   };
 
@@ -637,8 +637,8 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
               <p>{fallback(reportShift.admin)} {"->"} {fallback(reportShift.handoverToName || reportShift.handoverTo)}</p>
               <div className="report-line" />
               <p>{t("Umumiy savdo")}: {formatMoney(reportShift.totalRevenue)}</p>
-              <p>Cash: {formatCurrencyMap(reportShift.report?.cashByCurrency)}</p>
-              <p>Terminal: {formatCurrencyMap(reportShift.report?.terminalByCurrency)}</p>
+              <p>{t("Naqd")}: {formatCurrencyMap(reportShift.report?.cashByCurrency)}</p>
+              <p>{t("Terminal")}: {formatCurrencyMap(reportShift.report?.terminalByCurrency)}</p>
               <p>{t("Qarz")}: {formatCurrencyMap(reportShift.report?.debtByCurrency)}</p>
               <p>{t("Oldingi smenadan qabul")}: {formatMoney(reportShift.acceptedAmount)}</p>
               <p>{t("Rasxod")}: {formatMoney(Math.max(Number(reportShift.totalExpense || 0) - Number(reportShift.salaryAmount || 0), 0))}</p>

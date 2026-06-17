@@ -227,6 +227,7 @@ export default function Header({ onMenuClick }) {
         <button
           onClick={toggleTheme}
           className="header-icon-btn header-theme-btn"
+          aria-label={t("Theme")}
         >
           <SunMoon size={18} />
         </button>
@@ -235,6 +236,7 @@ export default function Header({ onMenuClick }) {
           <button
             className="header-icon-btn notification"
             onClick={() => setNotificationOpen((value) => !value)}
+            aria-label={t("Notifications")}
           >
             <Bell size={18} />
 
@@ -280,8 +282,8 @@ export default function Header({ onMenuClick }) {
                         navigate("/notifications");
                       }}
                     >
-                      <b>{alert.title || "-"}</b>
-                      <span>{alert.message || "-"}</span>
+                      <b>{t(alert.title || "-")}</b>
+                      <span>{t(alert.message || "-")}</span>
                     </button>
                   ))
                 )}

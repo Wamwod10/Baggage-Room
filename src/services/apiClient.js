@@ -7,9 +7,20 @@ const PRODUCTION_API_URL = "https://baggage-room-backend.onrender.com/api";
 
 const getBaseURL = () => {
   const configuredUrl = String(env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+  const localDevHost =
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
   const isProductionDomain =
     typeof window !== "undefined" &&
     ["qonoqbaggage.uz", "www.qonoqbaggage.uz"].includes(window.location.hostname);
+
+  if (
+    localDevHost &&
+    configuredUrl &&
+    configuredUrl.includes("baggage-room-backend.onrender.com")
+  ) {
+    return "http://localhost:5000/api";
+  }
 
   if (
     isProductionDomain &&

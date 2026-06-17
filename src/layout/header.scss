@@ -671,10 +671,13 @@ body.dark .header {
     padding: 10px 14px;
     gap: 10px;
     margin-right: 14px;
+    height: auto;
+    min-height: var(--header-height);
+    flex-wrap: wrap;
   }
 
   .header-search-wrap {
-    flex: 1 1 auto;
+    flex: 1 1 260px;
   }
 
   .header-search {
@@ -688,12 +691,15 @@ body.dark .header {
   }
 
   .header-actions {
-    flex: 0 0 auto;
+    width: 100%;
+    flex: 1 1 100%;
     gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 
   .header-branch-select {
-    width: clamp(170px, 19vw, 220px);
+    width: clamp(190px, 28vw, 260px);
   }
 
   .header-datetime {

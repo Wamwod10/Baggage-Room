@@ -118,7 +118,7 @@ export default function SalesHistory() {
   const formatCurrency = (order, amount) =>
     order.currency ? formatMoneyByCurrency(amount, order.currency) : formatMoney(amount);
 
-  const lockerPriceLabel = (order) => {
+  const lockerPriceLabel = (order, t) => {
     const lockers = Array.isArray(order.lockers) ? order.lockers : [];
 
     if (!lockers.length) return "-";
@@ -127,7 +127,7 @@ export default function SalesHistory() {
       .map((locker) => {
         const price = hasLockerPrice(locker)
           ? formatMoneyByCurrency(locker.price, locker.currency || order.currency)
-          : "Narx topilmadi";
+          : t("Narx topilmadi");
 
         return `#${locker.number} / ${locker.size} x${locker.count || 1}: ${price}`;
       })
@@ -197,7 +197,7 @@ export default function SalesHistory() {
               <div>
                 <h2>{selectedOrder.orderNumber || "-"}</h2>
                 <p>
-                  {selectedOrder.client} · {selectedOrder.phone}
+                  {selectedOrder.client} - {selectedOrder.phone}
                 </p>
               </div>
 
@@ -233,7 +233,7 @@ export default function SalesHistory() {
 
               <div>
                 <span>{t("Yacheyka narxlari")}</span>
-                <b>{lockerPriceLabel(selectedOrder)}</b>
+                <b>{lockerPriceLabel(selectedOrder, t)}</b>
               </div>
 
               <div>
@@ -431,34 +431,34 @@ export default function SalesHistory() {
 
           {!isLoading && !error && filteredOrders.map((item) => (
             <div className="history-table-row" key={item.id}>
-              <div>
+              <div data-label={t("Order")}>
                 <b>{item.orderNumber || "-"}</b>
                 <small>{formatDateTime(item.createdAt)}</small>
               </div>
 
-              <div>
+              <div data-label={t("Client")}>
                 <b>{item.client}</b>
                 <small>{item.phone}</small>
               </div>
 
-              <div>
+              <div data-label={t("Filial")}>
                 <b>{t(item.branch)}</b>
                 <small>{item.passport || "-"}</small>
               </div>
 
-              <div>
+              <div data-label={t("Bagaj")}>
                 <span>
                   {lockerLabel(item)}
                 </span>
                 <small>{formatDateTime(item.checkOut)}</small>
               </div>
 
-              <div>
+              <div data-label={t("Payment")}>
                 <b>{formatCurrency(item, getTotalPrice(item))}</b>
                 <small>{t(getPaymentLabel(item.payment))}</small>
               </div>
 
-              <div>
+              <div data-label={t("Pickup")}>
                 <span>
                   {item.realPickupTime
                     ? formatDateTime(item.realPickupTime)
@@ -467,7 +467,7 @@ export default function SalesHistory() {
                 <small>{t("Overtime")}: {formatCurrency(item, item.overtimeAmount)}</small>
               </div>
 
-              <div>
+              <div data-label={t("Status")}>
                 <span
                   className={
                     item.status === "Bekor qilindi" ||
@@ -480,7 +480,7 @@ export default function SalesHistory() {
                 </span>
               </div>
 
-              <div>
+              <div data-label={t("Action")}>
                 <button
                   type="button"
                   className="view-btn"
