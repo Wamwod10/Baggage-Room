@@ -364,7 +364,7 @@ export default function Settings() {
 
       setMessage(t("Settings saqlandi"));
     } catch (error) {
-      setMessage(error.message || t("Settings saqlashda xatolik yuz berdi."));
+      setMessage(t(error.message || "Settings saqlashda xatolik yuz berdi."));
     }
   };
 
@@ -391,7 +391,7 @@ export default function Settings() {
 
       setTestStatus(t("Test xabar Telegram groupga yuborildi"));
     } catch (error) {
-      setTestStatus(error.message || t("Telegram bilan ulanishda xatolik yuz berdi"));
+      setTestStatus(t(error.message || "Telegram bilan ulanishda xatolik yuz berdi"));
     }
   };
 
@@ -411,7 +411,7 @@ export default function Settings() {
         `${t("Data reset qilindi")}: ${Number(result?.after?.orders || 0)} ${t("order")}, ${Number(result?.after?.shifts || 0)} ${t("shift")}`,
       );
     } catch (error) {
-      setMessage(error.message || t("Data reset qilishda xatolik yuz berdi."));
+      setMessage(t(error.message || "Data reset qilishda xatolik yuz berdi."));
     } finally {
       setResetPending(false);
     }

@@ -40,7 +40,7 @@ export default function Login() {
       await login(form);
       navigate("/");
     } catch (err) {
-      setError(err.message);
+      setError(t(err.message || "Login yoki parol noto'g'ri"));
     } finally {
       setLoading(false);
     }
@@ -52,8 +52,8 @@ export default function Login() {
         <div className="login-brand">
           <div className="login-logo">BR</div>
           <div>
-            <h1>Baggage Room</h1>
-          <p>{t("Management System")}</p>
+            <h1>{t("Baggage Room")}</h1>
+            <p>{t("Management System")}</p>
           </div>
         </div>
 

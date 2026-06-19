@@ -201,6 +201,11 @@ select::-ms-expand {
   display: none;
 }
 
+body.dark select option {
+  background: var(--surface-strong);
+  color: var(--text-main);
+}
+
 body.dark select {
   color-scheme: dark;
 

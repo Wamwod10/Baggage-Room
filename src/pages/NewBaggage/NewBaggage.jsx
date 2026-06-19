@@ -327,7 +327,7 @@ export default function NewBaggage() {
         admin: user?.fullName,
       });
     } catch (error) {
-      setMessage(error.message || t("Yacheykani servisga o'tkazishda xatolik yuz berdi."));
+      setMessage(t(error.message || "Yacheykani servisga o'tkazishda xatolik yuz berdi."));
       return;
     }
     if (selectedLocker?.id === locker.id) {
@@ -349,7 +349,7 @@ export default function NewBaggage() {
         admin: user?.fullName,
       });
     } catch (error) {
-      setMessage(error.message || t("Yacheykani qaytarishda xatolik yuz berdi."));
+      setMessage(t(error.message || "Yacheykani qaytarishda xatolik yuz berdi."));
       return;
     }
     setRefreshKey((value) => value + 1);

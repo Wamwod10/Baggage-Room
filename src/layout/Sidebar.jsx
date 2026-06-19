@@ -77,7 +77,7 @@ export default function Sidebar({ open = false, onClose }) {
       <div className="sidebar-brand">
         <div className="sidebar-logo">BR</div>
         <div>
-          <h2 className="baggage">Baggage Room</h2>
+          <h2 className="baggage">{t("Baggage Room")}</h2>
           <p>{t("Admin panel")}</p>
         </div>
 

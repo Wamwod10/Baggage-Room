@@ -101,7 +101,7 @@ export default function Expenses() {
       });
       setStatusMessage(`${createdExpense?.category || form.category} saqlandi: ${formatMoney(amount)}`);
     } catch (error) {
-      fail(error.message || t("Xarajatni saqlashda xatolik yuz berdi."));
+      fail(t(error.message || "Xarajatni saqlashda xatolik yuz berdi."));
       return;
     } finally {
       setIsSubmitting(false);
@@ -117,7 +117,7 @@ export default function Expenses() {
       await expenseService.delete(id);
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      setFormError(error.message || t("Xarajatni o'chirishda xatolik yuz berdi."));
+      setFormError(t(error.message || "Xarajatni o'chirishda xatolik yuz berdi."));
     }
   };
 

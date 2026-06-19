@@ -146,7 +146,7 @@ export default function SalesHistory() {
         note: "Debt closed from sales history",
       });
     } catch (error) {
-      setStatusMessage(error.message || t("Qarz yopishda xatolik yuz berdi."));
+      setStatusMessage(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
     }
 

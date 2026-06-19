@@ -198,7 +198,7 @@ export default function Shifts() {
 
       setStatusMessage(`${t("Kassa ochildi")}.`);
     } catch (error) {
-      setFormError(error.message || t("Kassani ochishda xatolik yuz berdi."));
+      setFormError(t(error.message || "Kassani ochishda xatolik yuz berdi."));
     } finally {
       setPendingAction("");
     }
@@ -298,7 +298,7 @@ export default function Shifts() {
 
       setStatusMessage(`${t("Kassa yopildi")}.`);
     } catch (error) {
-      setFormError(error.message || t("Kassani yopishda xatolik yuz berdi."));
+      setFormError(t(error.message || "Kassani yopishda xatolik yuz berdi."));
     } finally {
       setPendingAction("");
     }
@@ -340,7 +340,7 @@ export default function Shifts() {
       setStatusMessage(`${t("Inkassa saqlandi")}: ${formatMoney(amount)}`);
       refreshData();
     } catch (error) {
-      setFormError(error.message || t("Inkassa saqlashda xatolik yuz berdi."));
+      setFormError(t(error.message || "Inkassa saqlashda xatolik yuz berdi."));
     } finally {
       setPendingAction("");
     }

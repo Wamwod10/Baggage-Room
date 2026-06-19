@@ -205,7 +205,7 @@ export default function ActiveBaggage() {
         admin: user?.fullName,
       });
     } catch (error) {
-      setFormError(error.message || t("Pickup tasdiqlashda xatolik yuz berdi."));
+      setFormError(t(error.message || "Pickup tasdiqlashda xatolik yuz berdi."));
       return;
     }
 
@@ -232,7 +232,7 @@ export default function ActiveBaggage() {
         note: "Debt closed from active baggage",
       });
     } catch (error) {
-      setFormError(error.message || t("Qarz yopishda xatolik yuz berdi."));
+      setFormError(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
     }
     const updatedOrder = { ...order, debtAmount: 0 };
@@ -263,7 +263,7 @@ export default function ActiveBaggage() {
     try {
       cancelledOrder = await baggageService.cancel(cancelOrder.id, cancelReason.trim());
     } catch (error) {
-      setFormError(error.message || t("Orderni bekor qilishda xatolik yuz berdi."));
+      setFormError(t(error.message || "Orderni bekor qilishda xatolik yuz berdi."));
       return;
     }
 
@@ -284,7 +284,7 @@ export default function ActiveBaggage() {
     try {
       order = await baggageService.reprint(orderId);
     } catch (error) {
-      setFormError(error.message || t("Chekni qayta chiqarishda xatolik yuz berdi."));
+      setFormError(t(error.message || "Chekni qayta chiqarishda xatolik yuz berdi."));
       return;
     }
 
@@ -328,7 +328,7 @@ export default function ActiveBaggage() {
         admin: user?.fullName || "Admin",
       });
     } catch (error) {
-      setFormError(error.message || t("Transfer saqlashda xatolik yuz berdi."));
+      setFormError(t(error.message || "Transfer saqlashda xatolik yuz berdi."));
       return;
     }
     const transfer = updatedOrder.transferHistory?.at(-1);

@@ -1101,6 +1101,20 @@ body.dark .locker-side-panel {
 
 body.dark .side-panel-head {
   background: rgba(42, 44, 54, 0.94);
+
+  span {
+    color: var(--text-muted);
+  }
+
+  h2 {
+    color: var(--text-main);
+  }
+
+  .side-panel-clear {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-soft);
+  }
 }
 
 .panel-scroll,
@@ -1111,6 +1125,12 @@ body.dark .side-panel-head {
   padding: 14px;
   background:
     linear-gradient(90deg, rgba(226, 232, 240, 0.32), transparent 1px) 0 0 / 1px 100% no-repeat;
+}
+
+body.dark .panel-scroll,
+body.dark .locker-detail-panel {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 1px) 0 0 / 1px 100% no-repeat;
 }
 
 .panel-scroll {
@@ -1186,6 +1206,16 @@ body.dark .side-panel-head {
   }
 }
 
+body.dark .panel-locker-summary {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 62%),
+    rgba(46, 48, 58, 0.9);
+  border-color: rgba(255, 255, 255, 0.11);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
 .panel-mini-actions {
   display: flex;
   justify-content: flex-end;
@@ -1223,6 +1253,10 @@ body.dark .side-panel-head {
 body.dark .panel-section {
   background: rgba(48, 50, 60, 0.82);
   border-color: rgba(255, 255, 255, 0.1);
+
+  h3 {
+    color: var(--text-main);
+  }
 }
 
 .panel-form-grid {
@@ -1277,12 +1311,23 @@ body.dark .panel-section {
 }
 
 body.dark .panel-form-grid label {
+  span {
+    color: var(--text-muted);
+  }
+
   input,
   select,
   .glass-select,
   textarea {
     background-color: rgba(72, 74, 84, 0.78);
     border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-main);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
   }
 }
 
@@ -1411,6 +1456,22 @@ body.dark .baggage-size-control {
     &.active {
       background: color-mix(in srgb, var(--primary) 18%, transparent);
       color: var(--primary);
+    }
+  }
+}
+
+body.dark .baggage-size-stepper {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+
+  button {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
+    border-color: rgba(255, 255, 255, 0.11);
+    color: var(--text-main);
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.14);
     }
   }
 }
@@ -1613,6 +1674,7 @@ body.dark .baggage-size-control {
 body.dark .panel-footer {
   background: rgba(31, 33, 42, 0.96);
   border-top-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -14px 28px rgba(0, 0, 0, 0.28);
 }
 
 .panel-totals {
@@ -1648,6 +1710,24 @@ body.dark .panel-footer {
       color: var(--primary);
       font-size: 22px;
       font-weight: 850;
+    }
+  }
+}
+
+body.dark .panel-totals {
+  span {
+    color: var(--text-muted);
+  }
+
+  b {
+    color: var(--text-main);
+  }
+
+  .payable {
+    border-top-color: rgba(255, 255, 255, 0.1);
+
+    b {
+      color: var(--primary);
     }
   }
 }
