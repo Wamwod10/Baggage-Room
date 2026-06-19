@@ -20,6 +20,9 @@ const lockerStatusMap = {
 const paymentMap = {
   CASH: "Naqd",
   CARD: "Terminal",
+  TERMINAL: "Terminal",
+  CLICK: "Click",
+  PAYME: "Payme",
   TRANSFER: "Terminal",
   DEBT: "Qarz",
 };
@@ -27,8 +30,10 @@ const paymentMap = {
 const reversePaymentMap = {
   Naqd: "CASH",
   Karta: "CARD",
-  Terminal: "CARD",
-  "Click/Payme": "CARD",
+  Terminal: "TERMINAL",
+  Click: "CLICK",
+  Payme: "PAYME",
+  "Click/Payme": "CLICK",
   "O'tkazma": "TRANSFER",
   "O‘tkazma": "TRANSFER",
   Qarz: "DEBT",
@@ -202,7 +207,7 @@ const mapShift = (shift) => {
     shift.systemExpectedCash ??
       shift.expectedCash ??
       shift.cashLeft ??
-      openingCash + totalRevenue - expenseAmount - inkassaAmount,
+      openingCash + acceptedCash + totalRevenue - expenseAmount - inkassaAmount,
   );
 
   return {
@@ -217,6 +222,7 @@ const mapShift = (shift) => {
     closedByLogin: shift.closedBy?.login || "",
     acceptedFromName: shift.acceptedFromName || shift.receivedFrom || fallbackText,
     receivedFrom: shift.acceptedFromName || shift.receivedFrom || fallbackText,
+    acceptedByName: shift.acceptedByName || openedByName,
     acceptedCash,
     acceptedAmount: acceptedCash,
     openingCash,
@@ -224,6 +230,9 @@ const mapShift = (shift) => {
     totalRevenue,
     cashRevenue: Number(shift.cashRevenue || 0),
     cardRevenue: Number(shift.cardRevenue || 0),
+    terminalRevenue: Number(shift.terminalRevenue ?? shift.cardRevenue ?? 0),
+    clickRevenue: Number(shift.clickRevenue || 0),
+    paymeRevenue: Number(shift.paymeRevenue || 0),
     transferRevenue: Number(shift.transferRevenue || 0),
     debtAmount,
     totalDebt: debtAmount,

@@ -28,6 +28,7 @@ const shiftService = {
       openingCash: Number(data.openingCash || 0),
       acceptedCash: Number(data.acceptedCash ?? data.acceptedAmount ?? 0),
       acceptedFromName: data.acceptedFromName || data.receivedFrom || "",
+      acceptedByName: data.acceptedByName || data.admin || "",
       handoverToName: data.handoverToName || data.handoverTo || "",
     });
     return mapShift(getData(response));

@@ -3,6 +3,8 @@ const currencyMeta = {
   USD: { suffix: "", decimals: 2, prefix: "$" },
   RUB: { suffix: "RUB", decimals: 2, prefix: "" },
   EUR: { suffix: "", decimals: 2, prefix: "EUR " },
+  KZT: { suffix: "₸", decimals: 2, prefix: "" },
+  TJS: { suffix: "TJS", decimals: 2, prefix: "" },
 };
 
 export const currencyFractionDigits = Object.fromEntries(

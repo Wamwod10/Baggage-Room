@@ -602,6 +602,8 @@ export default function ActiveBaggage() {
                   <option value="USD">USD</option>
                   <option value="RUB">RUB</option>
                   <option value="EUR">EUR</option>
+                  <option value="KZT">KZT</option>
+                  <option value="TJS">TJS</option>
                 </GlassSelect>
               </label>
               <label>

@@ -68,7 +68,7 @@ const priceForHours = (tariff, hours, isCustom = false) => {
   if (h <= 24) return Number(tariff.price24h || 0);
   if (h <= 48) return Number(tariff.price48h || 0);
   if (h <= 72) return Number(tariff.price72h || 0);
-  return Number(tariff.price72h || 0) + Math.ceil((h - 72) / 24) * Number(tariff.after72hPrice || 0);
+  return Math.round(Number(tariff.price72h || 0) + (h - 72) * (Number(tariff.after72hPrice || 0) / 24));
 };
 
 export default function NewBaggage() {
@@ -147,7 +147,7 @@ export default function NewBaggage() {
     const rows = asArray(safePageData.tariffs).filter((tariff) => tariff.branch === currentBranch);
     return Object.fromEntries(rows.map((tariff) => [tariff.size, tariff]));
   }, [currentBranch, safePageData.tariffs]);
-  const branchTariffHours = [1, 12, 24, 48, 72];
+  const branchTariffHours = [1, 12, 24, 48, 72, "after72"];
   const baggageSizes = useMemo(
     () => ["S", "M", "L", ...(XL_BRANCHES.has(currentBranch) ? ["XL"] : [])],
     [currentBranch],
@@ -163,11 +163,12 @@ export default function NewBaggage() {
   const selectedHours = useMemo(
     () => Math.max(
       1,
-      Number(form.tariffPreset === "custom" ? form.customHours : form.tariffPreset) || 1,
+      Number(["after72", "custom"].includes(form.tariffPreset) ? form.customHours : form.tariffPreset) || (form.tariffPreset === "after72" ? 73 : 1),
     ),
     [form.customHours, form.tariffPreset],
   );
   const isCustomTariff = form.tariffPreset === "custom";
+  const isAfter72Tariff = form.tariffPreset === "after72";
   const exchangeRate = useMemo(
     () => (form.currency === "UZS" ? 1 : Number(settings.exchangeRates?.[form.currency] || 0)),
     [form.currency, settings.exchangeRates],
@@ -436,7 +437,7 @@ export default function NewBaggage() {
         checkOut,
         tariffHours: selectedHours,
         customHours: isCustomTariff ? selectedHours : undefined,
-        tariffMode: isCustomTariff ? "custom" : "preset",
+        tariffMode: isCustomTariff ? "custom" : isAfter72Tariff ? "after72" : "preset",
         price: calculatedAmount,
         calculatedAmount,
         exchangeRate,
@@ -693,14 +694,15 @@ export default function NewBaggage() {
                 <span>{t("Tarif")}</span>
                 <GlassSelect value={form.tariffPreset} onChange={(event) => updateForm("tariffPreset", event.target.value)}>
                   {branchTariffHours.map((hours) => (
-                    <option key={hours} value={hours}>{hours} {t("soat")}</option>
+                    <option key={hours} value={hours}>
+                      {hours === "after72" ? "72+" : `${hours} ${t("soat")}`}
+                    </option>
                   ))}
-                  <option value="custom">{t("Qo'lda soat")}</option>
                 </GlassSelect>
               </label>
-              {form.tariffPreset === "custom" && (
+              {["after72", "custom"].includes(form.tariffPreset) && (
                 <label>
-                  <span>{t("Soat")}</span>
+                  <span>{isAfter72Tariff ? "72+ / soat" : t("Soat")}</span>
                   <input
                     inputMode="numeric"
                     value={formatNumberInput(form.customHours)}

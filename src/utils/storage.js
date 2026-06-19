@@ -10,8 +10,8 @@ const SETTINGS_KEY = "br_settings";
 const CASH_MOVEMENTS_KEY = "br_cash_movements";
 const INKASSA_KEY = "br_inkassa";
 
-export const PAYMENT_TYPES = ["Naqd", "Terminal", "Click/Payme", "Qarz"];
-export const CURRENCIES = ["UZS", "USD", "RUB", "EUR"];
+export const PAYMENT_TYPES = ["Naqd", "Terminal", "Click", "Payme", "Qarz"];
+export const CURRENCIES = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
 export const LOCKER_STATUSES = {
   FREE: "Bosh",
   BUSY: "Band",
@@ -96,6 +96,8 @@ const DEFAULT_SETTINGS = {
     USD: 12500,
     RUB: 140,
     EUR: 13500,
+    KZT: 27,
+    TJS: 1150,
   },
   overtimePerHour: 0,
   lockers: {},
@@ -421,10 +423,7 @@ const calculateSizeTariff = (branch, size, hours, isCustom = false) => {
   if (hourCount <= 48) return Number(tariff[48] || tariff[1] * hourCount || 0);
   if (hourCount <= 72) return Number(tariff[72] || tariff[1] * hourCount || 0);
 
-  return (
-    Number(tariff[72] || 0) +
-    Math.ceil((hourCount - 72) / 24) * Number(tariff.after72 || tariff[24] || 0)
-  );
+  return Math.round(Number(tariff[72] || 0) + (hourCount - 72) * (Number(tariff.after72 || 0) / 24));
 };
 
 const roundCurrencyAmount = (amount, currency = "UZS") => {
@@ -849,7 +848,7 @@ export function closeShift(branchName, { closingCash, handoverTo, rasxod, inkass
       ? {
           ...shift,
           handoverTo: handoverTo || "",
-          acceptedAmount: Number(acceptedAmount ?? shift.acceptedAmount ?? shift.openingCash ?? 0),
+          acceptedAmount: Number(acceptedAmount ?? shift.acceptedAmount ?? 0),
           closingCash: Number(closingCash || cashLeft || 0),
           rasxod: Number(rasxod ?? totalExpense),
           inkassa: Number(inkassa ?? totalInkassa),
@@ -873,11 +872,11 @@ export function closeShift(branchName, { closingCash, handoverTo, rasxod, inkass
               (order) => order.realPaidAmount,
             ),
             terminal: orders
-              .filter((order) => ["Karta", "Click/Payme", "O'tkazma"].includes(order.payment))
+              .filter((order) => ["Karta", "Terminal", "O'tkazma"].includes(order.payment))
               .reduce((sum, order) => sum + Number(order.realPaidAmount || 0), 0),
             terminalByCurrency: sumOrdersByCurrency(
               orders,
-              (order) => ["Karta", "Click/Payme", "O'tkazma"].includes(order.payment),
+              (order) => ["Karta", "Terminal", "O'tkazma"].includes(order.payment),
               (order) => order.realPaidAmount,
             ),
             debt: totalDebt,
@@ -886,7 +885,7 @@ export function closeShift(branchName, { closingCash, handoverTo, rasxod, inkass
               (order) => order.payment === "Qarz" && !order.debtClosedAt,
               (order) => order.debtAmount,
             ),
-            accepted: Number(shift.acceptedAmount || shift.openingCash || 0),
+            accepted: Number(shift.acceptedAmount || 0),
             expense: totalExpense,
             inkassa: totalInkassa,
             cashLeft,
@@ -1071,8 +1070,11 @@ export function getDashboardStats(branchName = null) {
     pickedUp,
     cancelled,
     cash: paymentTotal("Naqd"),
-    card: paymentTotal("Karta"),
-    clickPayme: paymentTotal("Click/Payme"),
+    card: paymentTotal("Karta") + paymentTotal("Terminal"),
+    terminal: paymentTotal("Karta") + paymentTotal("Terminal"),
+    click: paymentTotal("Click"),
+    payme: paymentTotal("Payme"),
+    clickPayme: paymentTotal("Click") + paymentTotal("Payme"),
     transfer: transferTotal,
     debt,
     inkassa: inkassaTotal,

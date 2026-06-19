@@ -116,6 +116,8 @@ export default function Shifts() {
         netProfit: 0,
         cash: 0,
         card: 0,
+        click: 0,
+        payme: 0,
         clickPayme: 0,
         transfer: 0,
         debt: 0,
@@ -134,8 +136,10 @@ export default function Shifts() {
         Number(currentShift.expenseAmount || currentShift.totalExpense || 0) -
         Number(currentShift.inkassaAmount || currentShift.totalInkassa || 0),
       cash: Number(currentShift.cashRevenue || 0),
-      card: Number(currentShift.cardRevenue || 0),
-      clickPayme: 0,
+      card: Number(currentShift.terminalRevenue ?? currentShift.cardRevenue ?? 0),
+      click: Number(currentShift.clickRevenue || 0),
+      payme: Number(currentShift.paymeRevenue || 0),
+      clickPayme: Number(currentShift.clickRevenue || 0) + Number(currentShift.paymeRevenue || 0),
       transfer: Number(currentShift.transferRevenue || 0),
       debt: Number(currentShift.debtAmount || 0),
       inkassa: Number(currentShift.inkassaAmount || currentShift.totalInkassa || 0),
@@ -182,7 +186,7 @@ export default function Shifts() {
         shiftTime: selectedShiftTime,
         openingCash,
         receivedFrom: receivedFrom.trim(),
-        acceptedAmount: acceptedAmount || openingCash,
+        acceptedAmount,
       });
 
       setAdminName("");
@@ -544,7 +548,8 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
           <div className="payment-breakdown-list">
             <div><span>{t("Naqd")}</span><b>{formatMoney(currentStats.cash)}</b></div>
             <div><span>{t("Terminal")}</span><b>{formatMoney(currentStats.card)}</b></div>
-            <div><span>Click/Payme</span><b>{formatMoney(currentStats.clickPayme)}</b></div>
+            <div><span>{t("Click")}</span><b>{formatMoney(currentStats.click)}</b></div>
+            <div><span>{t("Payme")}</span><b>{formatMoney(currentStats.payme)}</b></div>
             <div><span>{t("Qarz")}</span><b className="danger">{formatMoney(currentStats.debt)}</b></div>
             <div><span>{t("Expenses")}</span><b className="danger">{formatMoney(currentStats.expenses)}</b></div>
             <div><span>{t("Inkassa")}</span><b className="danger">{formatMoney(currentStats.inkassa)}</b></div>

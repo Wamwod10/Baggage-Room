@@ -33,6 +33,8 @@ const emptyDashboardData = {
     cashLeft: 0,
     cash: 0,
     card: 0,
+    click: 0,
+    payme: 0,
     clickPayme: 0,
     transfer: 0,
     debt: 0,
@@ -315,8 +317,12 @@ export default function Dashboard() {
                   <b>{formatMoney(safeStats.card)}</b>
                 </div>
                 <div>
-                  <span>Click/Payme</span>
-                  <b>{formatMoney(safeStats.clickPayme)}</b>
+                  <span>{t("Click")}</span>
+                  <b>{formatMoney(safeStats.click)}</b>
+                </div>
+                <div>
+                  <span>{t("Payme")}</span>
+                  <b>{formatMoney(safeStats.payme)}</b>
                 </div>
                 <div>
                   <span>{t("Qarz")}</span>

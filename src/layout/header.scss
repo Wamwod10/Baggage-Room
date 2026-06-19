@@ -51,7 +51,7 @@ body.dark .header {
 }
 
 .header-search {
-  width: clamp(260px, 31vw, 440px);
+  width: clamp(220px, 26vw, 360px);
   height: 44px;
   padding: 0 14px;
   border-radius: 999px;
@@ -541,6 +541,44 @@ body.dark .header {
 
 .header-icon-btn.notification {
   position: relative;
+}
+
+.header-language-wrap {
+  position: relative;
+}
+
+.header-language-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 168px;
+  padding: 7px;
+  border-radius: 18px;
+  background: var(--dropdown-bg);
+  border: 1px solid color-mix(in srgb, var(--glass-edge) 32%, transparent);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  z-index: 95;
+  display: grid;
+  gap: 4px;
+
+  button {
+    min-height: 36px;
+    padding: 0 10px;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+
+    &:hover,
+    &.active {
+      background: var(--surface-muted);
+      color: var(--text-main);
+    }
+  }
 }
 
 .notification-badge {

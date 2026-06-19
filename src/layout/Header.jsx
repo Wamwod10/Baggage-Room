@@ -3,6 +3,7 @@ import {
   Bell,
   CalendarClock,
   ChevronDown,
+  Languages,
   Menu,
   Search,
   SunMoon,
@@ -15,13 +16,19 @@ import settingsService from "../services/settingsService";
 import { ALL_BRANCHES_LABEL, getBranchNames } from "../utils/branches";
 import { getPaymentLabel } from "../utils/paymentLabels";
 import { useTranslation } from "../i18n/useTranslation";
+import { LANGUAGE_OPTIONS } from "../i18n/translations";
 import { getTashkentClock } from "../utils/formatDate";
 import "./header.scss";
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
+const languageLabels = {
+  uzLatn: "O'zbekcha",
+  uzCyrl: "Ўзбекча",
+  ru: "Русский",
+};
 
 export default function Header({ onMenuClick }) {
-  const { t } = useTranslation();
+  const { t, language, setLanguage } = useTranslation();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const navigate = useNavigate();
   const { user, activeBranch, effectiveBranch, isSuperAdmin, setActiveBranch } =
@@ -30,6 +37,7 @@ export default function Header({ onMenuClick }) {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [alertRefreshKey, setAlertRefreshKey] = useState(0);
   const [headerAlerts, setHeaderAlerts] = useState([]);
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -231,6 +239,35 @@ export default function Header({ onMenuClick }) {
         >
           <SunMoon size={18} />
         </button>
+
+        <div className="header-language-wrap">
+          <button
+            type="button"
+            className="header-icon-btn header-language-btn"
+            onClick={() => setLanguageMenuOpen((value) => !value)}
+            aria-label={t("Language")}
+          >
+            <Languages size={18} />
+          </button>
+
+          {languageMenuOpen && (
+            <div className="header-language-menu">
+              {LANGUAGE_OPTIONS.map((option) => (
+                <button
+                  type="button"
+                  key={option.value}
+                  className={option.value === language ? "active" : ""}
+                  onClick={() => {
+                    setLanguage(option.value);
+                    setLanguageMenuOpen(false);
+                  }}
+                >
+                  {languageLabels[option.value] || option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="header-notification-wrap">
           <button
