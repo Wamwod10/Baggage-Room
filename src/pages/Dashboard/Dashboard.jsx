@@ -57,10 +57,7 @@ const emptyDashboardData = {
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const toNumber = (value) => Number(value ?? 0) || 0;
 const formatCurrencyMap = (items = {}) =>
-  Object.entries(items || {})
-    .filter(([, amount]) => Number(amount || 0) !== 0)
-    .map(([currency, amount]) => formatMoneyByCurrency(amount, currency))
-    .join(" / ") || formatMoneyByCurrency(0, "UZS");
+  formatMoneyByCurrency(Number(items?.UZS || 0), "UZS");
 
 export default function Dashboard() {
   const { t, formatMoney } = useTranslation();
@@ -345,12 +342,10 @@ export default function Dashboard() {
                   <span>{t("Cash out")}</span>
                   <b>{formatMoney(safeStats.cashMovementOut)}</b>
                 </div>
-                {Object.entries(safeStats.currencyTotals || {}).map(([currency, amount]) => (
-                  <div key={currency}>
-                    <span>{currency}</span>
-                    <b>{formatMoneyByCurrency(amount, currency)}</b>
-                  </div>
-                ))}
+                <div>
+                  <span>UZS</span>
+                  <b>{formatMoneyByCurrency(safeStats.currencyTotals?.UZS || 0, "UZS")}</b>
+                </div>
               </div>
             </div>
 
