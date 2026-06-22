@@ -61,6 +61,7 @@ const clearAuthStorage = () => {
 
 const apiClient = axios.create({
   baseURL: getBaseURL(),
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -95,9 +96,16 @@ apiClient.interceptors.response.use(
       message:
         payload?.message === "Validation failed" && firstValidationMessage
           ? firstValidationMessage
-          : payload?.message || error.message || "Request failed",
+          : payload?.message ||
+            (error.code === "ECONNABORTED"
+              ? "Server javobi kechikdi. Qayta urinib ko'ring."
+              : !error.response
+                ? "Server bilan aloqa yo'q. Internetni tekshirib, qayta urinib ko'ring."
+                : error.message || "Request failed"),
       errors: payload?.errors || [],
       status,
+      code: error.code,
+      retryable: !status || status >= 500,
     });
   },
 );

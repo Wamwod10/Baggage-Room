@@ -147,7 +147,7 @@ export default function NewBaggage() {
     const rows = asArray(safePageData.tariffs).filter((tariff) => tariff.branch === currentBranch);
     return Object.fromEntries(rows.map((tariff) => [tariff.size, tariff]));
   }, [currentBranch, safePageData.tariffs]);
-  const branchTariffHours = [1, 12, 24, 48, 72, "after72"];
+  const branchTariffHours = [12, 24, 48, 72, "after72", "custom"];
   const baggageSizes = useMemo(
     () => ["S", "M", "L", ...(XL_BRANCHES.has(currentBranch) ? ["XL"] : [])],
     [currentBranch],
@@ -384,6 +384,16 @@ export default function NewBaggage() {
 
     if (!totalBaggageCount) {
       fail(t("Kamida bitta bagaj razmerini tanlang."));
+      return;
+    }
+
+    if (isCustomTariff && (!Number(form.customHours) || Number(form.customHours) <= 0)) {
+      fail(t("Qo'lda soat uchun musbat soat kiriting."));
+      return;
+    }
+
+    if (isAfter72Tariff && Number(selectedHours) <= 72) {
+      fail(t("72+ tarif uchun jami soat 72 dan katta bo'lishi kerak."));
       return;
     }
 
@@ -695,7 +705,7 @@ export default function NewBaggage() {
                 <GlassSelect value={form.tariffPreset} onChange={(event) => updateForm("tariffPreset", event.target.value)}>
                   {branchTariffHours.map((hours) => (
                     <option key={hours} value={hours}>
-                      {hours === "after72" ? "72+" : `${hours} ${t("soat")}`}
+                      {hours === "after72" ? "72+" : hours === "custom" ? t("Qo'lda soat") : `${hours} ${t("soat")}`}
                     </option>
                   ))}
                 </GlassSelect>

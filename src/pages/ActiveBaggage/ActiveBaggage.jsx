@@ -82,6 +82,7 @@ export default function ActiveBaggage() {
     payment: "Naqd",
     currency: "UZS",
     realPaidAmount: "",
+    overtimeAmount: "",
     paymentReason: "",
   });
   const [transferOrder, setTransferOrder] = useState(null);
@@ -174,6 +175,7 @@ export default function ActiveBaggage() {
       payment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
       currency: order.currency || "UZS",
       realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(order), order.currency || "UZS")),
+      overtimeAmount: String(fromMinorUnits(order.overtimeAmount || 0, order.currency || "UZS")),
       paymentReason: "",
     });
     setFormError("");
@@ -189,7 +191,8 @@ export default function ActiveBaggage() {
 
     if (
       toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS") !==
-        getPickupExpectedTotal(pickupOrder) &&
+        (getPickupExpectedTotal({ ...pickupOrder, overtimeAmount: 0 }) +
+          toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS")) &&
       !pickupForm.paymentReason.trim()
     ) {
       setFormError(t("Summani o'zgartirish sababini kiriting."));
@@ -200,7 +203,7 @@ export default function ActiveBaggage() {
     try {
       updatedOrder = await baggageService.pickup(pickupOrder.id, {
         ...pickupForm,
-        overtimeAmount: pickupOrder.overtimeAmount || 0,
+        overtimeAmount: toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS"),
         debtPaidAmount: pickupOrder.debtAmount || undefined,
         admin: user?.fullName,
       });
@@ -605,6 +608,19 @@ export default function ActiveBaggage() {
                   <option value="KZT">KZT</option>
                   <option value="TJS">TJS</option>
                 </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Qo'shimcha to'lov")}</span>
+                <input
+                  inputMode={pickupForm.currency === "UZS" ? "numeric" : "decimal"}
+                  value={formatNumberInput(pickupForm.overtimeAmount, { decimal: pickupForm.currency !== "UZS" })}
+                  onChange={(event) =>
+                    setPickupForm((prev) => ({
+                      ...prev,
+                      overtimeAmount: cleanNumericInput(event.target.value, { decimal: prev.currency !== "UZS" }),
+                    }))
+                  }
+                />
               </label>
               <label>
                 <span>{t("Real olingan summa")}</span>

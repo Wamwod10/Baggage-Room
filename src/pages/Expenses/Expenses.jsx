@@ -10,6 +10,7 @@ import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./expenses.scss";
+import { formatMoneyByCurrency } from "../../utils/currency";
 
 const getInitialForm = (defaultBranch = getBranchNames()[0] || "") => ({
   category: "Printer qog'ozi",
@@ -255,7 +256,7 @@ export default function Expenses() {
 
                 <div className="expense-right">
                   <strong>
-                    {Number(expense.amount || 0).toLocaleString("uz-UZ")} {expense.currency || "UZS"}
+                    {formatMoneyByCurrency(expense.amount || 0, expense.currency || "UZS")}
                   </strong>
                   <button
                     type="button"

@@ -1,6 +1,7 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { getData, getItems, mapExpense } from "./apiMappers";
+import { toMinorUnits } from "../utils/currency";
 
 const expenseService = {
   async getAll(branchName = null) {
@@ -16,7 +17,7 @@ const expenseService = {
       branchId,
       category: data.category,
       reason,
-      amount: Number(data.amount || 0),
+      amount: toMinorUnits(data.amount || 0, data.currency || "UZS"),
       currency: data.currency || "UZS",
     });
     return mapExpense(getData(response));

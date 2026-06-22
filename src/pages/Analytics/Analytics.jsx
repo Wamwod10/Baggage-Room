@@ -67,6 +67,7 @@ const emptyAnalyticsData = {
   problemAnalytics: [],
   financeAnalytics: {},
   currencyAnalytics: [],
+  currencyFinanceAnalytics: [],
   lockerUsage: [],
   customerAnalytics: {},
   debtAnalytics: {},
@@ -188,6 +189,7 @@ export default function Analytics() {
   const adminPerformance = Array.isArray(safeData.adminPerformance) ? safeData.adminPerformance : [];
   const problemAnalytics = Array.isArray(safeData.problemAnalytics) ? safeData.problemAnalytics : [];
   const currencyAnalytics = Array.isArray(safeData.currencyAnalytics) ? safeData.currencyAnalytics : [];
+  const currencyFinanceAnalytics = Array.isArray(safeData.currencyFinanceAnalytics) ? safeData.currencyFinanceAnalytics : [];
   const lockerUsage = Array.isArray(safeData.lockerUsage) ? safeData.lockerUsage : [];
   const branchRanking = Array.isArray(safeData.branchRanking) ? safeData.branchRanking : [];
   const insights = Array.isArray(safeData.insights) ? safeData.insights : [];
@@ -988,10 +990,15 @@ export default function Analytics() {
           </div>
 
           <div className="finance-analytics-grid">
-            {(currencyAnalytics || []).map((item) => (
+            {(currencyFinanceAnalytics.length ? currencyFinanceAnalytics : currencyAnalytics).map((item) => (
               <div key={item.currency}>
                 <span>{item.currency}</span>
-                <b>{formatMoneyByCurrency(item.amount, item.currency)}</b>
+                <b>{t("Revenue")}: {formatMoneyByCurrency(item.revenue ?? item.amount, item.currency)}</b>
+                {currencyFinanceAnalytics.length > 0 && (
+                  <small>
+                    {t("Expenses")}: {formatMoneyByCurrency(item.expenses, item.currency)} · {t("Inkassa")}: {formatMoneyByCurrency(item.inkassa, item.currency)} · {t("Kassada qolgan")}: {formatMoneyByCurrency(item.cashOnHand, item.currency)}
+                  </small>
+                )}
               </div>
             ))}
           </div>

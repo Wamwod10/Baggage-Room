@@ -17,7 +17,7 @@ import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
-import { formatMoneyByCurrency } from "../../utils/currency";
+import { formatMoneyByCurrency, toMinorUnits } from "../../utils/currency";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./shifts.scss";
 
@@ -29,6 +29,7 @@ const emptyShiftData = {
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const fallback = (value, empty = "-") =>
   value === undefined || value === null || value === "" ? empty : value;
+const currencies = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
 
 export default function Shifts() {
   const { t, formatDateTime, formatMoney } = useTranslation();
@@ -50,6 +51,7 @@ export default function Shifts() {
   const [handoverTo, setHandoverTo] = useState("");
   const [inkassaRecipient, setInkassaRecipient] = useState("");
   const [inkassaAmount, setInkassaAmount] = useState("");
+  const [inkassaCurrency, setInkassaCurrency] = useState("UZS");
   const [closingSalaryReceiver, setClosingSalaryReceiver] = useState("");
   const [closingSalaryAmount, setClosingSalaryAmount] = useState("");
   const [reportShift, setReportShift] = useState(null);
@@ -123,6 +125,15 @@ export default function Shifts() {
         debt: 0,
         inkassa: 0,
         cashLeft: 0,
+        revenueByCurrency: {},
+        cashByCurrency: {},
+        terminalByCurrency: {},
+        clickByCurrency: {},
+        paymeByCurrency: {},
+        expenseByCurrency: {},
+        inkassaByCurrency: {},
+        debtByCurrency: {},
+        cashBalanceByCurrency: {},
       };
     }
 
@@ -144,14 +155,29 @@ export default function Shifts() {
       debt: Number(currentShift.debtAmount || 0),
       inkassa: Number(currentShift.inkassaAmount || currentShift.totalInkassa || 0),
       cashLeft: Number(currentShift.systemExpectedCash ?? currentShift.expectedCash ?? currentShift.openingCash ?? 0),
+      revenueByCurrency: currentShift.revenueByCurrency || currentShift.report?.revenueByCurrency || {},
+      cashByCurrency: currentShift.cashByCurrency || currentShift.report?.cashByCurrency || {},
+      terminalByCurrency: currentShift.terminalByCurrency || currentShift.report?.terminalByCurrency || {},
+      clickByCurrency: currentShift.clickByCurrency || currentShift.report?.clickByCurrency || {},
+      paymeByCurrency: currentShift.paymeByCurrency || currentShift.report?.paymeByCurrency || {},
+      expenseByCurrency: currentShift.expenseByCurrency || currentShift.report?.expenseByCurrency || {},
+      inkassaByCurrency: currentShift.inkassaByCurrency || currentShift.report?.inkassaByCurrency || {},
+      debtByCurrency: currentShift.debtByCurrency || currentShift.report?.debtByCurrency || {},
+      cashBalanceByCurrency: currentShift.cashBalanceByCurrency || currentShift.report?.cashBalanceByCurrency || {},
     };
   }, [currentShift, refreshKey]);
 
   const formatCurrencyMap = (items = {}) =>
     Object.entries(items || {})
-      .filter(([, amount]) => Number(amount || 0) > 0)
+      .filter(([, amount]) => Number(amount || 0) !== 0)
       .map(([currency, amount]) => formatMoneyByCurrency(amount, currency))
       .join(" / ") || formatMoney(0);
+  const netCurrencyMap = (shift = {}) => Object.fromEntries(currencies.map((currency) => [
+    currency,
+    Number(shift.revenueByCurrency?.[currency] || 0) -
+      Number(shift.expenseByCurrency?.[currency] || 0) -
+      Number(shift.inkassaByCurrency?.[currency] || 0),
+  ]));
 
   const handleOpenShift = async () => {
     if (pendingAction) return;
@@ -204,7 +230,7 @@ export default function Shifts() {
     }
   };
 
-  const createInkassaRecord = async ({ recipient, amount }) => {
+  const createInkassaRecord = async ({ recipient, amount, currency }) => {
     if (!currentShift) throw new Error(t("Bu filialda ochiq smena yo'q"));
 
     return financeService.createInkassa({
@@ -212,18 +238,20 @@ export default function Shifts() {
       admin: currentShift?.admin || adminName || "Admin",
       recipient: recipient.trim(),
       amount,
-      currency: "UZS",
+      currency,
     });
   };
 
-  const validateInkassa = (recipient, amountValue) => {
+  const validateInkassa = (recipient, amountValue, currency) => {
     const amount = Number(amountValue || 0);
 
     if (!recipient.trim() || !Number.isFinite(amount) || amount <= 0) {
       return t("Inkassa uchun kimga berildi va summa majburiy.");
     }
 
-    if (amount > currentStats.cashLeft) {
+    const amountMinor = toMinorUnits(amount, currency);
+    const available = Number(currentStats.cashBalanceByCurrency?.[currency] || 0);
+    if (amountMinor > available) {
       return t("Inkassa summasi kassada qolgan puldan oshmasligi kerak.");
     }
 
@@ -316,7 +344,7 @@ export default function Shifts() {
     };
 
     const amount = Number(inkassaAmount || 0);
-    const inkassaError = validateInkassa(inkassaRecipient, amount);
+    const inkassaError = validateInkassa(inkassaRecipient, amount, inkassaCurrency);
 
     if (!currentShift) {
       fail(t("Bu filialda ochiq smena yo'q"));
@@ -332,12 +360,13 @@ export default function Shifts() {
       await createInkassaRecord({
         recipient: inkassaRecipient,
         amount,
+        currency: inkassaCurrency,
       });
 
       setInkassaRecipient("");
       setInkassaAmount("");
       setFormError("");
-      setStatusMessage(`${t("Inkassa saqlandi")}: ${formatMoney(amount)}`);
+      setStatusMessage(`${t("Inkassa saqlandi")}: ${formatMoneyByCurrency(toMinorUnits(amount, inkassaCurrency), inkassaCurrency)}`);
       refreshData();
     } catch (error) {
       setFormError(t(error.message || "Inkassa saqlashda xatolik yuz berdi."));
@@ -356,15 +385,17 @@ ${fallback(shift.admin)} -> ${fallback(shift.handoverToName || shift.handoverTo)
 
 ${t("Bugungi")}:
 ${t("Umumiy savdo")}: ${formatMoney(shift.totalRevenue)}
-${t("Naqd")}: ${formatCurrencyMap(shift.report?.cashByCurrency)}
-${t("Terminal")}: ${formatCurrencyMap(shift.report?.terminalByCurrency)}
-${t("Qarz")}: ${formatCurrencyMap(shift.report?.debtByCurrency)}
+${t("Naqd")}: ${formatCurrencyMap(shift.cashByCurrency || shift.report?.cashByCurrency)}
+${t("Terminal")}: ${formatCurrencyMap(shift.terminalByCurrency || shift.report?.terminalByCurrency)}
+${t("Click")}: ${formatCurrencyMap(shift.clickByCurrency || shift.report?.clickByCurrency)}
+${t("Payme")}: ${formatCurrencyMap(shift.paymeByCurrency || shift.report?.paymeByCurrency)}
+${t("Qarz")}: ${formatCurrencyMap(shift.debtByCurrency || shift.report?.debtByCurrency)}
 
 ${t("Oldingi smenadan qabul")}: ${formatMoney(shift.acceptedAmount)}
 ${t("Rasxod")}: ${formatMoney(regularExpense)}
 ${t("Oylik")}: ${formatMoney(shift.salaryAmount)}
-${t("Inkassa")}: ${formatMoney(shift.totalInkassa)}
-${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shift.systemExpectedCash ?? 0)}
+${t("Inkassa")}: ${formatCurrencyMap(shift.inkassaByCurrency || shift.report?.inkassaByCurrency)}
+${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift.report?.cashBalanceByCurrency)}
 `.trim();
   };
 
@@ -546,14 +577,14 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
           </div>
 
           <div className="payment-breakdown-list">
-            <div><span>{t("Naqd")}</span><b>{formatMoney(currentStats.cash)}</b></div>
-            <div><span>{t("Terminal")}</span><b>{formatMoney(currentStats.card)}</b></div>
-            <div><span>{t("Click")}</span><b>{formatMoney(currentStats.click)}</b></div>
-            <div><span>{t("Payme")}</span><b>{formatMoney(currentStats.payme)}</b></div>
-            <div><span>{t("Qarz")}</span><b className="danger">{formatMoney(currentStats.debt)}</b></div>
-            <div><span>{t("Expenses")}</span><b className="danger">{formatMoney(currentStats.expenses)}</b></div>
-            <div><span>{t("Inkassa")}</span><b className="danger">{formatMoney(currentStats.inkassa)}</b></div>
-            <div><span>{t("Kassada qolgan")}</span><b>{formatMoney(currentStats.cashLeft)}</b></div>
+            <div><span>{t("Naqd")}</span><b>{formatCurrencyMap(currentStats.cashByCurrency)}</b></div>
+            <div><span>{t("Terminal")}</span><b>{formatCurrencyMap(currentStats.terminalByCurrency)}</b></div>
+            <div><span>{t("Click")}</span><b>{formatCurrencyMap(currentStats.clickByCurrency)}</b></div>
+            <div><span>{t("Payme")}</span><b>{formatCurrencyMap(currentStats.paymeByCurrency)}</b></div>
+            <div><span>{t("Qarz")}</span><b className="danger">{formatCurrencyMap(currentStats.debtByCurrency)}</b></div>
+            <div><span>{t("Expenses")}</span><b className="danger">{formatCurrencyMap(currentStats.expenseByCurrency)}</b></div>
+            <div><span>{t("Inkassa")}</span><b className="danger">{formatCurrencyMap(currentStats.inkassaByCurrency)}</b></div>
+            <div><span>{t("Kassada qolgan")}</span><b>{formatCurrencyMap(currentStats.cashBalanceByCurrency)}</b></div>
           </div>
 
           {currentShift && (
@@ -563,15 +594,21 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
                   <h3>{t("Inkassa")}</h3>
                   <p>{t("Smena davomida kassadan pul chiqarish")}</p>
                 </div>
-                <b>{formatMoney(currentStats.cashLeft)}</b>
+                <b>{formatMoneyByCurrency(currentStats.cashBalanceByCurrency?.[inkassaCurrency] || 0, inkassaCurrency)}</b>
               </div>
               <label>
                 <span>{t("Inkassa kimga")}</span>
                 <input value={inkassaRecipient} onChange={(event) => setInkassaRecipient(event.target.value)} placeholder={t("Masalan: bosh kassir")} />
               </label>
               <label>
+                <span>{t("Currency")}</span>
+                <GlassSelect value={inkassaCurrency} onChange={(event) => { setInkassaCurrency(event.target.value); setInkassaAmount(""); }}>
+                  {currencies.map((currency) => <option value={currency} key={currency}>{currency}</option>)}
+                </GlassSelect>
+              </label>
+              <label>
                 <span>{t("Summa")}</span>
-                <input inputMode="numeric" value={formatNumberInput(inkassaAmount)} onChange={(event) => setInkassaAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 500000")} />
+                <input inputMode={inkassaCurrency === "UZS" ? "numeric" : "decimal"} value={formatNumberInput(inkassaAmount, { decimal: inkassaCurrency !== "UZS" })} onChange={(event) => setInkassaAmount(cleanNumericInput(event.target.value, { decimal: inkassaCurrency !== "UZS" }))} placeholder={inkassaCurrency === "UZS" ? t("Masalan: 500000") : "214.29"} />
               </label>
               <button type="button" onClick={handleInkassa} disabled={Boolean(pendingAction)}>
                 {pendingAction === "inkassa" ? t("Loading") : t("Inkassa qilish")}
@@ -616,10 +653,10 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
               <div><span>{fallback(shift.shiftTime)}</span></div>
               <div><span>{shift.openedAt ? formatDateTime(shift.openedAt) : "-"}</span></div>
               <div><span>{shift.closedAt ? formatDateTime(shift.closedAt) : "-"}</span></div>
-              <div><b>{formatMoney(shift.totalRevenue)}</b></div>
-              <div><b className="danger">{formatMoney(shift.totalExpense)}</b></div>
-              <div><b className="danger">{formatMoney(shift.totalDebt)}</b></div>
-              <div><b>{formatMoney(shift.netProfit)}</b></div>
+              <div><b>{formatCurrencyMap(shift.revenueByCurrency)}</b></div>
+              <div><b className="danger">{formatCurrencyMap(shift.expenseByCurrency)}</b></div>
+              <div><b className="danger">{formatCurrencyMap(shift.debtByCurrency)}</b></div>
+              <div><b>{formatCurrencyMap(netCurrencyMap(shift))}</b></div>
               <div><strong className={shift.status === "OPEN" ? "open" : "closed"}>{t(fallback(shift.status))}</strong></div>
             </div>
           ))}
@@ -642,14 +679,16 @@ ${t("Kassada qolgan")}: ${formatMoney(shift.cashLeft ?? shift.closingCash ?? shi
               <p>{fallback(reportShift.admin)} {"->"} {fallback(reportShift.handoverToName || reportShift.handoverTo)}</p>
               <div className="report-line" />
               <p>{t("Umumiy savdo")}: {formatMoney(reportShift.totalRevenue)}</p>
-              <p>{t("Naqd")}: {formatCurrencyMap(reportShift.report?.cashByCurrency)}</p>
-              <p>{t("Terminal")}: {formatCurrencyMap(reportShift.report?.terminalByCurrency)}</p>
-              <p>{t("Qarz")}: {formatCurrencyMap(reportShift.report?.debtByCurrency)}</p>
+              <p>{t("Naqd")}: {formatCurrencyMap(reportShift.cashByCurrency || reportShift.report?.cashByCurrency)}</p>
+              <p>{t("Terminal")}: {formatCurrencyMap(reportShift.terminalByCurrency || reportShift.report?.terminalByCurrency)}</p>
+              <p>{t("Click")}: {formatCurrencyMap(reportShift.clickByCurrency || reportShift.report?.clickByCurrency)}</p>
+              <p>{t("Payme")}: {formatCurrencyMap(reportShift.paymeByCurrency || reportShift.report?.paymeByCurrency)}</p>
+              <p>{t("Qarz")}: {formatCurrencyMap(reportShift.debtByCurrency || reportShift.report?.debtByCurrency)}</p>
               <p>{t("Oldingi smenadan qabul")}: {formatMoney(reportShift.acceptedAmount)}</p>
               <p>{t("Rasxod")}: {formatMoney(Math.max(Number(reportShift.totalExpense || 0) - Number(reportShift.salaryAmount || 0), 0))}</p>
               <p>{t("Oylik")}: {formatMoney(reportShift.salaryAmount)}</p>
-              <p>{t("Inkassa")}: {formatMoney(reportShift.totalInkassa)}</p>
-              <p>{t("Kassada qolgan")}: {formatMoney(reportShift.cashLeft ?? reportShift.closingCash ?? reportShift.systemExpectedCash ?? 0)}</p>
+              <p>{t("Inkassa")}: {formatCurrencyMap(reportShift.inkassaByCurrency || reportShift.report?.inkassaByCurrency)}</p>
+              <p>{t("Kassada qolgan")}: {formatCurrencyMap(reportShift.cashBalanceByCurrency || reportShift.report?.cashBalanceByCurrency)}</p>
             </div>
 
             <button type="button" className="report-copy-btn" onClick={handleCopyReport}>

@@ -1,6 +1,7 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { getArrayData, getData, getItems, mapCashMovement, mapInkassa } from "./apiMappers";
+import { toMinorUnits } from "../utils/currency";
 
 const financeService = {
   async getCashMovements(branchName = null) {
@@ -22,7 +23,7 @@ const financeService = {
       branchId,
       receiverName,
       shiftId: data.shiftId,
-      amount: Number(data.amount || 0),
+      amount: toMinorUnits(data.amount || 0, data.currency || "UZS"),
       currency: data.currency || "UZS",
       note: data.note || data.reason || "Inkassa",
     });

@@ -30,6 +30,13 @@ const mapDashboard = (data = {}) => ({
     cashMovementOut: toNumber(data.cashMovementOut),
     totalExpenses: toNumber(data.totalExpenses ?? data.expenseAmount),
     currencyTotals: data.currencyBreakdown || {},
+    revenueByCurrency: data.revenueByCurrency || data.currencyBreakdown || {},
+    expensesByCurrency: data.expensesByCurrency || {},
+    inkassaByCurrency: data.inkassaByCurrency || {},
+    debtByCurrency: data.debtByCurrency || {},
+    cashOnHandByCurrency: data.cashOnHandByCurrency || {},
+    netProfitByCurrency: data.netProfitByCurrency || {},
+    paymentByCurrency: data.paymentCurrencyBreakdown || {},
   },
   branchSummary: asArray(data.branchSummary).map((branch) => ({
     ...branch,

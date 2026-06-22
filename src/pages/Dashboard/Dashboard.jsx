@@ -56,6 +56,11 @@ const emptyDashboardData = {
 };
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const toNumber = (value) => Number(value ?? 0) || 0;
+const formatCurrencyMap = (items = {}) =>
+  Object.entries(items || {})
+    .filter(([, amount]) => Number(amount || 0) !== 0)
+    .map(([currency, amount]) => formatMoneyByCurrency(amount, currency))
+    .join(" / ") || formatMoneyByCurrency(0, "UZS");
 
 export default function Dashboard() {
   const { t, formatMoney } = useTranslation();
@@ -135,7 +140,7 @@ export default function Dashboard() {
   const statCards = [
     {
       title: t("Bugungi savdo"),
-      value: formatMoney(safeStats.revenue),
+      value: formatCurrencyMap(safeStats.revenueByCurrency),
       icon: TrendingUp,
       action: () => navigate("/sales-history"),
     },
@@ -153,19 +158,19 @@ export default function Dashboard() {
     },
     {
       title: t("Sof foyda"),
-      value: formatMoney(safeStats.netProfit),
+      value: formatCurrencyMap(safeStats.netProfitByCurrency),
       icon: Wallet,
       action: () => navigate("/expenses"),
     },
     {
       title: t("Kassada qolgan"),
-      value: formatMoney(safeStats.cashLeft ?? safeStats.cashOnHand),
+      value: formatCurrencyMap(safeStats.cashOnHandByCurrency),
       icon: Wallet,
       action: () => navigate("/shifts"),
     },
     {
       title: t("Qarz"),
-      value: formatMoney(safeStats.debt),
+      value: formatCurrencyMap(safeStats.debtByCurrency),
       icon: AlertTriangle,
       action: () => navigate("/active-baggage"),
     },
@@ -183,7 +188,7 @@ export default function Dashboard() {
     },
     {
       title: t("Inkassa"),
-      value: formatMoney(safeStats.inkassa),
+      value: formatCurrencyMap(safeStats.inkassaByCurrency),
       icon: CreditCard,
       action: () => navigate("/shifts"),
     },
@@ -310,27 +315,27 @@ export default function Dashboard() {
               <div className="payment-list">
                 <div>
                   <span>{t("Naqd")}</span>
-                  <b>{formatMoney(safeStats.cash)}</b>
+                  <b>{formatCurrencyMap(safeStats.paymentByCurrency?.CASH)}</b>
                 </div>
                 <div>
                   <span>{t("Terminal")}</span>
-                  <b>{formatMoney(safeStats.card)}</b>
+                  <b>{formatCurrencyMap(safeStats.paymentByCurrency?.TERMINAL)}</b>
                 </div>
                 <div>
                   <span>{t("Click")}</span>
-                  <b>{formatMoney(safeStats.click)}</b>
+                  <b>{formatCurrencyMap(safeStats.paymentByCurrency?.CLICK)}</b>
                 </div>
                 <div>
                   <span>{t("Payme")}</span>
-                  <b>{formatMoney(safeStats.payme)}</b>
+                  <b>{formatCurrencyMap(safeStats.paymentByCurrency?.PAYME)}</b>
                 </div>
                 <div>
                   <span>{t("Qarz")}</span>
-                  <b>{formatMoney(safeStats.debt)}</b>
+                  <b>{formatCurrencyMap(safeStats.debtByCurrency)}</b>
                 </div>
                 <div>
                   <span>{t("Inkassa")}</span>
-                  <b>{formatMoney(safeStats.inkassa)}</b>
+                  <b>{formatCurrencyMap(safeStats.inkassaByCurrency)}</b>
                 </div>
                 <div>
                   <span>{t("Cash in")}</span>

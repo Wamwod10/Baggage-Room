@@ -37,11 +37,11 @@ export default function usePageResource(loader, dependencies = [], initialData =
         })
         .catch((error) => {
           if (active) {
-            setState({
-              data: initialData,
+            setState((previous) => ({
+              data: previous.data ?? initialData,
               isLoading: false,
               error,
-            });
+            }));
           }
         });
     }, LOADING_DELAY);

@@ -43,6 +43,10 @@ export function AuthProvider({ children }) {
   const hydrateBranches = useCallback(async () => {
     try {
       await branchService.getAll({ force: true });
+      return true;
+    } catch (error) {
+      console.warn("Branch list could not be refreshed; keeping authenticated session", error);
+      return false;
     } finally {
       setBranchVersion((value) => value + 1);
     }
@@ -80,10 +84,10 @@ export function AuthProvider({ children }) {
 
       try {
         const currentUser = await authService.me();
-        await hydrateBranches();
         if (!cancelled) applyUser(currentUser);
-      } catch {
-        if (!cancelled) logout();
+        await hydrateBranches();
+      } catch (error) {
+        if (!cancelled && error?.status === 401) logout();
       } finally {
         if (!cancelled) setAuthLoading(false);
       }
