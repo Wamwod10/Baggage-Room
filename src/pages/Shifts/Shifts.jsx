@@ -17,7 +17,7 @@ import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
-import { formatMoneyByCurrency, toMinorUnits } from "../../utils/currency";
+import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./shifts.scss";
 
@@ -30,6 +30,7 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
 const fallback = (value, empty = "-") =>
   value === undefined || value === null || value === "" ? empty : value;
 const currencies = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
+const emptyCurrencyInputs = () => Object.fromEntries(currencies.map((currency) => [currency, ""]));
 
 export default function Shifts() {
   const { t, formatDateTime, formatMoney } = useTranslation();
@@ -44,10 +45,10 @@ export default function Shifts() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [adminName, setAdminName] = useState("");
   const [shiftTime, setShiftTime] = useState(shiftOptions[0]?.label || "");
-  const [openingCash, setOpeningCash] = useState("");
+  const [openingCashByCurrency, setOpeningCashByCurrency] = useState(emptyCurrencyInputs);
   const [receivedFrom, setReceivedFrom] = useState("");
-  const [acceptedAmount, setAcceptedAmount] = useState("");
-  const [closingCash, setClosingCash] = useState("");
+  const [acceptedCashByCurrency, setAcceptedCashByCurrency] = useState(emptyCurrencyInputs);
+  const [closingCashByCurrency, setClosingCashByCurrency] = useState(emptyCurrencyInputs);
   const [handoverTo, setHandoverTo] = useState("");
   const [inkassaRecipient, setInkassaRecipient] = useState("");
   const [inkassaAmount, setInkassaAmount] = useState("");
@@ -134,6 +135,8 @@ export default function Shifts() {
         inkassaByCurrency: {},
         debtByCurrency: {},
         cashBalanceByCurrency: {},
+        openingCashByCurrency: {},
+        acceptedCashByCurrency: {},
       };
     }
 
@@ -164,6 +167,8 @@ export default function Shifts() {
       inkassaByCurrency: currentShift.inkassaByCurrency || currentShift.report?.inkassaByCurrency || {},
       debtByCurrency: currentShift.debtByCurrency || currentShift.report?.debtByCurrency || {},
       cashBalanceByCurrency: currentShift.cashBalanceByCurrency || currentShift.report?.cashBalanceByCurrency || {},
+      openingCashByCurrency: currentShift.openingCashByCurrency || currentShift.report?.openingCashByCurrency || {},
+      acceptedCashByCurrency: currentShift.acceptedCashByCurrency || currentShift.report?.acceptedCashByCurrency || {},
     };
   }, [currentShift, refreshKey]);
 
@@ -177,6 +182,18 @@ export default function Shifts() {
     Number(shift.revenueByCurrency?.[currency] || 0) -
       Number(shift.expenseByCurrency?.[currency] || 0) -
       Number(shift.inkassaByCurrency?.[currency] || 0),
+  ]));
+  const closingValueForCurrency = (currency) => {
+    if (closingCashByCurrency[currency] !== "") return closingCashByCurrency[currency];
+    return String(fromMinorUnits(currentStats.cashBalanceByCurrency?.[currency] || 0, currency));
+  };
+  const regularExpenseCurrencyMap = (shift = {}) => Object.fromEntries(currencies.map((currency) => [
+    currency,
+    Math.max(
+      Number((shift.expenseByCurrency || shift.report?.expenseByCurrency)?.[currency] || 0) -
+        Number((shift.salaryByCurrency || shift.report?.salaryByCurrency)?.[currency] || 0),
+      0,
+    ),
   ]));
 
   const handleOpenShift = async () => {
@@ -200,8 +217,8 @@ export default function Shifts() {
       return;
     }
 
-    if (openingCash !== "" && Number(openingCash) < 0) {
-      fail(t("Opening cash manfiy bo'lishi mumkin emas."));
+    if ([openingCashByCurrency, acceptedCashByCurrency].some((values) => currencies.some((currency) => !Number.isFinite(Number(values[currency] || 0)) || Number(values[currency] || 0) < 0))) {
+      fail(t("Boshlang'ich va qabul qilingan summalar manfiy bo'lishi mumkin emas."));
       return;
     }
 
@@ -210,15 +227,15 @@ export default function Shifts() {
         branch: branchName,
         admin: adminName.trim(),
         shiftTime: selectedShiftTime,
-        openingCash,
+        openingCashByCurrency,
+        acceptedCashByCurrency,
         receivedFrom: receivedFrom.trim(),
-        acceptedAmount,
       });
 
       setAdminName("");
-      setOpeningCash("");
+      setOpeningCashByCurrency(emptyCurrencyInputs());
       setReceivedFrom("");
-      setAcceptedAmount("");
+      setAcceptedCashByCurrency(emptyCurrencyInputs());
       setFormError("");
       refreshData();
 
@@ -274,20 +291,9 @@ export default function Shifts() {
       return;
     }
 
-    if (closingCash === "") {
-      fail(t("Closing cash summasini kiriting."));
-      return;
-    }
-
-    const closingCashAmount = Number(closingCash);
-
-    if (!Number.isFinite(closingCashAmount)) {
-      fail(t("Closing cash summasini to'g'ri kiriting."));
-      return;
-    }
-
-    if (closingCash !== "" && Number(closingCash) < 0) {
-      fail(t("Closing cash manfiy bo'lishi mumkin emas."));
+    const resolvedClosingCashByCurrency = Object.fromEntries(currencies.map((currency) => [currency, closingValueForCurrency(currency)]));
+    if (currencies.some((currency) => !Number.isFinite(Number(resolvedClosingCashByCurrency[currency] || 0)) || Number(resolvedClosingCashByCurrency[currency] || 0) < 0)) {
+      fail(t("Har bir valyuta bo'yicha closing cash summasini to'g'ri kiriting."));
       return;
     }
 
@@ -310,13 +316,13 @@ export default function Shifts() {
 
     try {
       const closedShift = await shiftService.close(branchName, {
-        closingCash,
+        closingCashByCurrency: resolvedClosingCashByCurrency,
         handoverTo: handoverTo.trim(),
         salaryAmount: closeSalaryAmount,
         salaryReceiver: closingSalaryReceiver.trim(),
       });
 
-      setClosingCash("");
+      setClosingCashByCurrency(emptyCurrencyInputs());
       setHandoverTo("");
       setClosingSalaryReceiver("");
       setClosingSalaryAmount("");
@@ -377,23 +383,25 @@ export default function Shifts() {
 
   const getReportText = (shift) => {
     if (!shift) return "";
-    const regularExpense = Math.max(Number(shift.totalExpense || 0) - Number(shift.salaryAmount || 0), 0);
+    const salaryMap = shift.salaryByCurrency || shift.report?.salaryByCurrency || {};
+    const regularExpenseByCurrency = regularExpenseCurrencyMap(shift);
 
     return `
 ${t("Smenani topshirdi")}:
 ${fallback(shift.admin)} -> ${fallback(shift.handoverToName || shift.handoverTo)}
 
 ${t("Bugungi")}:
-${t("Umumiy savdo")}: ${formatMoney(shift.totalRevenue)}
+${t("Boshlang'ich kassa")}: ${formatCurrencyMap(shift.openingCashByCurrency || shift.report?.openingCashByCurrency)}
+${t("Qabul qilingan")}: ${formatCurrencyMap(shift.acceptedCashByCurrency || shift.report?.acceptedCashByCurrency)}
+${t("Umumiy savdo")}: ${formatCurrencyMap(shift.revenueByCurrency || shift.report?.revenueByCurrency)}
 ${t("Naqd")}: ${formatCurrencyMap(shift.cashByCurrency || shift.report?.cashByCurrency)}
 ${t("Terminal")}: ${formatCurrencyMap(shift.terminalByCurrency || shift.report?.terminalByCurrency)}
 ${t("Click")}: ${formatCurrencyMap(shift.clickByCurrency || shift.report?.clickByCurrency)}
 ${t("Payme")}: ${formatCurrencyMap(shift.paymeByCurrency || shift.report?.paymeByCurrency)}
 ${t("Qarz")}: ${formatCurrencyMap(shift.debtByCurrency || shift.report?.debtByCurrency)}
 
-${t("Oldingi smenadan qabul")}: ${formatMoney(shift.acceptedAmount)}
-${t("Rasxod")}: ${formatMoney(regularExpense)}
-${t("Oylik")}: ${formatMoney(shift.salaryAmount)}
+${t("Rasxod")}: ${formatCurrencyMap(regularExpenseByCurrency)}
+${t("Oylik")}: ${formatCurrencyMap(salaryMap)}
 ${t("Inkassa")}: ${formatCurrencyMap(shift.inkassaByCurrency || shift.report?.inkassaByCurrency)}
 ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift.report?.cashBalanceByCurrency)}
 `.trim();
@@ -519,14 +527,34 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
                 <span>{t("Kimdan")}</span>
                 <input value={receivedFrom} onChange={(event) => setReceivedFrom(event.target.value)} placeholder={t("Oldingi admin")} />
               </label>
-              <label>
-                <span>{t("Qabul qilingan summa")}</span>
-                <input inputMode="numeric" value={formatNumberInput(acceptedAmount)} onChange={(event) => setAcceptedAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 200000")} />
-              </label>
-              <label>
-                <span>{t("Opening cash")}</span>
-                <input inputMode="numeric" value={formatNumberInput(openingCash)} onChange={(event) => setOpeningCash(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 200000")} />
-              </label>
+              <div className="shift-currency-inputs">
+                <strong>{t("Boshlang'ich kassa")}</strong>
+                {currencies.map((currency) => (
+                  <label key={`opening-${currency}`}>
+                    <span>{currency}</span>
+                    <input
+                      inputMode={currency === "UZS" ? "numeric" : "decimal"}
+                      value={formatNumberInput(openingCashByCurrency[currency], { decimal: currency !== "UZS" })}
+                      onChange={(event) => setOpeningCashByCurrency((previous) => ({ ...previous, [currency]: cleanNumericInput(event.target.value, { decimal: currency !== "UZS" }) }))}
+                      placeholder="0"
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="shift-currency-inputs">
+                <strong>{t("Qabul qilingan pul")}</strong>
+                {currencies.map((currency) => (
+                  <label key={`accepted-${currency}`}>
+                    <span>{currency}</span>
+                    <input
+                      inputMode={currency === "UZS" ? "numeric" : "decimal"}
+                      value={formatNumberInput(acceptedCashByCurrency[currency], { decimal: currency !== "UZS" })}
+                      onChange={(event) => setAcceptedCashByCurrency((previous) => ({ ...previous, [currency]: cleanNumericInput(event.target.value, { decimal: currency !== "UZS" }) }))}
+                      placeholder="0"
+                    />
+                  </label>
+                ))}
+              </div>
               <button type="button" className="open-shift-btn" onClick={handleOpenShift} disabled={Boolean(pendingAction)}>
                 <PlayCircle size={17} />
                 {pendingAction === "open" ? t("Loading") : t("Kassani ochish")}
@@ -537,17 +565,28 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
               <div className="shift-current-box">
                 <div><span>{t("Admin")}</span><b>{fallback(currentShift.admin)}</b></div>
                 <div><span>{t("Kimdan")}</span><b>{fallback(currentShift.receivedFrom || currentShift.acceptedFromName)}</b></div>
-                <div><span>{t("Qabul")}</span><b>{formatMoney(currentShift.acceptedAmount || currentShift.acceptedCash || 0)}</b></div>
+                <div><span>{t("Boshlang'ich kassa")}</span><b>{formatCurrencyMap(currentStats.openingCashByCurrency)}</b></div>
+                <div><span>{t("Qabul qilingan")}</span><b>{formatCurrencyMap(currentStats.acceptedCashByCurrency)}</b></div>
                 <div><span>{t("Baggage count")}</span><b>{currentStats.baggage} {t("ta")}</b></div>
               </div>
               <label>
                 <span>{t("Kimga")}</span>
                 <input value={handoverTo} onChange={(event) => setHandoverTo(event.target.value)} placeholder={t("Keyingi admin")} />
               </label>
-              <label>
-                <span>{t("Closing cash")}</span>
-                <input inputMode="numeric" value={formatNumberInput(closingCash)} onChange={(event) => setClosingCash(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 1500000")} />
-              </label>
+              <div className="shift-currency-inputs">
+                <strong>{t("Closing cash")}</strong>
+                {currencies.map((currency) => (
+                  <label key={`closing-${currency}`}>
+                    <span>{currency}</span>
+                    <input
+                      inputMode={currency === "UZS" ? "numeric" : "decimal"}
+                      value={formatNumberInput(closingValueForCurrency(currency), { decimal: currency !== "UZS" })}
+                      onChange={(event) => setClosingCashByCurrency((previous) => ({ ...previous, [currency]: cleanNumericInput(event.target.value, { decimal: currency !== "UZS" }) }))}
+                      placeholder="0"
+                    />
+                  </label>
+                ))}
+              </div>
               <div className="close-inkassa-panel">
                 <div className="close-inkassa-title">
                   <span>{t("Oylik")}</span>
@@ -678,15 +717,16 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
               <h3>{t("Smenani topshirdi")}:</h3>
               <p>{fallback(reportShift.admin)} {"->"} {fallback(reportShift.handoverToName || reportShift.handoverTo)}</p>
               <div className="report-line" />
-              <p>{t("Umumiy savdo")}: {formatMoney(reportShift.totalRevenue)}</p>
+              <p>{t("Boshlang'ich kassa")}: {formatCurrencyMap(reportShift.openingCashByCurrency || reportShift.report?.openingCashByCurrency)}</p>
+              <p>{t("Qabul qilingan")}: {formatCurrencyMap(reportShift.acceptedCashByCurrency || reportShift.report?.acceptedCashByCurrency)}</p>
+              <p>{t("Umumiy savdo")}: {formatCurrencyMap(reportShift.revenueByCurrency || reportShift.report?.revenueByCurrency)}</p>
               <p>{t("Naqd")}: {formatCurrencyMap(reportShift.cashByCurrency || reportShift.report?.cashByCurrency)}</p>
               <p>{t("Terminal")}: {formatCurrencyMap(reportShift.terminalByCurrency || reportShift.report?.terminalByCurrency)}</p>
               <p>{t("Click")}: {formatCurrencyMap(reportShift.clickByCurrency || reportShift.report?.clickByCurrency)}</p>
               <p>{t("Payme")}: {formatCurrencyMap(reportShift.paymeByCurrency || reportShift.report?.paymeByCurrency)}</p>
               <p>{t("Qarz")}: {formatCurrencyMap(reportShift.debtByCurrency || reportShift.report?.debtByCurrency)}</p>
-              <p>{t("Oldingi smenadan qabul")}: {formatMoney(reportShift.acceptedAmount)}</p>
-              <p>{t("Rasxod")}: {formatMoney(Math.max(Number(reportShift.totalExpense || 0) - Number(reportShift.salaryAmount || 0), 0))}</p>
-              <p>{t("Oylik")}: {formatMoney(reportShift.salaryAmount)}</p>
+              <p>{t("Rasxod")}: {formatCurrencyMap(regularExpenseCurrencyMap(reportShift))}</p>
+              <p>{t("Oylik")}: {formatCurrencyMap(reportShift.salaryByCurrency || reportShift.report?.salaryByCurrency)}</p>
               <p>{t("Inkassa")}: {formatCurrencyMap(reportShift.inkassaByCurrency || reportShift.report?.inkassaByCurrency)}</p>
               <p>{t("Kassada qolgan")}: {formatCurrencyMap(reportShift.cashBalanceByCurrency || reportShift.report?.cashBalanceByCurrency)}</p>
             </div>

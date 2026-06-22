@@ -1,6 +1,12 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { getArrayData, getData, mapShift } from "./apiMappers";
+import { toMinorUnits } from "../utils/currency";
+
+const currencies = ["UZS", "USD", "EUR", "RUB", "KZT", "TJS"];
+const toMinorCurrencyMap = (values = {}) => Object.fromEntries(
+  currencies.map((currency) => [currency, toMinorUnits(values?.[currency] || 0, currency)]),
+);
 
 const shiftService = {
   async getAll(branchName = null) {
@@ -23,10 +29,14 @@ const shiftService = {
   async open(data) {
     const branchId = await branchService.getBranchIdByName(data.branch);
     if (!branchId) throw new Error("Filial tanlanmagan");
+    const openingCashByCurrency = toMinorCurrencyMap(data.openingCashByCurrency);
+    const acceptedCashByCurrency = toMinorCurrencyMap(data.acceptedCashByCurrency);
     const response = await apiClient.post("/shifts/open", {
       branchId,
-      openingCash: Number(data.openingCash || 0),
-      acceptedCash: Number(data.acceptedCash ?? data.acceptedAmount ?? 0),
+      openingCash: openingCashByCurrency.UZS,
+      acceptedCash: acceptedCashByCurrency.UZS,
+      openingCashByCurrency,
+      acceptedCashByCurrency,
       acceptedFromName: data.acceptedFromName || data.receivedFrom || "",
       acceptedByName: data.acceptedByName || data.admin || "",
       handoverToName: data.handoverToName || data.handoverTo || "",
@@ -37,8 +47,10 @@ const shiftService = {
   async close(branchName, data) {
     const current = await this.getCurrent(branchName);
     if (!current) throw new Error("Bu filialda ochiq smena yo'q");
+    const closingCashByCurrency = toMinorCurrencyMap(data.closingCashByCurrency);
     const response = await apiClient.post(`/shifts/${current.id}/close`, {
-      closingCash: Number(data.closingCash ?? data.cashLeft ?? 0),
+      closingCash: closingCashByCurrency.UZS,
+      closingCashByCurrency,
       handoverToName: data.handoverToName || data.handoverTo || "",
       salaryAmount: Number(data.salaryAmount || 0),
       salaryReceiver: data.salaryReceiver || "",

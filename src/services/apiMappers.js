@@ -209,6 +209,13 @@ const mapShift = (shift) => {
       shift.cashLeft ??
       openingCash + acceptedCash + totalRevenue - expenseAmount - inkassaAmount,
   );
+  const currencyMap = (value, fallbackUzs = 0) => {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    return ["UZS", "USD", "EUR", "RUB", "KZT", "TJS"].reduce((result, currency) => {
+      result[currency] = Number(source[currency] ?? (currency === "UZS" ? fallbackUzs : 0));
+      return result;
+    }, {});
+  };
 
   return {
     ...shift,
@@ -226,6 +233,10 @@ const mapShift = (shift) => {
     acceptedCash,
     acceptedAmount: acceptedCash,
     openingCash,
+    openingCashByCurrency: currencyMap(shift.openingCashByCurrency, openingCash),
+    acceptedCashByCurrency: currencyMap(shift.acceptedCashByCurrency, acceptedCash),
+    closingCashByCurrency: currencyMap(shift.closingCashByCurrency, shift.closingCash || 0),
+    differenceByCurrency: currencyMap(shift.differenceByCurrency, shift.difference || 0),
     closingCash: Number(shift.closingCash || 0),
     totalRevenue,
     cashRevenue: Number(shift.cashRevenue || 0),
