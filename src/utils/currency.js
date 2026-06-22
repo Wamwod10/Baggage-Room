@@ -3,29 +3,30 @@ const currencyMeta = {
   USD: { suffix: "", decimals: 2, prefix: "$" },
   RUB: { suffix: "RUB", decimals: 2, prefix: "" },
   EUR: { suffix: "", decimals: 2, prefix: "EUR " },
-  KZT: { suffix: "₸", decimals: 2, prefix: "" },
-  TJS: { suffix: "TJS", decimals: 2, prefix: "" },
 };
+
+const getCurrencyMeta = (currency = "UZS") =>
+  currencyMeta[currency] || { suffix: String(currency || ""), decimals: 2, prefix: "" };
 
 export const currencyFractionDigits = Object.fromEntries(
   Object.entries(currencyMeta).map(([currency, meta]) => [currency, meta.decimals]),
 );
 
 export const toMinorUnits = (amount, currency = "UZS") => {
-  const code = currencyMeta[currency] ? currency : "UZS";
-  const factor = 10 ** currencyMeta[code].decimals;
+  const code = currency || "UZS";
+  const factor = 10 ** getCurrencyMeta(code).decimals;
   return Math.round(Number(amount || 0) * factor);
 };
 
 export const fromMinorUnits = (amount, currency = "UZS") => {
-  const code = currencyMeta[currency] ? currency : "UZS";
-  const factor = 10 ** currencyMeta[code].decimals;
+  const code = currency || "UZS";
+  const factor = 10 ** getCurrencyMeta(code).decimals;
   return Number(amount || 0) / factor;
 };
 
 export const formatMoneyByCurrency = (amount, currency = "UZS") => {
-  const code = currencyMeta[currency] ? currency : "UZS";
-  const meta = currencyMeta[code];
+  const code = currency || "UZS";
+  const meta = getCurrencyMeta(code);
   const value = fromMinorUnits(amount, code).toLocaleString("uz-UZ", {
     minimumFractionDigits: meta.decimals,
     maximumFractionDigits: meta.decimals,
@@ -45,4 +46,4 @@ export const convertFromUZS = (amountUZS, currency = "UZS", rates = {}) => {
 };
 
 export const getCurrencySymbol = (currency = "UZS") =>
-  currencyMeta[currency]?.prefix || currencyMeta[currency]?.suffix || currency;
+  getCurrencyMeta(currency).prefix || getCurrencyMeta(currency).suffix || currency;

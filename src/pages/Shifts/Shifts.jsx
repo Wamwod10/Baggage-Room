@@ -29,7 +29,7 @@ const emptyShiftData = {
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const fallback = (value, empty = "-") =>
   value === undefined || value === null || value === "" ? empty : value;
-const currencies = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
+const currencies = ["UZS", "USD", "RUB", "EUR"];
 const emptyCurrencyInputs = () => Object.fromEntries(currencies.map((currency) => [currency, ""]));
 
 export default function Shifts() {

@@ -3,7 +3,7 @@ import branchService from "./branchService";
 import { getArrayData, getData, mapShift } from "./apiMappers";
 import { toMinorUnits } from "../utils/currency";
 
-const currencies = ["UZS", "USD", "EUR", "RUB", "KZT", "TJS"];
+const currencies = ["UZS", "USD", "EUR", "RUB"];
 const toMinorCurrencyMap = (values = {}) => Object.fromEntries(
   currencies.map((currency) => [currency, toMinorUnits(values?.[currency] || 0, currency)]),
 );

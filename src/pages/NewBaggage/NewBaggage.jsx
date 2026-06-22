@@ -153,7 +153,7 @@ export default function NewBaggage() {
     [currentBranch],
   );
   const currencies = useMemo(() => {
-    const configuredCurrencies = asArray(settings.currencies);
+    const configuredCurrencies = asArray(settings.currencies).filter((currency) => ["UZS", "USD", "RUB", "EUR"].includes(currency));
     return configuredCurrencies.length ? configuredCurrencies : ["UZS", "USD", "RUB", "EUR"];
   }, [settings.currencies]);
   const nextOrderId = useMemo(

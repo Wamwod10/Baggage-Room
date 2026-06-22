@@ -11,7 +11,7 @@ const CASH_MOVEMENTS_KEY = "br_cash_movements";
 const INKASSA_KEY = "br_inkassa";
 
 export const PAYMENT_TYPES = ["Naqd", "Terminal", "Click", "Payme", "Qarz"];
-export const CURRENCIES = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
+export const CURRENCIES = ["UZS", "USD", "RUB", "EUR"];
 export const LOCKER_STATUSES = {
   FREE: "Bosh",
   BUSY: "Band",
@@ -96,8 +96,6 @@ const DEFAULT_SETTINGS = {
     USD: 12500,
     RUB: 140,
     EUR: 13500,
-    KZT: 27,
-    TJS: 1150,
   },
   overtimePerHour: 0,
   lockers: {},
@@ -238,6 +236,13 @@ const normalizeSettings = (settings = {}) => {
     };
     return result;
   }, {});
+  const sanitizedCurrencies = Array.isArray(settings.currencies)
+    ? settings.currencies.filter((currency) => CURRENCIES.includes(currency))
+    : [];
+  const sanitizedExchangeRates = Object.fromEntries(CURRENCIES.map((currency) => [
+    currency,
+    Number(settings.exchangeRates?.[currency] ?? DEFAULT_SETTINGS.exchangeRates[currency]),
+  ]));
 
   return {
     ...DEFAULT_SETTINGS,
@@ -253,13 +258,11 @@ const normalizeSettings = (settings = {}) => {
       ...(settings.pricing || {}),
     },
     branchTariffs,
-    currencies: Array.isArray(settings.currencies) && settings.currencies.length
-      ? settings.currencies
-      : DEFAULT_SETTINGS.currencies,
-    exchangeRates: {
-      ...DEFAULT_SETTINGS.exchangeRates,
-      ...(settings.exchangeRates || {}),
-    },
+    currencies: sanitizedCurrencies.length ? sanitizedCurrencies : DEFAULT_SETTINGS.currencies,
+    defaultCurrency: CURRENCIES.includes(settings.defaultCurrency)
+      ? settings.defaultCurrency
+      : DEFAULT_SETTINGS.defaultCurrency,
+    exchangeRates: sanitizedExchangeRates,
     lockers: normalizeLockers(settings.lockers),
     telegram: {
       ...DEFAULT_SETTINGS.telegram,

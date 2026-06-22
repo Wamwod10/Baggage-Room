@@ -211,7 +211,7 @@ const mapShift = (shift) => {
   );
   const currencyMap = (value, fallbackUzs = 0) => {
     const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    return ["UZS", "USD", "EUR", "RUB", "KZT", "TJS"].reduce((result, currency) => {
+    return ["UZS", "USD", "EUR", "RUB"].reduce((result, currency) => {
       result[currency] = Number(source[currency] ?? (currency === "UZS" ? fallbackUzs : 0));
       return result;
     }, {});

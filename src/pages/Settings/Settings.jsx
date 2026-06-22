@@ -576,7 +576,7 @@ export default function Settings() {
                         currencies: event.target.value
                           .split(",")
                           .map((item) => item.trim().toUpperCase())
-                          .filter(Boolean),
+                          .filter((currency) => ["UZS", "USD", "RUB", "EUR"].includes(currency)),
                       }))
                     }
                     placeholder="UZS,USD,RUB,EUR"
