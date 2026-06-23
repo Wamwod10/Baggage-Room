@@ -153,8 +153,9 @@ export default function NewBaggage() {
     [currentBranch],
   );
   const currencies = useMemo(() => {
-    const configuredCurrencies = asArray(settings.currencies).filter((currency) => ["UZS", "USD", "RUB", "EUR"].includes(currency));
-    return configuredCurrencies.length ? configuredCurrencies : ["UZS", "USD", "RUB", "EUR"];
+    const supportedCurrencies = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
+    const configuredCurrencies = asArray(settings.currencies).filter((currency) => supportedCurrencies.includes(currency));
+    return configuredCurrencies.length ? configuredCurrencies : supportedCurrencies;
   }, [settings.currencies]);
   const nextOrderId = useMemo(
     () => `BR-${String(Number(safePageData.orderCount || 0) + 1).padStart(6, "0")}`,

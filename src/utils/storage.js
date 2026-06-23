@@ -11,7 +11,7 @@ const CASH_MOVEMENTS_KEY = "br_cash_movements";
 const INKASSA_KEY = "br_inkassa";
 
 export const PAYMENT_TYPES = ["Naqd", "Terminal", "Click", "Payme", "Qarz"];
-export const CURRENCIES = ["UZS", "USD", "RUB", "EUR"];
+export const CURRENCIES = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
 export const LOCKER_STATUSES = {
   FREE: "Bosh",
   BUSY: "Band",
@@ -96,6 +96,8 @@ const DEFAULT_SETTINGS = {
     USD: 12500,
     RUB: 140,
     EUR: 13500,
+    KZT: 25,
+    TJS: 1150,
   },
   overtimePerHour: 0,
   lockers: {},
