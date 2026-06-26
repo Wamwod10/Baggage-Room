@@ -75,7 +75,17 @@ const baggageService = {
       })).filter((item) => item.lockerId && item.size && Number(item.count || 0) > 0),
     });
     const responseData = getData(response, {});
-    return mapOrder(responseData.order || responseData);
+    const order = mapOrder(responseData.order || responseData);
+    return {
+      ...order,
+      telegram: responseData.telegram || null,
+      warnings: responseData.warnings || [],
+    };
+  },
+
+  async sendTelegram(id) {
+    const response = await apiClient.post(`/orders/${id}/telegram`);
+    return getData(response);
   },
 
   async update(id, data) {

@@ -477,10 +477,15 @@ export default function NewBaggage() {
     }
 
     const orderLabel = order?.orderNumber || "-";
+    const telegramStatus = order?.telegram
+      ? order.telegram.sent
+        ? ` ${t("Telegram xabar yuborildi.")}`
+        : ` ${t("Telegram yuborilmadi")}: ${order.telegram.message || order.telegram.reason || "-"}`
+      : "";
     setMessage(
       (print
         ? `${orderLabel} ${t("saqlandi va chek chiqarishga tayyor")}`
-        : `${orderLabel} ${t("muvaffaqiyatli saqlandi")}`),
+        : `${orderLabel} ${t("muvaffaqiyatli saqlandi")}`) + telegramStatus,
     );
     setSelectedLocker(null);
     setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));

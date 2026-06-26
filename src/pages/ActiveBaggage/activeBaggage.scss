@@ -102,7 +102,7 @@
 .active-table-head,
 .active-table-row {
   display: grid;
-  grid-template-columns: 1.05fr 1.35fr 1.15fr 1fr 1.15fr 1.05fr 0.8fr 230px;
+  grid-template-columns: 1.05fr 1.35fr 1.15fr 1fr 1.15fr 1.05fr 0.8fr 274px;
   gap: 14px;
   align-items: center;
 }
@@ -210,6 +210,11 @@
     background: var(--surface-muted);
     color: var(--text-muted);
     border: 1px solid var(--border);
+  }
+
+  &.telegram {
+    background: color-mix(in srgb, #229ed9 18%, var(--surface-muted));
+    color: #229ed9;
   }
 
   &.pickup {
@@ -585,7 +590,7 @@
 
   .active-table-head,
   .active-table-row {
-    min-width: 1160px;
+    min-width: 1210px;
   }
 }
 
@@ -665,7 +670,7 @@
   .row-actions {
     justify-content: stretch;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
 
     .icon-action {
       width: 100%;

@@ -142,23 +142,29 @@ const buildTelegramStateFromBackend = (telegramSettings = [], previousTelegram =
   };
 };
 
-const buildTelegramPayload = (telegram = {}, group = {}) => ({
-  botToken: group.token || telegram.botToken || "",
-  groupId: group.groupId || telegram.groupId || "",
-  enabled: Boolean(telegram.enabled && group.enabled !== false),
-  newOrderEnabled: Boolean(telegram.newOrder),
-  shiftOpenEnabled: Boolean(telegram.shiftOpened),
-  shiftCloseEnabled: Boolean(telegram.shiftClosed),
-  orderCancelEnabled: Boolean(telegram.orderCancelled),
-  delayedBaggageEnabled: Boolean(telegram.delayedBaggage),
-  overtimePaymentEnabled: Boolean(telegram.overtimePayment),
-  debtClosedEnabled: Boolean(telegram.debtClosed),
-  inkassaEnabled: Boolean(telegram.inkassa),
-  expenseEnabled: Boolean(telegram.expenseAlerts),
-  orderEditEnabled: Boolean(telegram.orderEdit),
-  lockerTransferEnabled: Boolean(telegram.lockerTransfer),
-  lockerServiceEnabled: Boolean(telegram.lockerBlock),
-});
+const buildTelegramPayload = (telegram = {}, group = {}) => {
+  const botToken = group.token || telegram.botToken || "";
+  const groupId = group.groupId || telegram.groupId || "";
+  const hasCredentials = Boolean(String(botToken).trim() && String(groupId).trim());
+
+  return {
+    botToken,
+    groupId,
+    enabled: Boolean(telegram.enabled && group.enabled !== false && hasCredentials),
+    newOrderEnabled: Boolean(telegram.newOrder),
+    shiftOpenEnabled: Boolean(telegram.shiftOpened),
+    shiftCloseEnabled: Boolean(telegram.shiftClosed),
+    orderCancelEnabled: Boolean(telegram.orderCancelled),
+    delayedBaggageEnabled: Boolean(telegram.delayedBaggage),
+    overtimePaymentEnabled: Boolean(telegram.overtimePayment),
+    debtClosedEnabled: Boolean(telegram.debtClosed),
+    inkassaEnabled: Boolean(telegram.inkassa),
+    expenseEnabled: Boolean(telegram.expenseAlerts),
+    orderEditEnabled: Boolean(telegram.orderEdit),
+    lockerTransferEnabled: Boolean(telegram.lockerTransfer),
+    lockerServiceEnabled: Boolean(telegram.lockerBlock),
+  };
+};
 
 export default function Settings() {
   const { t, language, setLanguage } = useTranslation();

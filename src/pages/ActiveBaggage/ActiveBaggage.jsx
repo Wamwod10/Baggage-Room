@@ -6,11 +6,11 @@ import {
   MoveRight,
   Printer,
   Search,
+  Send,
   XCircle,
 } from "lucide-react";
 import baggageService from "../../services/baggageService";
 import lockerService from "../../services/lockerService";
-import telegramService from "../../services/telegramService";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
@@ -92,6 +92,7 @@ export default function ActiveBaggage() {
     reason: "",
   });
   const [formError, setFormError] = useState("");
+  const [telegramSendingId, setTelegramSendingId] = useState("");
 
   const {
     data: pageData = { orders: [], lockers: [] },
@@ -199,9 +200,8 @@ export default function ActiveBaggage() {
       return;
     }
 
-    let updatedOrder;
     try {
-      updatedOrder = await baggageService.pickup(pickupOrder.id, {
+      await baggageService.pickup(pickupOrder.id, {
         ...pickupForm,
         overtimeAmount: toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS"),
         debtPaidAmount: pickupOrder.debtAmount || undefined,
@@ -215,14 +215,6 @@ export default function ActiveBaggage() {
     setRefreshKey((value) => value + 1);
     setPickupOrder(null);
     setSelectedOrder(null);
-
-    try {
-      if (updatedOrder.overtimeAmount > 0) {
-        await telegramService.sendOvertimePayment(updatedOrder);
-      }
-    } catch {
-      // Best-effort Telegram notification.
-    }
   };
 
   const handleCloseDebt = async (order) => {
@@ -238,14 +230,7 @@ export default function ActiveBaggage() {
       setFormError(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
     }
-    const updatedOrder = { ...order, debtAmount: 0 };
     setRefreshKey((value) => value + 1);
-
-    try {
-      await telegramService.sendDebtClosed(updatedOrder);
-    } catch {
-      // Best-effort Telegram notification.
-    }
   };
 
   const handleCancel = (order) => {
@@ -262,9 +247,8 @@ export default function ActiveBaggage() {
       return;
     }
 
-    let cancelledOrder;
     try {
-      cancelledOrder = await baggageService.cancel(cancelOrder.id, cancelReason.trim());
+      await baggageService.cancel(cancelOrder.id, cancelReason.trim());
     } catch (error) {
       setFormError(t(error.message || "Orderni bekor qilishda xatolik yuz berdi."));
       return;
@@ -274,12 +258,6 @@ export default function ActiveBaggage() {
     setSelectedOrder(null);
     setCancelOrder(null);
     setCancelReason("");
-
-    try {
-      await telegramService.sendOrderCancelled(cancelledOrder);
-    } catch {
-      // Backend already sends Telegram notifications; frontend notification is best-effort.
-    }
   };
 
   const handleReprint = async (orderId) => {
@@ -324,9 +302,8 @@ export default function ActiveBaggage() {
       return;
     }
 
-    let updatedOrder;
     try {
-      updatedOrder = await baggageService.transfer(transferOrder.id, {
+      await baggageService.transfer(transferOrder.id, {
         ...transferForm,
         admin: user?.fullName || "Admin",
       });
@@ -334,17 +311,21 @@ export default function ActiveBaggage() {
       setFormError(t(error.message || "Transfer saqlashda xatolik yuz berdi."));
       return;
     }
-    const transfer = updatedOrder.transferHistory?.at(-1);
-
     setRefreshKey((value) => value + 1);
     setTransferOrder(null);
+  };
 
+  const handleSendTelegram = async (order) => {
+    if (!order?.id || telegramSendingId) return;
+    setTelegramSendingId(order.id);
+    setFormError("");
     try {
-      if (transfer) {
-        await telegramService.sendLockerTransfer(updatedOrder, transfer);
-      }
-    } catch {
-      // Best-effort Telegram notification.
+      await baggageService.sendTelegram(order.id);
+      setFormError(`${order.orderNumber || "-"} ${t("Telegram xabar yuborildi.")}`);
+    } catch (error) {
+      setFormError(t(error.message || "Telegram bilan ulanishda xatolik yuz berdi"));
+    } finally {
+      setTelegramSendingId("");
     }
   };
 
@@ -494,6 +475,15 @@ export default function ActiveBaggage() {
                   </button>
                   <button type="button" className="icon-action print" onClick={() => handleReprint(order.id)}>
                     <Printer size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-action telegram"
+                    onClick={() => handleSendTelegram(order)}
+                    disabled={telegramSendingId === order.id}
+                    title="Telegram"
+                  >
+                    <Send size={16} />
                   </button>
                   {(order.status === "Aktiv" || order.status === "Kechikdi") && (
                     <>
