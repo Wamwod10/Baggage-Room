@@ -102,7 +102,7 @@
 .active-table-head,
 .active-table-row {
   display: grid;
-  grid-template-columns: 1.05fr 1.35fr 1.15fr 1fr 1.15fr 1.05fr 0.8fr 274px;
+  grid-template-columns: 1.05fr 1.35fr 1.15fr 1fr 1.15fr 1.05fr 0.8fr 318px;
   gap: 14px;
   align-items: center;
 }
@@ -215,6 +215,12 @@
   &.telegram {
     background: color-mix(in srgb, #229ed9 18%, var(--surface-muted));
     color: #229ed9;
+  }
+
+  &.edit {
+    background: color-mix(in srgb, var(--primary-soft) 70%, var(--surface-muted));
+    color: var(--primary);
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
   }
 
   &.pickup {
@@ -368,14 +374,102 @@
 }
 
 .pickup-modal,
-.transfer-modal {
+.transfer-modal,
+.edit-modal {
   width: min(620px, 100%);
+}
+
+.edit-modal {
+  width: min(760px, 100%);
 }
 
 .pickup-summary,
 .pickup-form {
   display: grid;
   gap: 10px;
+}
+
+.edit-form-grid,
+.edit-items {
+  display: grid;
+  gap: 10px;
+}
+
+.edit-form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 14px;
+
+  label {
+    display: grid;
+    gap: 6px;
+
+    &.full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  span {
+    color: var(--text-soft);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  input,
+  textarea,
+  .glass-select {
+    border-radius: 12px;
+  }
+
+  input,
+  .glass-select {
+    height: 42px;
+  }
+
+  input,
+  textarea {
+    padding: 0 12px;
+  }
+
+  textarea {
+    min-height: 82px;
+    padding-top: 10px;
+    resize: vertical;
+  }
+}
+
+.edit-items {
+  margin-bottom: 14px;
+}
+
+.edit-item-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 0.55fr;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+
+  label {
+    display: grid;
+    gap: 6px;
+  }
+
+  span {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  input,
+  .glass-select {
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  input {
+    padding: 0 11px;
+  }
 }
 
 .pickup-summary {
@@ -590,7 +684,7 @@
 
   .active-table-head,
   .active-table-row {
-    min-width: 1210px;
+    min-width: 1260px;
   }
 }
 
@@ -697,7 +791,9 @@
   }
 
   .pickup-summary,
-  .pickup-form {
+  .pickup-form,
+  .edit-form-grid,
+  .edit-item-row {
     grid-template-columns: 1fr;
   }
 }

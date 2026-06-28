@@ -47,6 +47,8 @@ const baggageService = {
     if (!branchId) throw new Error("Filial tanlanmagan");
     if (!lockerIds.length) throw new Error("Kamida bitta yacheyka tanlang");
     if (!baggageItems.length) throw new Error("Kamida bitta bagaj razmerini tanlang");
+    const paymentType = toPaymentType(data.payment);
+    if (!paymentType) throw new Error("To'lov turi tanlanmagan");
     const response = await apiClient.post("/orders", {
       branchId,
       clientName: data.client,
@@ -55,7 +57,7 @@ const baggageService = {
       tariffHours: Number(data.tariffHours || data.hours || 1),
       customHours: data.customHours ? Number(data.customHours) : undefined,
       currency: data.currency || "UZS",
-      paymentType: toPaymentType(data.payment),
+      paymentType,
       discountAmount: Number(data.discount || data.discountAmount || 0),
       discountReason: data.discountReason || "",
       realPaidAmount: Number(data.realPaidAmount ?? data.finalAmount ?? 0),
@@ -89,7 +91,13 @@ const baggageService = {
   },
 
   async update(id, data) {
-    const response = await apiClient.patch(`/orders/${id}`, data);
+    const payload = {
+      ...data,
+      paymentType: data.payment !== undefined ? toPaymentType(data.payment) : data.paymentType,
+    };
+    if (data.payment !== undefined && !payload.paymentType) throw new Error("To'lov turi tanlanmagan");
+    delete payload.payment;
+    const response = await apiClient.patch(`/orders/${id}`, payload);
     return mapOrder(getData(response));
   },
 
@@ -106,9 +114,11 @@ const baggageService = {
   async closeDebt(id, data) {
     const order = await this.getById(id);
     if (!order.debtId) throw new Error("Qarz topilmadi");
+    const paymentType = toPaymentType(data.payment);
+    if (!paymentType) throw new Error("To'lov turi tanlanmagan");
     const response = await apiClient.post(`/debts/${order.debtId}/close`, {
       amount: Number(data.amount || order.debtAmount || 0),
-      paymentType: toPaymentType(data.payment || "Naqd"),
+      paymentType,
       currency: data.currency || order.currency,
       note: data.note || "",
     });

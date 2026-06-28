@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle,
   Clock3,
+  Edit3,
   Eye,
   MoveRight,
   Printer,
@@ -35,6 +36,21 @@ const hasLockerPrice = (locker) =>
     Number.isFinite(Number(locker.price));
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
+
+const toDateTimeLocal = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
+const fromDateTimeLocal = (value) => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+};
 
 const lockerPriceLabel = (order, t) => {
   const lockers = Array.isArray(order.lockers) ? order.lockers : [];
@@ -74,6 +90,8 @@ export default function ActiveBaggage() {
   const [branch, setBranch] = useState("Barcha filiallar");
   const [status, setStatus] = useState("Barcha statuslar");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [editOrder, setEditOrder] = useState(null);
+  const [editForm, setEditForm] = useState(null);
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
@@ -112,11 +130,12 @@ export default function ActiveBaggage() {
   );
 
   useEffect(() => {
-    if (!selectedOrder && !receiptOrder && !cancelOrder && !pickupOrder && !transferOrder) return;
+    if (!selectedOrder && !editOrder && !receiptOrder && !cancelOrder && !pickupOrder && !transferOrder) return;
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setSelectedOrder(null);
+        setEditOrder(null);
         setReceiptOrder(null);
         setCancelOrder(null);
         setPickupOrder(null);
@@ -126,7 +145,7 @@ export default function ActiveBaggage() {
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [selectedOrder, receiptOrder, cancelOrder, pickupOrder, transferOrder]);
+  }, [selectedOrder, editOrder, receiptOrder, cancelOrder, pickupOrder, transferOrder]);
 
   const safePageData = pageData && typeof pageData === "object" ? pageData : { orders: [], lockers: [] };
   const pageOrders = asArray(safePageData.orders);
@@ -239,6 +258,75 @@ export default function ActiveBaggage() {
     setFormError("");
   };
 
+  const openEdit = (order) => {
+    setEditOrder(order);
+    setEditForm({
+      clientName: order.client || "",
+      phone: order.phone || "",
+      passport: order.passport || "",
+      checkOut: toDateTimeLocal(order.checkOut),
+      payment: getPaymentLabel(order.payment),
+      currency: order.currency || "UZS",
+      finalAmount: String(fromMinorUnits(order.finalAmount || order.finalPrice || 0, order.currency || "UZS")),
+      realPaidAmount: String(fromMinorUnits(order.realPaidAmount || 0, order.currency || "UZS")),
+      note: order.note || "",
+      items: asArray(order.lockers).map((locker) => ({
+        id: locker.itemId || locker.id,
+        lockerId: locker.lockerId,
+        number: locker.number,
+        size: locker.size,
+        count: String(locker.count || 1),
+      })),
+    });
+    setFormError("");
+  };
+
+  const updateEditForm = (key, value) => {
+    setEditForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const updateEditItem = (index, key, value) => {
+    setEditForm((prev) => ({
+      ...prev,
+      items: asArray(prev.items).map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item,
+      ),
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editOrder || !editForm) return;
+    if (!editForm.clientName.trim() || !editForm.phone.trim()) {
+      setFormError(t("Client va telefon majburiy."));
+      return;
+    }
+    try {
+      await baggageService.update(editOrder.id, {
+        clientName: editForm.clientName.trim(),
+        phone: editForm.phone.trim(),
+        passport: editForm.passport.trim(),
+        checkOut: fromDateTimeLocal(editForm.checkOut),
+        payment: editForm.payment,
+        currency: editForm.currency,
+        finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
+        realPaidAmount: editForm.payment === "Qarz" ? 0 : toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
+        note: editForm.note,
+        items: asArray(editForm.items).map((item) => ({
+          id: item.id,
+          lockerId: item.lockerId,
+          size: item.size,
+          count: Number(item.count || 1),
+        })),
+      });
+    } catch (error) {
+      setFormError(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
+      return;
+    }
+    setRefreshKey((value) => value + 1);
+    setEditOrder(null);
+    setSelectedOrder(null);
+  };
+
   const handleConfirmCancel = async () => {
     if (!cancelOrder) return;
 
@@ -293,6 +381,16 @@ export default function ActiveBaggage() {
         locker.status === "Bosh",
     );
   }, [pageLockers, transferOrder]);
+
+  const editLockerOptions = useMemo(() => {
+    if (!editOrder) return [];
+    const currentLockerIds = new Set(asArray(editOrder.lockers).map((locker) => locker.lockerId));
+    return pageLockers.filter(
+      (locker) =>
+        locker.branch === editOrder.branch &&
+        (locker.status === "Bosh" || currentLockerIds.has(locker.id)),
+    );
+  }, [editOrder, pageLockers]);
 
   const handleTransfer = async () => {
     if (!transferOrder) return;
@@ -473,6 +571,9 @@ export default function ActiveBaggage() {
                   <button type="button" className="icon-action view" onClick={() => setSelectedOrder(order)}>
                     <Eye size={16} />
                   </button>
+                  <button type="button" className="icon-action edit" onClick={() => openEdit(order)} title="Edit">
+                    <Edit3 size={16} />
+                  </button>
                   <button type="button" className="icon-action print" onClick={() => handleReprint(order.id)}>
                     <Printer size={16} />
                   </button>
@@ -553,6 +654,114 @@ export default function ActiveBaggage() {
         </div>
       )}
 
+      {editOrder && editForm && (
+        <div className="active-modal-backdrop" onClick={() => setEditOrder(null)}>
+          <div className="active-modal card edit-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="active-modal-head">
+              <div>
+                <h2>{t("Orderni tahrirlash")}</h2>
+                <p>{editOrder.orderNumber || "-"} - {editOrder.client}</p>
+              </div>
+              <button type="button" onClick={() => setEditOrder(null)}>{t("Close")}</button>
+            </div>
+
+            <div className="edit-form-grid">
+              <label>
+                <span>{t("Client")}</span>
+                <input value={editForm.clientName} onChange={(event) => updateEditForm("clientName", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("Phone")}</span>
+                <input value={editForm.phone} onChange={(event) => updateEditForm("phone", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("Passport")}</span>
+                <input value={editForm.passport} onChange={(event) => updateEditForm("passport", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("Check-out")}</span>
+                <input type="datetime-local" value={editForm.checkOut} onChange={(event) => updateEditForm("checkOut", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("To'lov turi")}</span>
+                <GlassSelect value={editForm.payment} onChange={(event) => updateEditForm("payment", event.target.value)}>
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <option value={option.value} key={option.value}>{t(option.label)}</option>
+                  ))}
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Currency")}</span>
+                <GlassSelect value={editForm.currency} onChange={(event) => updateEditForm("currency", event.target.value)}>
+                  <option value="UZS">UZS</option>
+                  <option value="USD">USD</option>
+                  <option value="RUB">RUB</option>
+                  <option value="EUR">EUR</option>
+                  <option value="KZT">KZT</option>
+                  <option value="TJS">TJS</option>
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Summa")}</span>
+                <input
+                  inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
+                  value={formatNumberInput(editForm.finalAmount, { decimal: editForm.currency !== "UZS" })}
+                  onChange={(event) => updateEditForm("finalAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}
+                />
+              </label>
+              <label>
+                <span>{t("Real paid")}</span>
+                <input
+                  inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
+                  value={formatNumberInput(editForm.payment === "Qarz" ? "0" : editForm.realPaidAmount, { decimal: editForm.currency !== "UZS" })}
+                  disabled={editForm.payment === "Qarz"}
+                  onChange={(event) => updateEditForm("realPaidAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}
+                />
+              </label>
+              <label className="full">
+                <span>{t("Note")}</span>
+                <textarea value={editForm.note} onChange={(event) => updateEditForm("note", event.target.value)} />
+              </label>
+            </div>
+
+            <div className="edit-items">
+              {asArray(editForm.items).map((item, index) => (
+                <div className="edit-item-row" key={item.id || index}>
+                  <label>
+                    <span>{t("Yacheyka")}</span>
+                    <GlassSelect value={item.lockerId || ""} onChange={(event) => updateEditItem(index, "lockerId", event.target.value)}>
+                      {editLockerOptions.map((locker) => (
+                        <option key={locker.id} value={locker.id}>
+                          #{locker.number} {locker.size}
+                        </option>
+                      ))}
+                    </GlassSelect>
+                  </label>
+                  <label>
+                    <span>{t("Size")}</span>
+                    <GlassSelect value={item.size || "S"} onChange={(event) => updateEditItem(index, "size", event.target.value)}>
+                      <option value="S">S</option>
+                      <option value="M">M</option>
+                      <option value="L">L</option>
+                      <option value="XL">XL</option>
+                    </GlassSelect>
+                  </label>
+                  <label>
+                    <span>{t("Soni")}</span>
+                    <input inputMode="numeric" value={item.count} onChange={(event) => updateEditItem(index, "count", cleanNumericInput(event.target.value))} />
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            <button type="button" className="pickup-confirm-btn" onClick={handleSaveEdit}>
+              <Edit3 size={17} />
+              {t("Saqlash")}
+            </button>
+          </div>
+        </div>
+      )}
+
       {pickupOrder && (
         <div className="active-modal-backdrop" onClick={() => setPickupOrder(null)}>
           <div className="active-modal card pickup-modal" onClick={(event) => event.stopPropagation()}>
@@ -595,6 +804,8 @@ export default function ActiveBaggage() {
                   <option value="USD">USD</option>
                   <option value="RUB">RUB</option>
                   <option value="EUR">EUR</option>
+                  <option value="KZT">KZT</option>
+                  <option value="TJS">TJS</option>
                 </GlassSelect>
               </label>
               <label>

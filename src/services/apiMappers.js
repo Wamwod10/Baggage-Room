@@ -53,7 +53,7 @@ const cashTypeMap = {
 };
 
 const fallbackText = "-";
-const toPaymentType = (payment) => reversePaymentMap[payment] || payment || "CASH";
+const toPaymentType = (payment) => reversePaymentMap[payment] || payment || null;
 const toStatusLabel = (status) => statusMap[status] || status;
 const toLockerStatusLabel = (status) => lockerStatusMap[status] || status;
 const toDisplayText = (value, fallback = fallbackText) => {
@@ -104,7 +104,8 @@ const mapOrder = (order) => {
   const branch = branchService.getBranchName(order.branch);
   const items = asArray(order.items);
   const lockers = items.map((item) => ({
-    id: item.lockerId,
+    id: item.id || item.lockerId,
+    itemId: item.id,
     lockerId: item.lockerId,
     number: item.lockerNumber,
     size: item.size,
@@ -129,7 +130,7 @@ const mapOrder = (order) => {
     status: toStatusLabel(order.status),
     apiStatus: order.status,
     payment: paymentMap[order.paymentType] || order.paymentType || fallbackText,
-    paymentType: order.paymentType || "CASH",
+    paymentType: order.paymentType || null,
     checkIn: order.checkIn,
     checkOut: order.plannedCheckOut,
     plannedCheckOut: order.plannedCheckOut,
