@@ -116,6 +116,12 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+
+  span:last-child {
+    width: 239px;
+    justify-self: end;
+    text-align: center;
+  }
 }
 
 .active-table-body {
