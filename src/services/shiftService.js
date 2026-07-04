@@ -58,6 +58,12 @@ const shiftService = {
     return mapShift(getData(response));
   },
 
+  async sendCurrentSalesTelegram(branchName = null) {
+    const branchId = await branchService.getBranchIdByName(branchName);
+    const response = await apiClient.post("/shifts/current/sales-telegram", null, { params: { branchId } });
+    return getData(response);
+  },
+
   async isOpen(branchName = null) {
     return Boolean(await this.getCurrent(branchName));
   },

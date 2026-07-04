@@ -1,22 +1,57 @@
 /* src/pages/Dashboard/dashboard.scss */
 
-.dashboard-filter {
+.dashboard-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-filter,
+.dashboard-sales-btn {
   height: 42px;
   padding: 0 14px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--primary-soft) 32%, var(--surface-muted));
-  color: var(--text-main);
   border: 1px solid transparent;
   font-size: 15px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.dashboard-filter {
+  background: color-mix(in srgb, var(--primary-soft) 32%, var(--surface-muted));
+  color: var(--text-main);
 
   &:hover {
     background: var(--surface-strong);
     transform: translateY(-1px);
   }
+}
+
+.dashboard-sales-btn {
+  background: color-mix(in srgb, var(--success) 88%, var(--surface-strong));
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background: var(--success);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+  }
+}
+
+.dashboard-message {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .dashboard-stats {
@@ -328,6 +363,12 @@
 }
 
 @media (max-width: 640px) {
+  .dashboard-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .dashboard-sales-btn,
   .dashboard-filter {
     width: 100%;
     justify-content: center;

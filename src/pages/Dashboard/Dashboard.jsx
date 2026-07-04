@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Briefcase,
   CreditCard,
+  Send,
   RefreshCcw,
   TrendingUp,
   Users,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
 import notificationService from "../../services/notificationService";
+import shiftService from "../../services/shiftService";
 import { useAuth } from "../../store/AuthContext";
 import "./dashboard.scss";
 import { getBranchNames } from "../../utils/branches";
@@ -64,6 +66,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { effectiveBranch } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [salesSending, setSalesSending] = useState(false);
+  const [salesMessage, setSalesMessage] = useState("");
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -134,6 +138,26 @@ export default function Dashboard() {
     .slice(0, 5)
     .map((log) => `${log.description}`);
 
+  const canSendSales = Boolean(effectiveBranch && safeData.currentShift);
+
+  const handleSendSales = async (event) => {
+    animateButtonIcon(event);
+    if (!canSendSales || salesSending) return;
+
+    setSalesSending(true);
+    setSalesMessage("");
+
+    try {
+      await shiftService.sendCurrentSalesTelegram(effectiveBranch);
+      setSalesMessage(t("Savdo hisoboti Telegram guruhga yuborildi"));
+      setRefreshKey((prev) => prev + 1);
+    } catch (sendError) {
+      setSalesMessage(t(sendError.message || "Telegram bilan ulanishda xatolik yuz berdi"));
+    } finally {
+      setSalesSending(false);
+    }
+  };
+
   const statCards = [
     {
       title: t("Bugungi savdo"),
@@ -199,17 +223,31 @@ export default function Dashboard() {
           <p>{t("Filiallar, savdo va bagaj holati bo'yicha umumiy ko'rsatkichlar")}</p>
         </div>
 
-        <button
-          className="dashboard-filter"
-          onClick={(event) => {
-            animateButtonIcon(event);
-            setRefreshKey((prev) => prev + 1);
-          }}
-        >
-          <RefreshCcw size={16} />
-          {t("Refresh")}
-        </button>
+        <div className="dashboard-header-actions">
+          <button
+            className="dashboard-sales-btn"
+            onClick={handleSendSales}
+            disabled={!canSendSales || salesSending}
+            title={!effectiveBranch ? t("Filial tanlang") : !safeData.currentShift ? t("Kassa yopiq") : t("Savdoni yuborish")}
+          >
+            <Send size={16} />
+            {salesSending ? t("Loading") : t("Savdoni yuborish")}
+          </button>
+
+          <button
+            className="dashboard-filter"
+            onClick={(event) => {
+              animateButtonIcon(event);
+              setRefreshKey((prev) => prev + 1);
+            }}
+          >
+            <RefreshCcw size={16} />
+            {t("Refresh")}
+          </button>
+        </div>
       </div>
+
+      {salesMessage && <div className="dashboard-message">{salesMessage}</div>}
 
       {error ? (
         <StateBlock

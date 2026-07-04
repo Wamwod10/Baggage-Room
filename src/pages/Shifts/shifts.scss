@@ -248,7 +248,8 @@
 }
 
 .open-shift-btn,
-.close-shift-btn {
+.close-shift-btn,
+.send-sales-btn {
   height: 42px;
   border-radius: 16px;
   color: #ffffff;
@@ -266,6 +267,20 @@
 
 .close-shift-btn {
   background: var(--danger);
+}
+
+.send-sales-btn {
+  background: color-mix(in srgb, var(--success) 88%, var(--surface-strong));
+
+  &:hover:not(:disabled) {
+    background: var(--success);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+  }
 }
 
 .close-inkassa-panel {
@@ -626,6 +641,7 @@
 
   .open-shift-btn,
   .close-shift-btn,
+  .send-sales-btn,
   .report-copy-btn {
     width: 100%;
     min-height: 44px;
