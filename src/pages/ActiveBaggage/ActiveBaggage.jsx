@@ -98,11 +98,14 @@ export default function ActiveBaggage() {
   const [pickupOrder, setPickupOrder] = useState(null);
   const [pickupForm, setPickupForm] = useState({
     payment: "Naqd",
+    overtimePayment: "Naqd",
     currency: "UZS",
     realPaidAmount: "",
     overtimeAmount: "",
     paymentReason: "",
   });
+  const [debtCloseOrder, setDebtCloseOrder] = useState(null);
+  const [debtClosePayment, setDebtClosePayment] = useState("Naqd");
   const [transferOrder, setTransferOrder] = useState(null);
   const [transferForm, setTransferForm] = useState({
     fromNumber: "",
@@ -130,7 +133,7 @@ export default function ActiveBaggage() {
   );
 
   useEffect(() => {
-    if (!selectedOrder && !editOrder && !receiptOrder && !cancelOrder && !pickupOrder && !transferOrder) return;
+    if (!selectedOrder && !editOrder && !receiptOrder && !cancelOrder && !pickupOrder && !transferOrder && !debtCloseOrder) return;
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
@@ -140,12 +143,13 @@ export default function ActiveBaggage() {
         setCancelOrder(null);
         setPickupOrder(null);
         setTransferOrder(null);
+        setDebtCloseOrder(null);
       }
     };
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [selectedOrder, editOrder, receiptOrder, cancelOrder, pickupOrder, transferOrder]);
+  }, [selectedOrder, editOrder, receiptOrder, cancelOrder, pickupOrder, transferOrder, debtCloseOrder]);
 
   const safePageData = pageData && typeof pageData === "object" ? pageData : { orders: [], lockers: [] };
   const pageOrders = asArray(safePageData.orders);
@@ -193,6 +197,7 @@ export default function ActiveBaggage() {
     setPickupOrder(order);
     setPickupForm({
       payment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
+      overtimePayment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
       currency: order.currency || "UZS",
       realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(order), order.currency || "UZS")),
       overtimeAmount: String(fromMinorUnits(order.overtimeAmount || 0, order.currency || "UZS")),
@@ -209,10 +214,13 @@ export default function ActiveBaggage() {
       return;
     }
 
+    const overtimeMinor = toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS");
+    const expectedPaidTotal =
+      getPickupExpectedTotal({ ...pickupOrder, overtimeAmount: 0 }) +
+      (pickupForm.overtimePayment === "Qarz" ? 0 : overtimeMinor);
+
     if (
-      toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS") !==
-        (getPickupExpectedTotal({ ...pickupOrder, overtimeAmount: 0 }) +
-          toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS")) &&
+      toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS") !== expectedPaidTotal &&
       !pickupForm.paymentReason.trim()
     ) {
       setFormError(t("Summani o'zgartirish sababini kiriting."));
@@ -222,7 +230,7 @@ export default function ActiveBaggage() {
     try {
       await baggageService.pickup(pickupOrder.id, {
         ...pickupForm,
-        overtimeAmount: toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS"),
+        overtimeAmount: overtimeMinor,
         debtPaidAmount: pickupOrder.debtAmount || undefined,
         admin: user?.fullName,
       });
@@ -236,11 +244,19 @@ export default function ActiveBaggage() {
     setSelectedOrder(null);
   };
 
-  const handleCloseDebt = async (order) => {
+  const openCloseDebt = (order) => {
+    setDebtCloseOrder(order);
+    setDebtClosePayment("Naqd");
+    setFormError("");
+  };
+
+  const handleCloseDebt = async () => {
+    const order = debtCloseOrder;
+    if (!order) return;
     try {
       await baggageService.closeDebt(order.id, {
         amount: order.debtAmount,
-        payment: "Naqd",
+        payment: debtClosePayment,
         currency: order.currency,
         admin: user?.fullName,
         note: "Debt closed from active baggage",
@@ -249,6 +265,7 @@ export default function ActiveBaggage() {
       setFormError(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
     }
+    setDebtCloseOrder(null);
     setRefreshKey((value) => value + 1);
   };
 
@@ -600,7 +617,7 @@ export default function ActiveBaggage() {
                     </>
                   )}
                   {Number(order.debtAmount || 0) > 0 && (
-                    <button type="button" className="debt-close-btn" onClick={() => handleCloseDebt(order)}>
+                    <button type="button" className="debt-close-btn" onClick={() => openCloseDebt(order)}>
                       {t("Qarz yopish")}
                     </button>
                   )}
@@ -790,7 +807,7 @@ export default function ActiveBaggage() {
 
             <div className="pickup-form">
               <label>
-                <span>{t("To'lov turi")}</span>
+                <span>{Number(pickupOrder.debtAmount || 0) > 0 ? t("Qarz to'lovi turi") : t("To'lov turi")}</span>
                 <GlassSelect value={pickupForm.payment} onChange={(event) => setPickupForm((prev) => ({ ...prev, payment: event.target.value }))}>
                   {PAYMENT_OPTIONS.map((option) => (
                     <option value={option.value} key={option.value}>{t(option.label)}</option>
@@ -821,6 +838,16 @@ export default function ActiveBaggage() {
                   }
                 />
               </label>
+              {Number(pickupForm.overtimeAmount || 0) > 0 && (
+                <label>
+                  <span>{t("Qo'shimcha to'lov turi")}</span>
+                  <GlassSelect value={pickupForm.overtimePayment} onChange={(event) => setPickupForm((prev) => ({ ...prev, overtimePayment: event.target.value }))}>
+                    {PAYMENT_OPTIONS.map((option) => (
+                      <option value={option.value} key={option.value}>{t(option.label)}</option>
+                    ))}
+                  </GlassSelect>
+                </label>
+              )}
               <label>
                 <span>{t("Real olingan summa")}</span>
                 <input
@@ -843,6 +870,34 @@ export default function ActiveBaggage() {
             <button type="button" className="pickup-confirm-btn" onClick={handlePickup}>
               <CheckCircle size={17} />
               {t("Pickup tasdiqlash")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {debtCloseOrder && (
+        <div className="active-modal-backdrop" onClick={() => setDebtCloseOrder(null)}>
+          <div className="active-modal card cancel-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="active-modal-head">
+              <div>
+                <h2>{t("Qarz yopish")}</h2>
+                <p>{debtCloseOrder.orderNumber || "-"} - {debtCloseOrder.client}</p>
+              </div>
+              <button type="button" onClick={() => setDebtCloseOrder(null)}>{t("Close")}</button>
+            </div>
+            <div className="pickup-form">
+              <label className="full">
+                <span>{t("To'lov turi")}</span>
+                <GlassSelect value={debtClosePayment} onChange={(event) => setDebtClosePayment(event.target.value)}>
+                  {PAYMENT_OPTIONS.filter((option) => option.value !== "Qarz").map((option) => (
+                    <option value={option.value} key={option.value}>{t(option.label)}</option>
+                  ))}
+                </GlassSelect>
+              </label>
+            </div>
+            <button type="button" className="pickup-confirm-btn" onClick={handleCloseDebt}>
+              <CheckCircle size={17} />
+              {t("Qarz yopish")}
             </button>
           </div>
         </div>

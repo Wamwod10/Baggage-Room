@@ -12,6 +12,8 @@ const INKASSA_KEY = "br_inkassa";
 
 export const PAYMENT_TYPES = ["Naqd", "Terminal", "Click", "Payme", "Qarz"];
 export const CURRENCIES = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
+export const OVERTIME_GRACE_MINUTES = 10;
+export const OVERTIME_GRACE_MS = OVERTIME_GRACE_MINUTES * 60 * 1000;
 export const LOCKER_STATUSES = {
   FREE: "Bosh",
   BUSY: "Band",
@@ -1162,11 +1164,11 @@ export function calculateOvertime(order) {
   const now = Date.now();
   const checkoutTime = new Date(order.checkOut).getTime();
 
-  if (now <= checkoutTime) {
+  if (now <= checkoutTime + OVERTIME_GRACE_MS) {
     return { status: "Aktiv", overtimeAmount: 0, overtimeHours: 0 };
   }
 
-  const diffMs = now - checkoutTime;
+  const diffMs = now - checkoutTime - OVERTIME_GRACE_MS;
   const overtimeHours = Math.max(1, Math.ceil(diffMs / 1000 / 60 / 60));
   const overtimeAmountUZS = calculateTariffAmount({
     branch: order.branch,

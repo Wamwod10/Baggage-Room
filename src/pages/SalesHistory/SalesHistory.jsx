@@ -35,6 +35,8 @@ export default function SalesHistory() {
   const [status, setStatus] = useState("Status");
   const [manualSelectedOrder, setSelectedOrder] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [debtCloseOrder, setDebtCloseOrder] = useState(null);
+  const [debtClosePayment, setDebtClosePayment] = useState("Naqd");
 
   const {
     data: orders = [],
@@ -54,11 +56,12 @@ export default function SalesHistory() {
   const selectedOrder = manualSelectedOrder || orderFromUrl;
 
   useEffect(() => {
-    if (!selectedOrder) return;
+    if (!selectedOrder && !debtCloseOrder) return;
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setSelectedOrder(null);
+        setDebtCloseOrder(null);
 
         if (orderIdFromUrl) {
           setSearchParams({});
@@ -68,7 +71,7 @@ export default function SalesHistory() {
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [orderIdFromUrl, selectedOrder, setSearchParams]);
+  }, [debtCloseOrder, orderIdFromUrl, selectedOrder, setSearchParams]);
 
   const filteredOrders = useMemo(() => {
     return asArray(orders).filter((order) => {
@@ -134,13 +137,21 @@ export default function SalesHistory() {
       .join("; ");
   };
 
-  const handleCloseDebt = async (order) => {
+  const openCloseDebt = (order) => {
+    setDebtCloseOrder(order);
+    setDebtClosePayment("Naqd");
+    setStatusMessage("");
+  };
+
+  const handleCloseDebt = async () => {
+    const order = debtCloseOrder;
+    if (!order) return;
     const updatedOrder = { ...order, debtAmount: 0 };
 
     try {
       await baggageService.closeDebt(order.id, {
         amount: order.debtAmount,
-        payment: "Naqd",
+        payment: debtClosePayment,
         currency: order.currency,
         admin: "Admin",
         note: "Debt closed from sales history",
@@ -151,6 +162,7 @@ export default function SalesHistory() {
     }
 
     setSelectedOrder(updatedOrder);
+    setDebtCloseOrder(null);
     setRefreshKey((value) => value + 1);
 
     try {
@@ -338,11 +350,36 @@ export default function SalesHistory() {
               <button
                 type="button"
                 className="history-debt-close"
-                onClick={() => handleCloseDebt(selectedOrder)}
+                onClick={() => openCloseDebt(selectedOrder)}
               >
                 {t("Qarz yopish")}
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {debtCloseOrder && (
+        <div className="order-modal-backdrop" onClick={() => setDebtCloseOrder(null)}>
+          <div className="order-modal card" onClick={(event) => event.stopPropagation()}>
+            <div className="order-modal-head">
+              <div>
+                <h2>{t("Qarz yopish")}</h2>
+                <p>{debtCloseOrder.orderNumber || "-"} - {debtCloseOrder.client}</p>
+              </div>
+              <button type="button" onClick={() => setDebtCloseOrder(null)}>{t("Close")}</button>
+            </div>
+            <label className="history-debt-payment">
+              <span>{t("To'lov turi")}</span>
+              <GlassSelect value={debtClosePayment} onChange={(event) => setDebtClosePayment(event.target.value)}>
+                {PAYMENT_OPTIONS.filter((option) => option.value !== "Qarz").map((option) => (
+                  <option value={option.value} key={option.value}>{t(option.label)}</option>
+                ))}
+              </GlassSelect>
+            </label>
+            <button type="button" className="history-debt-close" onClick={handleCloseDebt}>
+              {t("Qarz yopish")}
+            </button>
           </div>
         </div>
       )}

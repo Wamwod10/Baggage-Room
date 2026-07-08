@@ -131,6 +131,8 @@ const mapOrder = (order) => {
     apiStatus: order.status,
     payment: paymentMap[order.paymentType] || order.paymentType || fallbackText,
     paymentType: order.paymentType || null,
+    overtimePayment: paymentMap[order.overtimePaymentType] || order.overtimePaymentType || null,
+    overtimePaymentType: order.overtimePaymentType || null,
     checkIn: order.checkIn,
     checkOut: order.plannedCheckOut,
     plannedCheckOut: order.plannedCheckOut,

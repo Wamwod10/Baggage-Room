@@ -106,6 +106,8 @@ const baggageService = {
       overtimeAmount: Number(data.overtimeAmount || 0),
       debtPaidAmount: data.debtPaidAmount !== undefined ? Number(data.debtPaidAmount) : undefined,
       paymentType: toPaymentType(data.payment),
+      overtimePaymentType: toPaymentType(data.overtimePayment || data.overtimePaymentType),
+      doplataPaymentType: toPaymentType(data.overtimePayment || data.doplataPaymentType),
       currency: data.currency,
     });
     return mapOrder(getData(response));
