@@ -223,7 +223,7 @@ const mapShift = (shift) => {
   return {
     ...shift,
     branch: branchService.getBranchName(shift.branch) || shift.branch || fallbackText,
-    admin: openedByName,
+    admin: shift.acceptedByName || openedByName,
     openedBy: openedByName,
     openedByName,
     openedByLogin: shift.openedBy?.login || "",
