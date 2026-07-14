@@ -45,7 +45,7 @@ export default function Header({ onMenuClick }) {
   useEffect(() => {
     const interval = setInterval(() => {
       setAlertRefreshKey((value) => value + 1);
-    }, 10000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);

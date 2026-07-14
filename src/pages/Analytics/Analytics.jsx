@@ -173,7 +173,7 @@ export default function Analytics() {
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshKey((prev) => prev + 1);
-    }, 10000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);

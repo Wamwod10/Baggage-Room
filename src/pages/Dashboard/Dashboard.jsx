@@ -13,7 +13,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
-import notificationService from "../../services/notificationService";
 import shiftService from "../../services/shiftService";
 import { useAuth } from "../../store/AuthContext";
 import "./dashboard.scss";
@@ -72,7 +71,7 @@ export default function Dashboard() {
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshKey((prev) => prev + 1);
-    }, 10000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -83,12 +82,11 @@ export default function Dashboard() {
     error,
     retry,
   } = usePageResource(() => {
-    return Promise.all([
-      dashboardService.getData(effectiveBranch),
-      notificationService.getSmartAlerts(effectiveBranch),
-    ]).then(([dashboardData, smartAlerts]) => ({
+    return dashboardService.getData(effectiveBranch).then((dashboardData) => ({
       ...dashboardData,
-      smartAlerts,
+      smartAlerts: asArray(dashboardData.notifications)
+        .filter((item) => !item.isRead)
+        .slice(0, 20),
     }));
   }, [effectiveBranch, refreshKey], emptyDashboardData);
 

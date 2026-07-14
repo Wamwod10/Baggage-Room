@@ -272,6 +272,7 @@ const mapNotification = (notification = {}) => ({
   title: notification.title || fallbackText,
   message: notification.message || fallbackText,
   branch: branchService.getBranchName(notification.branch) || notification.branch || fallbackText,
+  isRead: Boolean(notification.isRead),
   read: notification.isRead,
   type: String(notification.type || "INFO").toLowerCase(),
 });
