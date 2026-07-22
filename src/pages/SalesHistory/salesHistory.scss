@@ -215,6 +215,7 @@
   &.edit {
     color: var(--primary);
     background: color-mix(in srgb, var(--primary-soft) 48%, var(--surface-muted));
+    margin-right: 12px !important;
   }
 }
 
