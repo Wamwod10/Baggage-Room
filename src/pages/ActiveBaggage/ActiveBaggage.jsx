@@ -28,6 +28,7 @@ import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
   formatMoneyByCurrency(value, currency);
+const overtimeCurrency = (order = {}) => order.overtimeCurrency || order.currency || "UZS";
 
 const hasLockerPrice = (locker) =>
   locker?.price !== undefined &&
@@ -569,7 +570,7 @@ export default function ActiveBaggage() {
                 <div data-label={t("Narx")}>
                   <b>{formatCurrency(getTotalPrice(order), order.currency)}</b>
                   <small>
-                    {t("Overtime")}: {formatCurrency(order.overtimeAmount, order.currency)}
+                    {t("Overtime")}: {formatCurrency(order.overtimeAmount, overtimeCurrency(order))}
                   </small>
                   {Number(order.debtAmount || 0) > 0 && (
                     <small className="debt-line">
@@ -797,7 +798,7 @@ export default function ActiveBaggage() {
               </div>
               <div>
                 <span>{t("Overtime")}</span>
-                <b>{formatCurrency(pickupOrder.overtimeAmount, pickupOrder.currency)}</b>
+                <b>{formatCurrency(pickupOrder.overtimeAmount, overtimeCurrency(pickupOrder))}</b>
               </div>
               <div>
                 <span>{t("Overtime soat")}</span>

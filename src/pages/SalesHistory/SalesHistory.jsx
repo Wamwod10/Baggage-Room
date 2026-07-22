@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarDays, Eye, Search } from "lucide-react";
+import { CalendarDays, Edit3, Eye, Search } from "lucide-react";
 import baggageService from "../../services/baggageService";
 import telegramService from "../../services/telegramService";
 import { useAuth } from "../../store/AuthContext";
@@ -12,7 +12,8 @@ import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
-import { formatMoneyByCurrency } from "../../utils/currency";
+import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
+import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 
 const hasLockerPrice = (locker) =>
@@ -21,6 +22,21 @@ const hasLockerPrice = (locker) =>
   locker?.price !== "" &&
     Number.isFinite(Number(locker.price));
 const asArray = (value) => (Array.isArray(value) ? value : []);
+const overtimeCurrency = (order = {}) => order.overtimeCurrency || order.currency || "UZS";
+const toDateTimeLocal = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
+const fromDateTimeLocal = (value) => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+};
 
 export default function SalesHistory() {
   const { t, formatMoney, formatDateTime } = useTranslation();
@@ -37,6 +53,8 @@ export default function SalesHistory() {
   const [statusMessage, setStatusMessage] = useState("");
   const [debtCloseOrder, setDebtCloseOrder] = useState(null);
   const [debtClosePayment, setDebtClosePayment] = useState("Naqd");
+  const [editOrder, setEditOrder] = useState(null);
+  const [editForm, setEditForm] = useState(null);
 
   const {
     data: orders = [],
@@ -56,12 +74,13 @@ export default function SalesHistory() {
   const selectedOrder = manualSelectedOrder || orderFromUrl;
 
   useEffect(() => {
-    if (!selectedOrder && !debtCloseOrder) return;
+    if (!selectedOrder && !debtCloseOrder && !editOrder) return;
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setSelectedOrder(null);
         setDebtCloseOrder(null);
+        setEditOrder(null);
 
         if (orderIdFromUrl) {
           setSearchParams({});
@@ -71,7 +90,7 @@ export default function SalesHistory() {
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [debtCloseOrder, orderIdFromUrl, selectedOrder, setSearchParams]);
+  }, [debtCloseOrder, editOrder, orderIdFromUrl, selectedOrder, setSearchParams]);
 
   const filteredOrders = useMemo(() => {
     return asArray(orders).filter((order) => {
@@ -118,8 +137,8 @@ export default function SalesHistory() {
     asArray(order.lockers).map((locker) => `#${locker.number || "-"} ${locker.size || "-"} x${locker.count || 1}`).join(", ") ||
     `${order.size || "-"} / ${order.count || 0} ${t("ta")}`;
 
-  const formatCurrency = (order, amount) =>
-    order.currency ? formatMoneyByCurrency(amount, order.currency) : formatMoney(amount);
+  const formatCurrency = (order, amount, currency = order.currency) =>
+    currency ? formatMoneyByCurrency(amount, currency) : formatMoney(amount);
 
   const lockerPriceLabel = (order, t) => {
     const lockers = Array.isArray(order.lockers) ? order.lockers : [];
@@ -141,6 +160,83 @@ export default function SalesHistory() {
     setDebtCloseOrder(order);
     setDebtClosePayment("Naqd");
     setStatusMessage("");
+  };
+
+  const openEdit = (order) => {
+    const orderCurrency = order.currency || "UZS";
+    const extraCurrency = overtimeCurrency(order);
+    setEditOrder(order);
+    setEditForm({
+      clientName: order.client || "",
+      phone: order.phone || "",
+      passport: order.passport || "",
+      checkOut: toDateTimeLocal(order.checkOut),
+      payment: getPaymentLabel(order.payment),
+      currency: orderCurrency,
+      finalAmount: String(fromMinorUnits(order.finalAmount || order.finalPrice || 0, orderCurrency)),
+      realPaidAmount: String(fromMinorUnits(order.realPaidAmount || 0, orderCurrency)),
+      overtimeAmount: String(fromMinorUnits(order.overtimeAmount || 0, extraCurrency)),
+      overtimeCurrency: extraCurrency,
+      overtimePayment: getPaymentLabel(order.overtimePayment || order.overtimePaymentType || order.payment),
+      note: order.note || "",
+      items: asArray(order.lockers).map((locker) => ({
+        id: locker.itemId || locker.id,
+        size: locker.size,
+        count: String(locker.count || 1),
+      })),
+    });
+    setStatusMessage("");
+  };
+
+  const updateEditForm = (key, value) => {
+    setEditForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const updateEditItem = (index, key, value) => {
+    setEditForm((prev) => ({
+      ...prev,
+      items: asArray(prev.items).map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item,
+      ),
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editOrder || !editForm) return;
+    if (!editForm.clientName.trim() || !editForm.phone.trim()) {
+      setStatusMessage(t("Client va telefon majburiy."));
+      return;
+    }
+
+    try {
+      await baggageService.update(editOrder.id, {
+        clientName: editForm.clientName.trim(),
+        phone: editForm.phone.trim(),
+        passport: editForm.passport.trim(),
+        checkOut: fromDateTimeLocal(editForm.checkOut),
+        payment: editForm.payment,
+        currency: editForm.currency,
+        finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
+        realPaidAmount: editForm.payment === "Qarz" ? 0 : toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
+        overtimeAmount: toMinorUnits(editForm.overtimeAmount || 0, editForm.overtimeCurrency),
+        overtimeCurrency: editForm.overtimeCurrency,
+        overtimePaymentType: editForm.overtimePayment,
+        note: editForm.note,
+        items: asArray(editForm.items).map((item) => ({
+          id: item.id,
+          size: item.size,
+          count: Number(item.count || 1),
+        })),
+      });
+    } catch (error) {
+      setStatusMessage(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
+      return;
+    }
+
+    setRefreshKey((value) => value + 1);
+    setEditOrder(null);
+    setSelectedOrder(null);
+    setStatusMessage(t("Order tahrirlandi. Telegram xabar yuborildi."));
   };
 
   const handleCloseDebt = async () => {
@@ -295,7 +391,7 @@ export default function SalesHistory() {
 
               <div>
                 <span>{t("Overtime")}</span>
-                <b>{formatCurrency(selectedOrder, selectedOrder.overtimeAmount)}</b>
+                <b>{formatCurrency(selectedOrder, selectedOrder.overtimeAmount, overtimeCurrency(selectedOrder))}</b>
               </div>
 
               <div>
@@ -355,6 +451,133 @@ export default function SalesHistory() {
                 {t("Qarz yopish")}
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {editOrder && editForm && (
+        <div className="order-modal-backdrop" onClick={() => setEditOrder(null)}>
+          <div className="order-modal history-edit-modal card" onClick={(event) => event.stopPropagation()}>
+            <div className="order-modal-head">
+              <div>
+                <h2>{t("Orderni tahrirlash")}</h2>
+                <p>{editOrder.orderNumber || "-"} - {editOrder.client}</p>
+              </div>
+              <button type="button" onClick={() => setEditOrder(null)}>{t("Close")}</button>
+            </div>
+
+            <div className="history-edit-grid">
+              <label>
+                <span>{t("Client")}</span>
+                <input value={editForm.clientName} onChange={(event) => updateEditForm("clientName", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("Phone")}</span>
+                <input value={editForm.phone} onChange={(event) => updateEditForm("phone", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("Passport")}</span>
+                <input value={editForm.passport} onChange={(event) => updateEditForm("passport", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("Check-out")}</span>
+                <input type="datetime-local" value={editForm.checkOut} onChange={(event) => updateEditForm("checkOut", event.target.value)} />
+              </label>
+              <label>
+                <span>{t("To'lov turi")}</span>
+                <GlassSelect value={editForm.payment} onChange={(event) => updateEditForm("payment", event.target.value)}>
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <option value={option.value} key={option.value}>{t(option.label)}</option>
+                  ))}
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Currency")}</span>
+                <GlassSelect value={editForm.currency} onChange={(event) => updateEditForm("currency", event.target.value)}>
+                  <option value="UZS">UZS</option>
+                  <option value="USD">USD</option>
+                  <option value="RUB">RUB</option>
+                  <option value="EUR">EUR</option>
+                  <option value="KZT">KZT</option>
+                  <option value="TJS">TJS</option>
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Summa")}</span>
+                <input
+                  inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
+                  value={formatNumberInput(editForm.finalAmount, { decimal: editForm.currency !== "UZS" })}
+                  onChange={(event) => updateEditForm("finalAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}
+                />
+              </label>
+              <label>
+                <span>{t("Real paid")}</span>
+                <input
+                  inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
+                  value={formatNumberInput(editForm.payment === "Qarz" ? "0" : editForm.realPaidAmount, { decimal: editForm.currency !== "UZS" })}
+                  disabled={editForm.payment === "Qarz"}
+                  onChange={(event) => updateEditForm("realPaidAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}
+                />
+              </label>
+              <label>
+                <span>{t("Qo'shimcha to'lov")}</span>
+                <input
+                  inputMode={editForm.overtimeCurrency === "UZS" ? "numeric" : "decimal"}
+                  value={formatNumberInput(editForm.overtimeAmount, { decimal: editForm.overtimeCurrency !== "UZS" })}
+                  onChange={(event) => updateEditForm("overtimeAmount", cleanNumericInput(event.target.value, { decimal: editForm.overtimeCurrency !== "UZS" }))}
+                />
+              </label>
+              <label>
+                <span>{t("Qo'shimcha valyuta")}</span>
+                <GlassSelect value={editForm.overtimeCurrency} onChange={(event) => updateEditForm("overtimeCurrency", event.target.value)}>
+                  <option value="UZS">UZS</option>
+                  <option value="USD">USD</option>
+                  <option value="RUB">RUB</option>
+                  <option value="EUR">EUR</option>
+                  <option value="KZT">KZT</option>
+                  <option value="TJS">TJS</option>
+                </GlassSelect>
+              </label>
+              <label>
+                <span>{t("Qo'shimcha to'lov turi")}</span>
+                <GlassSelect value={editForm.overtimePayment} onChange={(event) => updateEditForm("overtimePayment", event.target.value)}>
+                  {PAYMENT_OPTIONS.filter((option) => option.value !== "Qarz").map((option) => (
+                    <option value={option.value} key={option.value}>{t(option.label)}</option>
+                  ))}
+                </GlassSelect>
+              </label>
+              <label className="full">
+                <span>{t("Note")}</span>
+                <textarea value={editForm.note} onChange={(event) => updateEditForm("note", event.target.value)} />
+              </label>
+            </div>
+
+            {asArray(editForm.items).length > 0 && (
+              <div className="history-edit-items">
+                {asArray(editForm.items).map((item, index) => (
+                  <div className="history-edit-item" key={item.id || index}>
+                    <label>
+                      <span>{t("Size")}</span>
+                      <GlassSelect value={item.size || "S"} onChange={(event) => updateEditItem(index, "size", event.target.value)}>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                      </GlassSelect>
+                    </label>
+                    <label>
+                      <span>{t("Soni")}</span>
+                      <input inputMode="numeric" value={item.count} onChange={(event) => updateEditItem(index, "count", cleanNumericInput(event.target.value))} />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button type="button" className="history-save-edit" onClick={handleSaveEdit}>
+              <Edit3 size={17} />
+              {t("Saqlash")}
+            </button>
           </div>
         </div>
       )}
@@ -501,7 +724,7 @@ export default function SalesHistory() {
                     ? formatDateTime(item.realPickupTime)
                     : "-"}
                 </span>
-                <small>{t("Overtime")}: {formatCurrency(item, item.overtimeAmount)}</small>
+                <small>{t("Overtime")}: {formatCurrency(item, item.overtimeAmount, overtimeCurrency(item))}</small>
               </div>
 
               <div data-label={t("Status")}>
@@ -518,6 +741,16 @@ export default function SalesHistory() {
               </div>
 
               <div data-label={t("Action")}>
+                {item.status !== "Bekor qilindi" && (
+                  <button
+                    type="button"
+                    className="view-btn edit"
+                    onClick={() => openEdit(item)}
+                    title={t("Edit")}
+                  >
+                    <Edit3 size={16} />
+                  </button>
+                )}
                 <button
                   type="button"
                   className="view-btn"

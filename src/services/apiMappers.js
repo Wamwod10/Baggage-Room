@@ -83,6 +83,26 @@ const getItems = (payload) => {
 };
 const getData = (payload, fallback = null) => unwrapData(payload) ?? fallback;
 const getArrayData = (payload) => asArray(unwrapData(payload));
+const signedAmount = (item = {}) =>
+  Number(item.amount || 0) * (item.direction === "OUT" ? -1 : 1);
+const getOvertimePayment = (order = {}) => {
+  const movements = asArray(order.cashMovements).filter(
+    (item) =>
+      item?.type === "ORDER_PAYMENT" &&
+      String(item.note || "").toLowerCase().startsWith("overtime "),
+  );
+
+  const totals = movements.reduce((acc, item) => {
+    const currency = item.currency || order.currency || "UZS";
+    acc[currency] = (acc[currency] || 0) + signedAmount(item);
+    return acc;
+  }, {});
+  const currency = Object.keys(totals).find((key) => Number(totals[key] || 0) !== 0);
+
+  return currency
+    ? { amount: Math.abs(Number(totals[currency] || 0)), currency }
+    : { amount: order.overtimeAmount, currency: order.currency || "UZS" };
+};
 
 const mapLocker = (locker) => {
   if (!locker) return null;
@@ -103,6 +123,7 @@ const mapOrder = (order) => {
   if (!order) return null;
   const branch = branchService.getBranchName(order.branch);
   const items = asArray(order.items);
+  const overtimePayment = getOvertimePayment(order);
   const lockers = items.map((item) => ({
     id: item.id || item.lockerId,
     itemId: item.id,
@@ -149,7 +170,8 @@ const mapOrder = (order) => {
     realPaidAmount: order.realPaidAmount,
     difference: order.paymentDifference,
     paymentDifference: order.paymentDifference,
-    overtimeAmount: order.overtimeAmount,
+    overtimeAmount: overtimePayment.amount ?? order.overtimeAmount,
+    overtimeCurrency: overtimePayment.currency || order.currency || "UZS",
     overtimeHours: order.overtimeHours,
     currency: order.currency || "UZS",
     note: order.note,

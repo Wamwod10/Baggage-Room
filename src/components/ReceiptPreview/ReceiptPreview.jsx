@@ -38,6 +38,8 @@ export default function ReceiptPreview({ order, onClose }) {
   const lockers =
     Array.isArray(order.lockers) && order.lockers.length ? order.lockers : [];
   const money = (value) => formatMoneyByCurrency(value, order.currency);
+  const overtimeMoney = (value) =>
+    formatMoneyByCurrency(value, order.overtimeCurrency || order.currency);
   const getLockerPrice = (locker) => {
     if (hasLockerPrice(locker)) return Number(locker.price);
 
@@ -227,7 +229,7 @@ export default function ReceiptPreview({ order, onClose }) {
 
             <div className="receipt-row">
               <span>{t("Overtime")}</span>
-              <b>{money(order.overtimeAmount)}</b>
+              <b>{overtimeMoney(order.overtimeAmount)}</b>
             </div>
 
             <div className="receipt-row">

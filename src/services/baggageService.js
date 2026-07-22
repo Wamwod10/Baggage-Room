@@ -94,8 +94,12 @@ const baggageService = {
     const payload = {
       ...data,
       paymentType: data.payment !== undefined ? toPaymentType(data.payment) : data.paymentType,
+      overtimePaymentType: data.overtimePaymentType !== undefined ? toPaymentType(data.overtimePaymentType) : data.overtimePaymentType,
+      doplataPaymentType: data.doplataPaymentType !== undefined ? toPaymentType(data.doplataPaymentType) : data.doplataPaymentType,
     };
     if (data.payment !== undefined && !payload.paymentType) throw new Error("To'lov turi tanlanmagan");
+    if (data.overtimePaymentType !== undefined && !payload.overtimePaymentType) throw new Error("Qo'shimcha to'lov turi tanlanmagan");
+    if (data.doplataPaymentType !== undefined && !payload.doplataPaymentType) throw new Error("Qo'shimcha to'lov turi tanlanmagan");
     delete payload.payment;
     const response = await apiClient.patch(`/orders/${id}`, payload);
     return mapOrder(getData(response));

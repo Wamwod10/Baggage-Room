@@ -117,7 +117,7 @@
 .history-table-head,
 .history-table-row {
   display: grid;
-  grid-template-columns: 1.05fr 1.35fr 1.25fr 0.95fr 1fr 1.35fr 0.9fr 44px;
+  grid-template-columns: 1.05fr 1.35fr 1.25fr 0.95fr 1fr 1.35fr 0.9fr 84px;
   gap: 14px;
   align-items: center;
 }
@@ -211,6 +211,101 @@
     color: var(--primary);
     border-color: var(--primary-soft);
   }
+
+  &.edit {
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary-soft) 48%, var(--surface-muted));
+  }
+}
+
+.history-table-row > div[data-label="Action"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-edit-modal {
+  width: min(860px, 100%);
+}
+
+.history-edit-grid,
+.history-edit-items {
+  display: grid;
+  gap: 12px;
+}
+
+.history-edit-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  .full {
+    grid-column: 1 / -1;
+  }
+}
+
+.history-edit-grid label,
+.history-edit-item label,
+.history-debt-payment {
+  display: grid;
+  gap: 7px;
+
+  span {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  input,
+  textarea,
+  select,
+  .glass-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    color: var(--text-main);
+    font-size: 14px;
+  }
+
+  input,
+  textarea {
+    padding: 0 12px;
+  }
+
+  textarea {
+    min-height: 82px;
+    padding-top: 10px;
+    resize: vertical;
+  }
+}
+
+.history-edit-items {
+  margin-top: 14px;
+}
+
+.history-edit-item {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+}
+
+.history-save-edit {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
 }
 
 .order-modal-backdrop {
@@ -427,6 +522,11 @@
     width: 100%;
     min-height: 42px;
   }
+
+  .history-table-row > div[data-label="Action"] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 680px) {
@@ -443,6 +543,11 @@
   }
 
   .order-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-edit-grid,
+  .history-edit-item {
     grid-template-columns: 1fr;
   }
 }
