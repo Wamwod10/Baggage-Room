@@ -117,7 +117,7 @@
 .history-table-head,
 .history-table-row {
   display: grid;
-  grid-template-columns: 1.05fr 1.35fr 1.25fr 0.95fr 1fr 1.35fr 0.9fr 84px;
+  grid-template-columns: 1.05fr 1.35fr 1.25fr 0.95fr 1fr 1.35fr 0.9fr 104px;
   gap: 14px;
   align-items: center;
 }
@@ -221,7 +221,9 @@
 .history-table-row > div[data-label="Action"] {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .history-edit-modal {
