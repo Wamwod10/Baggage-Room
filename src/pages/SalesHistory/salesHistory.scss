@@ -117,7 +117,7 @@
 .history-table-head,
 .history-table-row {
   display: grid;
-  grid-template-columns: 1.05fr 1.35fr 1.25fr 0.95fr 1fr 1.35fr 0.9fr 104px;
+  grid-template-columns: 1.05fr 1.35fr 1.25fr 0.95fr 1fr 1.35fr 0.9fr 120px;
   gap: 14px;
   align-items: center;
 }
@@ -222,8 +222,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 18px;
   min-width: 0;
+  padding-inline: 8px;
+}
+
+.history-table-row > div[data-label="Action"] .view-btn + .view-btn {
+  margin-left: 10px;
 }
 
 .history-edit-modal {
@@ -528,6 +533,11 @@
   .history-table-row > div[data-label="Action"] {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .history-table-row > div[data-label="Action"] .view-btn + .view-btn {
+    margin-left: 0;
   }
 }
 
