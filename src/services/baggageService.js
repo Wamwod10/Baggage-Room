@@ -9,7 +9,55 @@ const statusByLabel = {
   "Bekor qilindi": "CANCELLED",
 };
 
+const paginationFrom = (response = {}, fallback = {}) => ({
+  page: Number(response.pagination?.page ?? fallback.page ?? 1),
+  limit: Number(response.pagination?.limit ?? fallback.limit ?? 50),
+  total: Number(response.pagination?.total ?? 0),
+  totalPages: Number(response.pagination?.totalPages ?? 1),
+});
+
 const baggageService = {
+  async getPage({
+    branchName = null,
+    page = 1,
+    limit = 50,
+    search = "",
+    status,
+    statuses,
+    payment,
+    paymentType,
+    active = false,
+    debtOnly = false,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = {}) {
+    const branchId = await branchService.getBranchIdByName(branchName);
+    const resolvedPaymentType = paymentType || toPaymentType(payment);
+    const resolvedStatus = statusByLabel[status] || status;
+    const resolvedStatuses = Array.isArray(statuses)
+      ? statuses.map((item) => statusByLabel[item] || item).filter(Boolean).join(",")
+      : statuses;
+    const response = await apiClient.get("/orders", {
+      params: {
+        branchId,
+        page,
+        limit,
+        search: search?.trim() || undefined,
+        status: resolvedStatus || undefined,
+        statuses: resolvedStatuses || undefined,
+        paymentType: resolvedPaymentType || undefined,
+        active: active ? "true" : undefined,
+        debtOnly: debtOnly ? "true" : undefined,
+        sortBy,
+        sortOrder,
+      },
+    });
+    return {
+      items: getItems(response).map(mapOrder).filter(Boolean),
+      pagination: paginationFrom(response, { page, limit }),
+    };
+  },
+
   async getAll(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/orders", {
@@ -19,13 +67,13 @@ const baggageService = {
   },
 
   async getActive(branchName = null) {
-    const orders = await this.getAll(branchName);
-    return asArray(orders).filter((order) => order.status === "Aktiv" || order.status === "Kechikdi");
+    const page = await this.getPage({ branchName, active: true, limit: 50 });
+    return page.items;
   },
 
   async getHistory(branchName = null) {
-    const orders = await this.getAll(branchName);
-    return asArray(orders).filter((order) => order.status === "Olib ketildi" || order.status === "Bekor qilindi");
+    const page = await this.getPage({ branchName, statuses: ["PICKED_UP", "CANCELLED"], limit: 50 });
+    return page.items;
   },
 
   async getById(id) {

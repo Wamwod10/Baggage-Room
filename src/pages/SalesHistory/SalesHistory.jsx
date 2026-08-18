@@ -38,6 +38,11 @@ const fromDateTimeLocal = (value) => {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
+const emptyOrdersPage = {
+  items: [],
+  pagination: { page: 1, limit: 50, total: 0, totalPages: 1 },
+};
+
 export default function SalesHistory() {
   const { t, formatMoney, formatDateTime } = useTranslation();
   const branchNames = getBranchNames();
@@ -46,6 +51,8 @@ export default function SalesHistory() {
   const { effectiveBranch } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [branch, setBranch] = useState("Barcha filiallar");
   const [payment, setPayment] = useState("Payment");
   const [status, setStatus] = useState("Status");
@@ -57,15 +64,26 @@ export default function SalesHistory() {
   const [editForm, setEditForm] = useState(null);
 
   const {
-    data: orders = [],
+    data: ordersPage = emptyOrdersPage,
     isLoading,
     error,
     retry,
   } = usePageResource(
-    () => baggageService.getAll(effectiveBranch),
-    [effectiveBranch, refreshKey],
-    [],
+    () => baggageService.getPage({
+      branchName: effectiveBranch || (branch === "Barcha filiallar" ? null : branch),
+      page,
+      limit: 50,
+      search: debouncedSearch || orderIdFromUrl || "",
+      status: status === "Status" ? undefined : status,
+      payment: payment === "Payment" ? undefined : payment,
+    }),
+    [effectiveBranch, branch, page, debouncedSearch, orderIdFromUrl, payment, status, refreshKey],
+    emptyOrdersPage,
   );
+
+  const safeOrdersPage = ordersPage && typeof ordersPage === "object" ? ordersPage : emptyOrdersPage;
+  const orders = asArray(safeOrdersPage.items);
+  const pagination = safeOrdersPage.pagination || emptyOrdersPage.pagination;
 
   const orderFromUrl = useMemo(
     () => asArray(orders).find((order) => order.orderNumber === orderIdFromUrl || order.id === orderIdFromUrl) || null,
@@ -92,29 +110,13 @@ export default function SalesHistory() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [debtCloseOrder, editOrder, orderIdFromUrl, selectedOrder, setSearchParams]);
 
-  const filteredOrders = useMemo(() => {
-    return asArray(orders).filter((order) => {
-      const query = search.toLowerCase();
-
-      const matchSearch =
-        String(order.orderNumber || "").toLowerCase().includes(query) ||
-        String(order.client || "").toLowerCase().includes(query) ||
-        String(order.phone || "").toLowerCase().includes(query);
-
-      const matchBranch = effectiveBranch
-        ? order.branch === effectiveBranch
-        : branch === "Barcha filiallar" || order.branch === branch;
-
-      const matchPayment =
-        payment === "Payment" ||
-        getPaymentLabel(order.payment) === getPaymentLabel(payment) ||
-        (payment === "Qarz" && Number(order.debtAmount || 0) > 0);
-
-      const matchStatus = status === "Status" || order.status === status;
-
-      return matchSearch && matchBranch && matchPayment && matchStatus;
-    });
-  }, [orders, search, branch, payment, status, effectiveBranch]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   const hasActiveFilters =
     Boolean(search.trim()) ||
@@ -125,6 +127,11 @@ export default function SalesHistory() {
   const handleRefresh = (event) => {
     animateButtonIcon(event);
     setRefreshKey((value) => value + 1);
+  };
+
+  const goToPage = (nextPage) => {
+    const totalPages = Math.max(Number(pagination.totalPages || 1), 1);
+    setPage(Math.min(Math.max(Number(nextPage) || 1, 1), totalPages));
   };
 
   const getTotalPrice = (order) => {
@@ -620,7 +627,10 @@ export default function SalesHistory() {
         <div className="history-filters">
           <GlassSelect
             value={branch}
-            onChange={(e) => setBranch(e.target.value)}
+            onChange={(e) => {
+              setBranch(e.target.value);
+              setPage(1);
+            }}
             disabled={Boolean(effectiveBranch)}
           >
             <option value="Barcha filiallar">{t("Barcha filiallar")}</option>
@@ -631,14 +641,20 @@ export default function SalesHistory() {
             ))}
           </GlassSelect>
 
-          <GlassSelect value={payment} onChange={(e) => setPayment(e.target.value)}>
+          <GlassSelect value={payment} onChange={(e) => {
+            setPayment(e.target.value);
+            setPage(1);
+          }}>
             <option value="Payment">{t("Payment")}</option>
             {PAYMENT_OPTIONS.map((option) => (
               <option value={option.value} key={option.value}>{t(option.label)}</option>
             ))}
           </GlassSelect>
 
-          <GlassSelect value={status} onChange={(e) => setStatus(e.target.value)}>
+          <GlassSelect value={status} onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}>
             <option value="Status">{t("Status")}</option>
             <option value="Aktiv">{t("Aktiv")}</option>
             <option value="Olib ketildi">{t("Olib ketildi")}</option>
@@ -673,7 +689,7 @@ export default function SalesHistory() {
 
           {isLoading && !error && <TableSkeleton rows={6} columns={8} />}
 
-          {!isLoading && !error && filteredOrders.length === 0 && (
+          {!isLoading && !error && orders.length === 0 && (
             <StateBlock
               type={hasActiveFilters ? "search" : "empty"}
               title={
@@ -689,7 +705,7 @@ export default function SalesHistory() {
             />
           )}
 
-          {!isLoading && !error && filteredOrders.map((item) => (
+          {!isLoading && !error && orders.map((item) => (
             <div className="history-table-row" key={item.id}>
               <div data-label={t("Order")}>
                 <b>{item.orderNumber || "-"}</b>
@@ -763,6 +779,20 @@ export default function SalesHistory() {
           ))}
         </div>
       </div>
+
+      {!error && Number(pagination.totalPages || 1) > 1 && (
+        <div className="history-pagination">
+          <button type="button" onClick={() => goToPage(page - 1)} disabled={page <= 1 || isLoading}>
+            {t("Oldingi")}
+          </button>
+          <span>
+            {page} / {pagination.totalPages} - {pagination.total} {t("ta")}
+          </span>
+          <button type="button" onClick={() => goToPage(page + 1)} disabled={page >= pagination.totalPages || isLoading}>
+            {t("Keyingi")}
+          </button>
+        </div>
+      )}
     </section>
   );
 }

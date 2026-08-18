@@ -16,7 +16,9 @@ const notificationService = {
   },
 
   async getSmartAlerts(branchName = null) {
-    const alerts = await this.getAlerts(branchName);
+    const branchId = await branchService.getBranchIdByName(branchName);
+    const response = await apiClient.get("/notifications", { params: { branchId, isRead: "false", limit: 20 } });
+    const alerts = getItems(response).map(mapNotification);
     return asArray(alerts).filter((item) => !item.isRead).slice(0, 20);
   },
 

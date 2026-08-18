@@ -268,6 +268,36 @@
   font-weight: 800;
 }
 
+.active-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 14px;
+
+  span {
+    min-width: 140px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  button {
+    min-height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 14px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+  }
+}
+
 .active-modal-backdrop,
 .receipt-backdrop {
   position: fixed;

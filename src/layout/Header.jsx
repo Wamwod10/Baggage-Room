@@ -35,6 +35,7 @@ export default function Header({ onMenuClick }) {
     useAuth();
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [results, setResults] = useState([]);
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
@@ -81,35 +82,20 @@ export default function Header({ onMenuClick }) {
   }, [currentDate]);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
     let active = true;
-    const query = search.trim().toLowerCase();
-    if (!query) return undefined;
+    const query = debouncedSearch;
+    if (query.length < 2) return undefined;
 
     baggageService
-      .getAll(effectiveBranch)
-      .then((orders) => {
+      .getPage({ branchName: effectiveBranch, search: query, limit: 8 })
+      .then(({ items }) => {
         if (!active) return;
-        setResults(
-          asArray(orders)
-            .filter((order) => {
-              const searchableFields = [
-                order.orderNumber,
-                order.client,
-                order.phone,
-                order.passport,
-                order.branch,
-                order.size,
-                order.payment,
-                order.status,
-                order.admin,
-              ];
-
-              return searchableFields.some((field) =>
-                String(field || "").toLowerCase().includes(query),
-              );
-            })
-            .slice(0, 8),
-        );
+        setResults(asArray(items).slice(0, 8));
       })
       .catch(() => {
         if (active) setResults([]);
@@ -118,7 +104,7 @@ export default function Header({ onMenuClick }) {
     return () => {
       active = false;
     };
-  }, [effectiveBranch, search]);
+  }, [debouncedSearch, effectiveBranch]);
 
   const toggleTheme = () => {
     const settings = settingsService.get();
@@ -141,7 +127,7 @@ export default function Header({ onMenuClick }) {
   const handleSearchChange = (event) => {
     const value = event.target.value;
     setSearch(value);
-    if (!value.trim()) {
+    if (value.trim().length < 2) {
       setResults([]);
     }
   };

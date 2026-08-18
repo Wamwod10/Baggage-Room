@@ -82,12 +82,19 @@ const getPickupExpectedTotal = (order = {}) => {
   return previousPaid + Number(order.overtimeAmount || 0);
 };
 
+const emptyPageData = {
+  ordersPage: { items: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 1 } },
+  lockers: [],
+};
+
 export default function ActiveBaggage() {
   const { t, formatDateTime } = useTranslation();
   const { effectiveBranch, user } = useAuth();
   const branchNames = getBranchNames();
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [branch, setBranch] = useState("Barcha filiallar");
   const [status, setStatus] = useState("Barcha statuslar");
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -117,20 +124,28 @@ export default function ActiveBaggage() {
   const [telegramSendingId, setTelegramSendingId] = useState("");
 
   const {
-    data: pageData = { orders: [], lockers: [] },
+    data: pageData = emptyPageData,
     isLoading,
     error,
     retry,
   } = usePageResource(
     async () => {
-      const [orders, lockers] = await Promise.all([
-        baggageService.getAll(effectiveBranch),
-        lockerService.getAll(effectiveBranch),
+      const [ordersPage, lockers] = await Promise.all([
+        baggageService.getPage({
+          branchName: effectiveBranch || (branch === "Barcha filiallar" ? null : branch),
+          page,
+          limit: 50,
+          search: debouncedSearch,
+          active: status === "Barcha statuslar",
+          status: status !== "Barcha statuslar" && status !== "Qarz" ? status : undefined,
+          debtOnly: status === "Qarz",
+        }),
+        lockerService.getAll(effectiveBranch || (branch === "Barcha filiallar" ? null : branch)),
       ]);
-      return { orders: asArray(orders), lockers: asArray(lockers) };
+      return { ordersPage, lockers: asArray(lockers) };
     },
-    [effectiveBranch, refreshKey],
-    { orders: [], lockers: [] },
+    [effectiveBranch, branch, page, debouncedSearch, status, refreshKey],
+    emptyPageData,
   );
 
   useEffect(() => {
@@ -152,46 +167,31 @@ export default function ActiveBaggage() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [selectedOrder, editOrder, receiptOrder, cancelOrder, pickupOrder, transferOrder, debtCloseOrder]);
 
-  const safePageData = pageData && typeof pageData === "object" ? pageData : { orders: [], lockers: [] };
-  const pageOrders = asArray(safePageData.orders);
+  const safePageData = pageData && typeof pageData === "object" ? pageData : emptyPageData;
+  const safeOrdersPage = safePageData.ordersPage || emptyPageData.ordersPage;
+  const pageOrders = asArray(safeOrdersPage.items);
+  const pagination = safeOrdersPage.pagination || emptyPageData.ordersPage.pagination;
   const pageLockers = asArray(safePageData.lockers);
 
-  const rawActiveOrders = useMemo(() => {
-    return pageOrders.filter(
-      (order) =>
-        order.status === "Aktiv" ||
-        order.status === "Kechikdi" ||
-        Number(order.debtAmount || 0) > 0,
-    );
-  }, [pageOrders]);
+  const rawActiveOrders = pageOrders;
+  const activeOrders = pageOrders;
 
-  const activeOrders = useMemo(() => {
-    return asArray(rawActiveOrders).filter((order) => {
-      const query = search.toLowerCase();
-      const lockerText = asArray(order.lockers).map((locker) => locker.number).join(" ");
-
-      const matchSearch =
-        String(order.orderNumber || "").toLowerCase().includes(query) ||
-        String(order.client || "").toLowerCase().includes(query) ||
-        String(order.phone || "").toLowerCase().includes(query) ||
-        lockerText.includes(query);
-
-      const matchBranch = effectiveBranch
-        ? order.branch === effectiveBranch
-        : branch === "Barcha filiallar" || order.branch === branch;
-
-      const matchStatus =
-        status === "Barcha statuslar" ||
-        order.status === status ||
-        (status === "Qarz" && Number(order.debtAmount || 0) > 0);
-
-      return matchSearch && matchBranch && matchStatus;
-    });
-  }, [rawActiveOrders, search, branch, status, effectiveBranch]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   const handleRefresh = (event) => {
     animateButtonIcon(event);
     setRefreshKey((value) => value + 1);
+  };
+
+  const goToPage = (nextPage) => {
+    const totalPages = Math.max(Number(pagination.totalPages || 1), 1);
+    setPage(Math.min(Math.max(Number(nextPage) || 1, 1), totalPages));
   };
 
   const openPickup = (order) => {
@@ -483,7 +483,10 @@ export default function ActiveBaggage() {
         </div>
 
         <div className="active-filters">
-          <GlassSelect value={branch} onChange={(e) => setBranch(e.target.value)} disabled={Boolean(effectiveBranch)}>
+          <GlassSelect value={branch} onChange={(e) => {
+            setBranch(e.target.value);
+            setPage(1);
+          }} disabled={Boolean(effectiveBranch)}>
             <option value="Barcha filiallar">{t("Barcha filiallar")}</option>
             {(effectiveBranch ? [effectiveBranch] : branchNames).map((item) => (
               <option key={item} value={item}>
@@ -492,7 +495,10 @@ export default function ActiveBaggage() {
             ))}
           </GlassSelect>
 
-          <GlassSelect value={status} onChange={(e) => setStatus(e.target.value)}>
+          <GlassSelect value={status} onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}>
             <option value="Barcha statuslar">{t("Barcha statuslar")}</option>
             <option value="Aktiv">{t("Aktiv")}</option>
             <option value="Kechikdi">{t("Kechikdi")}</option>
@@ -627,6 +633,20 @@ export default function ActiveBaggage() {
             ))}
         </div>
       </div>
+
+      {!error && Number(pagination.totalPages || 1) > 1 && (
+        <div className="active-pagination">
+          <button type="button" onClick={() => goToPage(page - 1)} disabled={page <= 1 || isLoading}>
+            {t("Oldingi")}
+          </button>
+          <span>
+            {page} / {pagination.totalPages} - {pagination.total} {t("ta")}
+          </span>
+          <button type="button" onClick={() => goToPage(page + 1)} disabled={page >= pagination.totalPages || isLoading}>
+            {t("Keyingi")}
+          </button>
+        </div>
+      )}
 
       {selectedOrder && (
         <div className="active-modal-backdrop" onClick={() => setSelectedOrder(null)}>

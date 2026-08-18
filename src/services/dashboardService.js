@@ -1,6 +1,6 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { asArray, getArrayData, getData, getItems, mapActivityLog, mapCashMovement, mapLocker, mapNotification, mapOrder, mapShift } from "./apiMappers";
+import { asArray, getData, getItems, mapActivityLog, mapCashMovement, mapNotification, mapShift } from "./apiMappers";
 
 const toNumber = (value) => Number(value ?? 0) || 0;
 
@@ -65,22 +65,18 @@ const dashboardService = {
 
   async getData(branchName = null) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const [dashboard, orders, notifications, audit, cash, lockers] = await Promise.all([
+    const [dashboard, notifications, audit, cash] = await Promise.all([
       apiClient.get("/analytics/dashboard", { params: { branchId } }),
-      apiClient.get("/orders", { params: { branchId, limit: 20 } }),
       apiClient.get("/notifications", { params: { branchId, limit: 20 } }),
       apiClient.get("/audit", { params: { branchId, limit: 20 } }),
       apiClient.get("/cash-movements", { params: { branchId, limit: 20 } }),
-      apiClient.get("/lockers", { params: { branchId } }),
     ]);
 
     return {
       ...mapDashboard(getData(dashboard, {})),
-      orders: getItems(orders).map(mapOrder).filter(Boolean),
       notifications: getItems(notifications).map(mapNotification),
       activityLogs: getItems(audit).map(mapActivityLog),
       cashMovements: getItems(cash).map(mapCashMovement),
-      lockers: getArrayData(lockers).map(mapLocker).filter(Boolean),
     };
   },
 
