@@ -68,6 +68,20 @@ export default function Dashboard() {
   const [salesSending, setSalesSending] = useState(false);
   const [salesMessage, setSalesMessage] = useState("");
 
+  const {
+    data = emptyDashboardData,
+    isLoading,
+    error,
+    retry,
+  } = usePageResource(({ signal } = {}) => {
+    return dashboardService.getData(effectiveBranch, { signal }).then((dashboardData) => ({
+      ...dashboardData,
+      smartAlerts: asArray(dashboardData.notifications)
+        .filter((item) => !item.isRead)
+        .slice(0, 20),
+    }));
+  }, [effectiveBranch, refreshKey], emptyDashboardData);
+
   useEffect(() => {
     let timerId = null;
     let disposed = false;
@@ -93,20 +107,6 @@ export default function Dashboard() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [isLoading]);
-
-  const {
-    data = emptyDashboardData,
-    isLoading,
-    error,
-    retry,
-  } = usePageResource(({ signal } = {}) => {
-    return dashboardService.getData(effectiveBranch, { signal }).then((dashboardData) => ({
-      ...dashboardData,
-      smartAlerts: asArray(dashboardData.notifications)
-        .filter((item) => !item.isRead)
-        .slice(0, 20),
-    }));
-  }, [effectiveBranch, refreshKey], emptyDashboardData);
 
   const safeData = data && typeof data === "object" ? data : emptyDashboardData;
   const safeStats = { ...emptyDashboardData.stats, ...(safeData.stats || {}) };
