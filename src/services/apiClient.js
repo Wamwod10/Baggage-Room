@@ -108,7 +108,7 @@ const createCancelledError = () => ({
 });
 
 const subscribeToGet = (entry, signal) => {
-  if (signal.aborted) return Promise.reject(createCancelledError());
+  if (signal?.aborted) return Promise.reject(createCancelledError());
 
   entry.subscribers += 1;
 
@@ -158,13 +158,14 @@ const subscribeToGet = (entry, signal) => {
 };
 
 apiClient.get = (url, config = {}) => {
-  const baseURL = config.baseURL || apiClient.defaults.baseURL || "";
-  const key = `${baseURL}|${getAuthContextKey()}|${url}?${stableSerialize(config.params || {})}`;
-  if (config.signal?.aborted) return Promise.reject(createCancelledError());
+  const safeConfig = config ?? {};
+  const baseURL = safeConfig.baseURL || apiClient.defaults.baseURL || "";
+  const key = `${baseURL}|${getAuthContextKey()}|${url}?${stableSerialize(safeConfig.params || {})}`;
+  if (safeConfig.signal?.aborted) return Promise.reject(createCancelledError());
   const existing = inFlightGets.get(key);
-  if (existing) return subscribeToGet(existing, config.signal);
+  if (existing) return subscribeToGet(existing, safeConfig.signal);
 
-  const { signal: callerSignal, ...requestConfig } = config;
+  const { signal: callerSignal, ...requestConfig } = safeConfig;
   const controller = new AbortController();
   const entry = {
     controller,

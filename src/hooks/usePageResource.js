@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 
+const isCancelledResourceError = (error) =>
+  error?.cancelled ||
+  error?.code === "ERR_CANCELED" ||
+  error?.name === "AbortError" ||
+  error?.name === "CanceledError";
+
 export default function usePageResource(loader, dependencies = [], initialData = null) {
   const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState({
@@ -33,7 +39,7 @@ export default function usePageResource(loader, dependencies = [], initialData =
         }
       })
       .catch((error) => {
-        if (active && !error?.cancelled && error?.code !== "ERR_CANCELED") {
+        if (active && !isCancelledResourceError(error)) {
           setState((previous) => ({
             data: previous.data ?? initialData,
             isLoading: false,
