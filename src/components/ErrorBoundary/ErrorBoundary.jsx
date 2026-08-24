@@ -20,7 +20,9 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error("Application render error:", error, info);
+    if (import.meta.env.DEV) {
+      console.error("Application render error:", error, info);
+    }
   }
 
   render() {

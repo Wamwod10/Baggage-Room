@@ -199,11 +199,12 @@ export default function Settings() {
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
 
     Promise.all([
       branchService.getAll(),
-      settingsService.getTariffs(),
-      telegramService.getSettings(),
+      settingsService.getTariffs(null, { signal: controller.signal }),
+      telegramService.getSettings(null, { signal: controller.signal }),
     ])
       .then(([branches, tariffs, telegramSettings]) => {
         if (!active) return;
@@ -230,11 +231,12 @@ export default function Settings() {
         }));
       })
       .catch(() => {
-        if (active) setMessage(t("Backend settings yuklanmadi"));
+        if (active && !controller.signal.aborted) setMessage(t("Backend settings yuklanmadi"));
       });
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [t]);
 
@@ -377,7 +379,9 @@ export default function Settings() {
       } catch (err) {
         // If fetching fails, keep current settings and show a message
         // Do not overwrite enabled=false from backend with frontend defaults
-        console.warn("Refetching telegram settings failed", err);
+        if (import.meta.env.DEV) {
+          console.warn("Refetching telegram settings failed", err);
+        }
       }
 
       setMessage(t("Settings saqlandi"));

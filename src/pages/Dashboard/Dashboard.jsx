@@ -69,20 +69,38 @@ export default function Dashboard() {
   const [salesMessage, setSalesMessage] = useState("");
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey((prev) => prev + 1);
-    }, 60000);
+    let timerId = null;
+    let disposed = false;
 
-    return () => clearInterval(interval);
-  }, []);
+    const schedule = () => {
+      if (!disposed) timerId = window.setTimeout(tick, document.hidden ? 300000 : 60000);
+    };
+    const tick = () => {
+      if (!disposed && !document.hidden && !isLoading) setRefreshKey((prev) => prev + 1);
+      schedule();
+    };
+    const handleVisibilityChange = () => {
+      window.clearTimeout(timerId);
+      if (!document.hidden && !isLoading) setRefreshKey((prev) => prev + 1);
+      schedule();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    schedule();
+    return () => {
+      disposed = true;
+      window.clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isLoading]);
 
   const {
     data = emptyDashboardData,
     isLoading,
     error,
     retry,
-  } = usePageResource(() => {
-    return dashboardService.getData(effectiveBranch).then((dashboardData) => ({
+  } = usePageResource(({ signal } = {}) => {
+    return dashboardService.getData(effectiveBranch, { signal }).then((dashboardData) => ({
       ...dashboardData,
       smartAlerts: asArray(dashboardData.notifications)
         .filter((item) => !item.isRead)

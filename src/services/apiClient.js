@@ -4,6 +4,10 @@ const TOKEN_KEY = "br_token";
 const AUTH_EVENT = "br:unauthorized";
 const env = import.meta.env || {};
 const PRODUCTION_API_URL = "https://baggage-room-backend.onrender.com/api";
+const parseTimeout = (value, fallback = 15000) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 1000 && parsed <= 120000 ? parsed : fallback;
+};
 
 const getBaseURL = () => {
   const configuredUrl = String(env.VITE_API_URL || "").trim().replace(/\/+$/, "");
@@ -44,6 +48,20 @@ const readToken = () => {
   }
 };
 
+const fingerprint = (value = "") => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+};
+
+const getAuthContextKey = () => {
+  const token = readToken();
+  return token ? `auth:${fingerprint(token)}` : "anonymous";
+};
+
 const clearAuthStorage = () => {
   try {
     if (typeof localStorage !== "undefined") {
@@ -61,11 +79,107 @@ const clearAuthStorage = () => {
 
 const apiClient = axios.create({
   baseURL: getBaseURL(),
-  timeout: 60000,
+  timeout: parseTimeout(env.VITE_API_TIMEOUT_MS),
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+// React StrictMode intentionally mounts effects twice in development. Keeping
+// identical GET requests in-flight also protects production from two mounted
+// consumers asking for the same resource at the same time.
+const inFlightGets = new Map();
+
+const stableSerialize = (value) => {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(",")}}`;
+};
+
+const originalGet = apiClient.get.bind(apiClient);
+const createCancelledError = () => ({
+  success: false,
+  message: "Request cancelled",
+  errors: [],
+  status: 0,
+  code: "ERR_CANCELED",
+  cancelled: true,
+  retryable: false,
+});
+
+const subscribeToGet = (entry, signal) => {
+  if (signal.aborted) return Promise.reject(createCancelledError());
+
+  entry.subscribers += 1;
+
+  if (!signal) {
+    return entry.promise.finally(() => {
+      entry.subscribers = Math.max(0, entry.subscribers - 1);
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const cleanup = () => {
+      signal.removeEventListener("abort", onAbort);
+      entry.subscribers = Math.max(0, entry.subscribers - 1);
+    };
+
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(createCancelledError());
+
+      // Give a StrictMode remount or another consumer in the same turn a
+      // chance to subscribe before cancelling the shared network request.
+      queueMicrotask(() => {
+        if (entry.subscribers === 0 && !entry.settled) entry.controller.abort();
+      });
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    entry.promise.then(
+      (value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+};
+
+apiClient.get = (url, config = {}) => {
+  const baseURL = config.baseURL || apiClient.defaults.baseURL || "";
+  const key = `${baseURL}|${getAuthContextKey()}|${url}?${stableSerialize(config.params || {})}`;
+  if (config.signal?.aborted) return Promise.reject(createCancelledError());
+  const existing = inFlightGets.get(key);
+  if (existing) return subscribeToGet(existing, config.signal);
+
+  const { signal: callerSignal, ...requestConfig } = config;
+  const controller = new AbortController();
+  const entry = {
+    controller,
+    promise: null,
+    settled: false,
+    subscribers: 0,
+  };
+
+  entry.promise = originalGet(url, { ...requestConfig, signal: controller.signal }).finally(() => {
+    entry.settled = true;
+    if (inFlightGets.get(key) === entry) inFlightGets.delete(key);
+  });
+  inFlightGets.set(key, entry);
+  return subscribeToGet(entry, callerSignal);
+};
 
 apiClient.interceptors.request.use((config) => {
   const token = readToken();
@@ -82,6 +196,10 @@ apiClient.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const payload = error.response?.data;
+
+    if (axios.isCancel(error) || error.code === "ERR_CANCELED") {
+      return Promise.reject(createCancelledError());
+    }
 
     if (status === 401) {
       clearAuthStorage();
@@ -106,9 +224,11 @@ apiClient.interceptors.response.use(
       status,
       code: error.code,
       retryable: !status || status >= 500,
+      isTimeout: error.code === "ECONNABORTED" || error.code === "ETIMEDOUT",
+      isNetworkError: !error.response && error.code !== "ECONNABORTED" && error.code !== "ETIMEDOUT",
     });
   },
 );
 
-export { TOKEN_KEY, AUTH_EVENT };
+export { TOKEN_KEY, AUTH_EVENT, getAuthContextKey };
 export default apiClient;

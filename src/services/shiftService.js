@@ -9,16 +9,16 @@ const toMinorCurrencyMap = (values = {}) => Object.fromEntries(
 );
 
 const shiftService = {
-  async getAll(branchName = null) {
+  async getAll(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/shifts", { params: { branchId } });
+    const response = await apiClient.get("/shifts", { params: { branchId }, signal });
     return getArrayData(response).map(mapShift).filter(Boolean);
   },
 
-  async getCurrent(branchName = null) {
+  async getCurrent(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
     try {
-      const response = await apiClient.get("/shifts/current", { params: { branchId } });
+      const response = await apiClient.get("/shifts/current", { params: { branchId }, signal });
       return getData(response) ? mapShift(getData(response)) : null;
     } catch (error) {
       if (error.status === 400 && (!branchId || error.message === "branchId is required")) return null;

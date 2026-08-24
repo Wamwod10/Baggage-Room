@@ -7,9 +7,9 @@ const getData = (payload, fallback = null) => payload?.data ?? payload ?? fallba
 const getArrayData = (payload) => (Array.isArray(getData(payload)) ? getData(payload) : []);
 
 const telegramService = {
-  async getSettings(branchName = null) {
+  async getSettings(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/telegram/settings", { params: { branchId } });
+    const response = await apiClient.get("/telegram/settings", { params: { branchId }, signal });
     return getArrayData(response);
   },
 

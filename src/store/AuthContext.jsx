@@ -45,7 +45,9 @@ export function AuthProvider({ children }) {
       await branchService.getAll({ force: true });
       return true;
     } catch (error) {
-      console.warn("Branch list could not be refreshed; keeping authenticated session", error);
+      if (import.meta.env.DEV) {
+        console.warn("Branch list could not be refreshed; keeping authenticated session", error);
+      }
       return false;
     } finally {
       setBranchVersion((value) => value + 1);
@@ -67,6 +69,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     authService.logout();
+    branchService.clearCache();
     localStorage.removeItem(ACTIVE_BRANCH_KEY);
     setActiveBranchState(ALL_BRANCHES_LABEL);
     setUser(null);

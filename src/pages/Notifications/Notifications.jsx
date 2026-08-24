@@ -36,7 +36,7 @@ export default function Notifications() {
     error,
     retry,
   } = usePageResource(
-    () => notificationService.getPageData(effectiveBranch),
+    ({ signal } = {}) => notificationService.getPageData(effectiveBranch, { signal }),
     [effectiveBranch, refreshKey],
     emptyPageData,
   );

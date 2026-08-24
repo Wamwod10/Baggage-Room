@@ -12,25 +12,26 @@ const LOCKER_STATUSES = {
 const lockerService = {
   statuses: LOCKER_STATUSES,
 
-  async getAll(branchName = null) {
+  async getAll(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/lockers", { params: { branchId } });
+    const response = await apiClient.get("/lockers", { params: { branchId }, signal });
     return getArrayData(response).map(mapLocker).filter(Boolean);
   },
 
-  async block(branchName, number, data = {}) {
-    const lockers = await this.getAll(branchName);
-    const locker = asArray(lockers).find((item) => Number(item.number) === Number(number));
+  async block(branchOrLocker, numberOrData, data = {}) {
+    const directLocker = branchOrLocker && typeof branchOrLocker === "object" ? branchOrLocker : null;
+    const locker = directLocker || asArray(await this.getAll(branchOrLocker)).find((item) => Number(item.number) === Number(numberOrData));
     if (!locker) throw new Error("Locker topilmadi");
+    const payload = directLocker ? numberOrData || {} : data;
     const response = await apiClient.patch(`/lockers/${locker.id}/service`, {
-      serviceReason: data.reason || "",
+      serviceReason: payload.reason || "",
     });
     return mapLocker(getData(response));
   },
 
-  async unblock(branchName, number) {
-    const lockers = await this.getAll(branchName);
-    const locker = asArray(lockers).find((item) => Number(item.number) === Number(number));
+  async unblock(branchOrLocker, number) {
+    const directLocker = branchOrLocker && typeof branchOrLocker === "object" ? branchOrLocker : null;
+    const locker = directLocker || asArray(await this.getAll(branchOrLocker)).find((item) => Number(item.number) === Number(number));
     if (!locker) throw new Error("Locker topilmadi");
     const response = await apiClient.patch(`/lockers/${locker.id}/restore`);
     return mapLocker(getData(response));

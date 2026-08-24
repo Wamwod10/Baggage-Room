@@ -291,7 +291,12 @@ export const printReceipt = (selector = "#thermal-receipt, .receipt-paper") => {
   root.innerHTML = "";
   root.appendChild(receipt.cloneNode(true));
 
+  let cleanupTimer = null;
   const cleanup = () => {
+    if (cleanupTimer !== null) {
+      window.clearTimeout(cleanupTimer);
+      cleanupTimer = null;
+    }
     document.body.classList.remove("receipt-printing");
     root.innerHTML = "";
     window.removeEventListener("afterprint", cleanup);
@@ -299,6 +304,6 @@ export const printReceipt = (selector = "#thermal-receipt, .receipt-paper") => {
 
   window.addEventListener("afterprint", cleanup);
   document.body.classList.add("receipt-printing");
+  cleanupTimer = window.setTimeout(cleanup, 120000);
   window.print();
-  window.setTimeout(cleanup, 120000);
 };

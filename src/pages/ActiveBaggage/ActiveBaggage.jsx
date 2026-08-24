@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle,
   Clock3,
@@ -122,6 +122,20 @@ export default function ActiveBaggage() {
   });
   const [formError, setFormError] = useState("");
   const [telegramSendingId, setTelegramSendingId] = useState("");
+  const [pendingAction, setPendingAction] = useState("");
+  const pendingActionRef = useRef(false);
+
+  const beginAction = (action) => {
+    if (pendingActionRef.current) return false;
+    pendingActionRef.current = true;
+    setPendingAction(action);
+    return true;
+  };
+
+  const endAction = () => {
+    pendingActionRef.current = false;
+    setPendingAction("");
+  };
 
   const {
     data: pageData = emptyPageData,
@@ -129,7 +143,7 @@ export default function ActiveBaggage() {
     error,
     retry,
   } = usePageResource(
-    async () => {
+    async ({ signal } = {}) => {
       const [ordersPage, lockers] = await Promise.all([
         baggageService.getPage({
           branchName: effectiveBranch || (branch === "Barcha filiallar" ? null : branch),
@@ -139,8 +153,9 @@ export default function ActiveBaggage() {
           active: status === "Barcha statuslar",
           status: status !== "Barcha statuslar" && status !== "Qarz" ? status : undefined,
           debtOnly: status === "Qarz",
+          signal,
         }),
-        lockerService.getAll(effectiveBranch || (branch === "Barcha filiallar" ? null : branch)),
+        lockerService.getAll(effectiveBranch || (branch === "Barcha filiallar" ? null : branch), { signal }),
       ]);
       return { ordersPage, lockers: asArray(lockers) };
     },
@@ -178,7 +193,8 @@ export default function ActiveBaggage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setDebouncedSearch(search.trim());
+      const query = search.trim();
+      setDebouncedSearch(query.length >= 2 ? query : "");
       setPage(1);
     }, 250);
     return () => window.clearTimeout(timer);
@@ -228,6 +244,7 @@ export default function ActiveBaggage() {
       return;
     }
 
+    if (!beginAction("pickup")) return;
     try {
       await baggageService.pickup(pickupOrder.id, {
         ...pickupForm,
@@ -238,6 +255,8 @@ export default function ActiveBaggage() {
     } catch (error) {
       setFormError(t(error.message || "Pickup tasdiqlashda xatolik yuz berdi."));
       return;
+    } finally {
+      endAction();
     }
 
     setRefreshKey((value) => value + 1);
@@ -254,9 +273,11 @@ export default function ActiveBaggage() {
   const handleCloseDebt = async () => {
     const order = debtCloseOrder;
     if (!order) return;
+    if (!beginAction("debt")) return;
     try {
       await baggageService.closeDebt(order.id, {
         amount: order.debtAmount,
+        debtId: order.debtId,
         payment: debtClosePayment,
         currency: order.currency,
         admin: user?.fullName,
@@ -265,6 +286,8 @@ export default function ActiveBaggage() {
     } catch (error) {
       setFormError(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
+    } finally {
+      endAction();
     }
     setDebtCloseOrder(null);
     setRefreshKey((value) => value + 1);
@@ -318,6 +341,7 @@ export default function ActiveBaggage() {
       setFormError(t("Client va telefon majburiy."));
       return;
     }
+    if (!beginAction("edit")) return;
     try {
       await baggageService.update(editOrder.id, {
         clientName: editForm.clientName.trim(),
@@ -339,6 +363,8 @@ export default function ActiveBaggage() {
     } catch (error) {
       setFormError(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
       return;
+    } finally {
+      endAction();
     }
     setRefreshKey((value) => value + 1);
     setEditOrder(null);
@@ -353,11 +379,14 @@ export default function ActiveBaggage() {
       return;
     }
 
+    if (!beginAction("cancel")) return;
     try {
       await baggageService.cancel(cancelOrder.id, cancelReason.trim());
     } catch (error) {
       setFormError(t(error.message || "Orderni bekor qilishda xatolik yuz berdi."));
       return;
+    } finally {
+      endAction();
     }
 
     setRefreshKey((value) => value + 1);
@@ -366,16 +395,8 @@ export default function ActiveBaggage() {
     setCancelReason("");
   };
 
-  const handleReprint = async (orderId) => {
-    let order;
-    try {
-      order = await baggageService.reprint(orderId);
-    } catch (error) {
-      setFormError(t(error.message || "Chekni qayta chiqarishda xatolik yuz berdi."));
-      return;
-    }
-
-    setRefreshKey((value) => value + 1);
+  const handleReprint = (order) => {
+    if (!order) return;
     setReceiptOrder(order);
   };
 
@@ -418,14 +439,25 @@ export default function ActiveBaggage() {
       return;
     }
 
+    const source = asArray(transferOrder.lockers).find((locker) => Number(locker.number) === Number(transferForm.fromNumber));
+    const target = pageLockers.find((locker) => Number(locker.number) === Number(transferForm.toNumber));
+    if (!source || !target) {
+      setFormError(t("Old yoki yangi yacheyka topilmadi."));
+      return;
+    }
+    if (!beginAction("transfer")) return;
     try {
-      await baggageService.transfer(transferOrder.id, {
-        ...transferForm,
-        admin: user?.fullName || "Admin",
+      await lockerService.transfer({
+        orderId: transferOrder.id,
+        fromLockerId: source.lockerId || source.id,
+        toLockerId: target.id,
+        note: transferForm.reason,
       });
     } catch (error) {
       setFormError(t(error.message || "Transfer saqlashda xatolik yuz berdi."));
       return;
+    } finally {
+      endAction();
     }
     setRefreshKey((value) => value + 1);
     setTransferOrder(null);
@@ -595,10 +627,10 @@ export default function ActiveBaggage() {
                   <button type="button" className="icon-action view" onClick={() => setSelectedOrder(order)}>
                     <Eye size={16} />
                   </button>
-                  <button type="button" className="icon-action edit" onClick={() => openEdit(order)} title="Edit">
+                  <button type="button" className="icon-action edit" onClick={() => openEdit(order)} title="Edit" disabled={Boolean(pendingAction)}>
                     <Edit3 size={16} />
                   </button>
-                  <button type="button" className="icon-action print" onClick={() => handleReprint(order.id)}>
+                  <button type="button" className="icon-action print" onClick={() => handleReprint(order)} disabled={Boolean(pendingAction)}>
                     <Printer size={16} />
                   </button>
                   <button
@@ -612,19 +644,19 @@ export default function ActiveBaggage() {
                   </button>
                   {(order.status === "Aktiv" || order.status === "Kechikdi") && (
                     <>
-                      <button type="button" className="icon-action transfer" onClick={() => openTransfer(order)}>
+                      <button type="button" className="icon-action transfer" onClick={() => openTransfer(order)} disabled={Boolean(pendingAction)}>
                         <MoveRight size={16} />
                       </button>
-                      <button type="button" className="icon-action pickup" onClick={() => openPickup(order)}>
+                      <button type="button" className="icon-action pickup" onClick={() => openPickup(order)} disabled={Boolean(pendingAction)}>
                         <CheckCircle size={16} />
                       </button>
-                      <button type="button" className="icon-action cancel" onClick={() => handleCancel(order)}>
+                      <button type="button" className="icon-action cancel" onClick={() => handleCancel(order)} disabled={Boolean(pendingAction)}>
                         <XCircle size={16} />
                       </button>
                     </>
                   )}
                   {Number(order.debtAmount || 0) > 0 && (
-                    <button type="button" className="debt-close-btn" onClick={() => openCloseDebt(order)}>
+                    <button type="button" className="debt-close-btn" onClick={() => openCloseDebt(order)} disabled={Boolean(pendingAction)}>
                       {t("Qarz yopish")}
                     </button>
                   )}
@@ -792,7 +824,7 @@ export default function ActiveBaggage() {
               ))}
             </div>
 
-            <button type="button" className="pickup-confirm-btn" onClick={handleSaveEdit}>
+            <button type="button" className="pickup-confirm-btn" onClick={handleSaveEdit} disabled={Boolean(pendingAction)}>
               <Edit3 size={17} />
               {t("Saqlash")}
             </button>
@@ -888,7 +920,7 @@ export default function ActiveBaggage() {
               </label>
             </div>
 
-            <button type="button" className="pickup-confirm-btn" onClick={handlePickup}>
+            <button type="button" className="pickup-confirm-btn" onClick={handlePickup} disabled={Boolean(pendingAction)}>
               <CheckCircle size={17} />
               {t("Pickup tasdiqlash")}
             </button>
@@ -916,7 +948,7 @@ export default function ActiveBaggage() {
                 </GlassSelect>
               </label>
             </div>
-            <button type="button" className="pickup-confirm-btn" onClick={handleCloseDebt}>
+            <button type="button" className="pickup-confirm-btn" onClick={handleCloseDebt} disabled={Boolean(pendingAction)}>
               <CheckCircle size={17} />
               {t("Qarz yopish")}
             </button>
@@ -963,7 +995,7 @@ export default function ActiveBaggage() {
               </label>
             </div>
 
-            <button type="button" className="pickup-confirm-btn" onClick={handleTransfer}>
+            <button type="button" className="pickup-confirm-btn" onClick={handleTransfer} disabled={Boolean(pendingAction)}>
               <MoveRight size={17} />
               {t("Transfer saqlash")}
             </button>
@@ -988,7 +1020,7 @@ export default function ActiveBaggage() {
               <textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
             </label>
 
-            <button type="button" className="cancel-confirm-btn" onClick={handleConfirmCancel}>
+            <button type="button" className="cancel-confirm-btn" onClick={handleConfirmCancel} disabled={Boolean(pendingAction)}>
               {t("Bekor qilishni tasdiqlash")}
             </button>
           </div>

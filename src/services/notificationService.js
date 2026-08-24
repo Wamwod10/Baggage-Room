@@ -3,21 +3,21 @@ import branchService from "./branchService";
 import { asArray, getData, getItems, mapActivityLog, mapNotification } from "./apiMappers";
 
 const notificationService = {
-  async getAlerts(branchName = null) {
+  async getAlerts(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/notifications", { params: { branchId, limit: 100 } });
+    const response = await apiClient.get("/notifications", { params: { branchId, limit: 100 }, signal });
     return getItems(response).map(mapNotification);
   },
 
-  async getActivityLogs(branchName = null) {
+  async getActivityLogs(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/audit", { params: { branchId, limit: 100 } });
+    const response = await apiClient.get("/audit", { params: { branchId, limit: 100 }, signal });
     return getItems(response).map(mapActivityLog);
   },
 
-  async getSmartAlerts(branchName = null) {
+  async getSmartAlerts(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/notifications", { params: { branchId, isRead: "false", limit: 20 } });
+    const response = await apiClient.get("/notifications", { params: { branchId, isRead: "false", limit: 20 }, signal });
     const alerts = getItems(response).map(mapNotification);
     return asArray(alerts).filter((item) => !item.isRead).slice(0, 20);
   },
@@ -37,10 +37,10 @@ const notificationService = {
     return [];
   },
 
-  async getPageData(branchName = null) {
+  async getPageData(branchName = null, { signal } = {}) {
     const [alerts, activityLogs] = await Promise.all([
-      this.getSmartAlerts(branchName),
-      this.getActivityLogs(branchName),
+      this.getSmartAlerts(branchName, { signal }),
+      this.getActivityLogs(branchName, { signal }),
     ]);
     return { alerts: asArray(alerts), systemNotifications: [], activityLogs: asArray(activityLogs) };
   },

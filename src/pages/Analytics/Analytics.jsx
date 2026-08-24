@@ -165,18 +165,36 @@ export default function Analytics() {
     error,
     retry,
   } = usePageResource(
-    () => analyticsService.getData(period, effectiveBranch),
+    ({ signal } = {}) => analyticsService.getData(period, effectiveBranch, { signal }),
     [period, effectiveBranch, refreshKey],
     emptyAnalyticsData,
   );
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey((prev) => prev + 1);
-    }, 60000);
+    let timerId = null;
+    let disposed = false;
 
-    return () => clearInterval(interval);
-  }, []);
+    const schedule = () => {
+      if (!disposed) timerId = window.setTimeout(tick, document.hidden ? 300000 : 60000);
+    };
+    const tick = () => {
+      if (!disposed && !document.hidden && !isLoading) setRefreshKey((prev) => prev + 1);
+      schedule();
+    };
+    const handleVisibilityChange = () => {
+      window.clearTimeout(timerId);
+      if (!document.hidden && !isLoading) setRefreshKey((prev) => prev + 1);
+      schedule();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    schedule();
+    return () => {
+      disposed = true;
+      window.clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isLoading]);
 
   const safeData = data && typeof data === "object" ? data : emptyAnalyticsData;
   const overview = { ...emptyAnalyticsData.overview, ...(safeData.overview || {}) };

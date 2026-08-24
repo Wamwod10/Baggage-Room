@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   Bell,
   CalendarClock,
@@ -39,70 +39,71 @@ export default function Header({ onMenuClick }) {
   const [results, setResults] = useState([]);
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
-  const [alertRefreshKey, setAlertRefreshKey] = useState(0);
   const [headerAlerts, setHeaderAlerts] = useState([]);
-  const [currentDate, setCurrentDate] = useState(() => new Date());
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAlertRefreshKey((value) => value + 1);
-    }, 60000);
+    let disposed = false;
+    let timerId = null;
+    let loading = false;
+    let controller = null;
 
-    return () => clearInterval(interval);
-  }, []);
+    const loadAlerts = async () => {
+      if (disposed || document.hidden || loading) return;
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentDate(new Date());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    notificationService
-      .getSmartAlerts(effectiveBranch)
-      .then((alerts) => {
-        if (active) setHeaderAlerts(asArray(alerts));
-      })
-      .catch(() => {
-        if (active) setHeaderAlerts([]);
-      });
-    return () => {
-      active = false;
+      loading = true;
+      controller = new AbortController();
+      try {
+        const alerts = await notificationService.getSmartAlerts(effectiveBranch, { signal: controller.signal });
+        if (!disposed) setHeaderAlerts(asArray(alerts));
+      } catch (error) {
+        if (!disposed && !error?.cancelled) setHeaderAlerts([]);
+      } finally {
+        loading = false;
+        if (!disposed) timerId = window.setTimeout(loadAlerts, document.hidden ? 300000 : 60000);
+      }
     };
-  }, [effectiveBranch, alertRefreshKey]);
+
+    const handleVisibilityChange = () => {
+      window.clearTimeout(timerId);
+      if (!document.hidden) void loadAlerts();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    void loadAlerts();
+
+    return () => {
+      disposed = true;
+      window.clearTimeout(timerId);
+      controller?.abort();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [effectiveBranch]);
 
   const safeHeaderAlerts = asArray(headerAlerts);
   const safeResults = asArray(results);
   const alertCount = safeHeaderAlerts.length;
-  const liveDate = useMemo(() => {
-    return getTashkentClock(currentDate);
-  }, [currentDate]);
-
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
-    let active = true;
     const query = debouncedSearch;
     if (query.length < 2) return undefined;
+    const controller = new AbortController();
 
     baggageService
-      .getPage({ branchName: effectiveBranch, search: query, limit: 8 })
+      .getPage({ branchName: effectiveBranch, search: query, limit: 8, signal: controller.signal })
       .then(({ items }) => {
-        if (!active) return;
+        if (controller.signal.aborted) return;
         setResults(asArray(items).slice(0, 8));
       })
-      .catch(() => {
-        if (active) setResults([]);
+      .catch((error) => {
+        if (!controller.signal.aborted && !error?.cancelled) setResults([]);
       });
 
     return () => {
-      active = false;
+      controller.abort();
     };
   }, [debouncedSearch, effectiveBranch]);
 
@@ -210,13 +211,7 @@ export default function Header({ onMenuClick }) {
           </div>
         )}
 
-        <div className="header-datetime" aria-label={t("Joriy sana va vaqt")}>
-          <CalendarClock size={17} />
-          <div>
-            <b>{liveDate.time}</b>
-            <span>{liveDate.date}</span>
-          </div>
-        </div>
+        <HeaderClock label={t("Joriy sana va vaqt")} />
 
         <button
           onClick={toggleTheme}
@@ -328,6 +323,27 @@ export default function Header({ onMenuClick }) {
         </div>
       </div>
     </header>
+  );
+}
+
+function HeaderClock({ label }) {
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setCurrentDate(new Date()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const liveDate = getTashkentClock(currentDate);
+
+  return (
+    <div className="header-datetime" aria-label={label}>
+      <CalendarClock size={17} />
+      <div>
+        <b>{liveDate.time}</b>
+        <span>{liveDate.date}</span>
+      </div>
+    </div>
   );
 }
 

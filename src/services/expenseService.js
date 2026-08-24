@@ -4,9 +4,9 @@ import { getData, getItems, mapExpense } from "./apiMappers";
 import { toMinorUnits } from "../utils/currency";
 
 const expenseService = {
-  async getAll(branchName = null) {
+  async getAll(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/expenses", { params: { branchId, limit: 200 } });
+    const response = await apiClient.get("/expenses", { params: { branchId, limit: 200 }, signal });
     return getItems(response).map(mapExpense);
   },
 

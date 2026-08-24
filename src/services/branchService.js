@@ -1,7 +1,8 @@
-import apiClient from "./apiClient";
+import apiClient, { getAuthContextKey } from "./apiClient";
 import { BRANCH_NAME_BY_CODE, setRuntimeBranches } from "../utils/branches";
 
 let branchCache = null;
+let branchRequest = null;
 
 const mapBranch = (branch) => ({
   ...branch,
@@ -10,11 +11,23 @@ const mapBranch = (branch) => ({
 const getArrayData = (payload) => (Array.isArray(payload?.data) ? payload.data : []);
 
 const getAll = async ({ force = false } = {}) => {
-  if (branchCache && !force) return branchCache;
-  const response = await apiClient.get("/branches");
-  branchCache = getArrayData(response).map(mapBranch);
-  setRuntimeBranches(branchCache);
-  return branchCache;
+  const contextKey = getAuthContextKey();
+  if (branchCache?.contextKey === contextKey && !force) return branchCache.value;
+  if (branchRequest?.contextKey === contextKey && !force) return branchRequest.promise;
+
+  const request = apiClient.get("/branches").then((response) => {
+    const value = getArrayData(response).map(mapBranch);
+    if (getAuthContextKey() === contextKey) {
+      branchCache = { contextKey, value };
+      setRuntimeBranches(value);
+    }
+    return value;
+  }).finally(() => {
+    if (branchRequest?.promise === request) branchRequest = null;
+  });
+  branchRequest = { contextKey, promise: request };
+
+  return request;
 };
 
 const getBranchIdByName = async (branchName) => {
@@ -30,6 +43,7 @@ const getBranchName = (branch) => {
 
 const clearCache = () => {
   branchCache = null;
+  branchRequest = null;
   setRuntimeBranches([]);
 };
 

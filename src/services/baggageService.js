@@ -30,6 +30,9 @@ const baggageService = {
     debtOnly = false,
     sortBy = "createdAt",
     sortOrder = "desc",
+    phone,
+    passport,
+    signal,
   } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const resolvedPaymentType = paymentType || toPaymentType(payment);
@@ -43,6 +46,8 @@ const baggageService = {
         page,
         limit,
         search: search?.trim() || undefined,
+        phone: phone?.trim() || undefined,
+        passport: passport?.trim() || undefined,
         status: resolvedStatus || undefined,
         statuses: resolvedStatuses || undefined,
         paymentType: resolvedPaymentType || undefined,
@@ -51,6 +56,7 @@ const baggageService = {
         sortBy,
         sortOrder,
       },
+      signal,
     });
     return {
       items: getItems(response).map(mapOrder).filter(Boolean),
@@ -58,10 +64,11 @@ const baggageService = {
     };
   },
 
-  async getAll(branchName = null) {
+  async getAll(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const response = await apiClient.get("/orders", {
       params: { branchId, limit: 200 },
+      signal,
     });
     return getItems(response).map(mapOrder).filter(Boolean);
   },
@@ -97,6 +104,7 @@ const baggageService = {
     if (!baggageItems.length) throw new Error("Kamida bitta bagaj razmerini tanlang");
     const paymentType = toPaymentType(data.payment);
     if (!paymentType) throw new Error("To'lov turi tanlanmagan");
+    const idempotencyKey = data.idempotencyKey || globalThis.crypto?.randomUUID?.() || `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const response = await apiClient.post("/orders", {
       branchId,
       clientName: data.client,
@@ -123,7 +131,7 @@ const baggageService = {
         discountAmount: item.discountAmount || 0,
         currency: item.currency || data.currency || "UZS",
       })).filter((item) => item.lockerId && item.size && Number(item.count || 0) > 0),
-    });
+    }, { headers: { "Idempotency-Key": idempotencyKey } });
     const responseData = getData(response, {});
     const order = mapOrder(responseData.order || responseData);
     return {
@@ -165,15 +173,16 @@ const baggageService = {
     return mapOrder(getData(response));
   },
 
-  async closeDebt(id, data) {
-    const order = await this.getById(id);
-    if (!order.debtId) throw new Error("Qarz topilmadi");
+  async closeDebt(id, data = {}) {
+    const order = data.debtId ? null : await this.getById(id);
+    const debtId = data.debtId || order?.debtId;
+    if (!debtId) throw new Error("Qarz topilmadi");
     const paymentType = toPaymentType(data.payment);
     if (!paymentType) throw new Error("To'lov turi tanlanmagan");
-    const response = await apiClient.post(`/debts/${order.debtId}/close`, {
-      amount: Number(data.amount || order.debtAmount || 0),
+    const response = await apiClient.post(`/debts/${debtId}/close`, {
+      amount: Number(data.amount ?? order?.debtAmount ?? 0),
       paymentType,
-      currency: data.currency || order.currency,
+      currency: data.currency || order?.currency,
       note: data.note || "",
     });
     return getData(response);
@@ -204,13 +213,19 @@ const baggageService = {
     return safeLockers.reduce((sum, locker) => sum + Number(locker.price || locker.originalPrice || 0), 0);
   },
 
-  async getCustomerHistory({ phone, passport, branchName }) {
+  async getCustomerHistory({ phone, passport, branchName, signal }) {
     if (!phone && !passport) return { visits: 0, orders: [], activeOrders: [], duplicateOrders: [] };
-    const orders = await this.getAll(branchName);
-    const matchedOrders = asArray(orders).filter((order) => (phone && order.phone === phone) || (passport && order.passport === passport));
+    const page = await this.getPage({
+      branchName,
+      phone,
+      passport,
+      limit: 50,
+      signal,
+    });
+    const matchedOrders = asArray(page.items);
     const activeOrders = matchedOrders.filter((order) => order.status === "Aktiv" || order.status === "Kechikdi");
     return {
-      visits: matchedOrders.length,
+      visits: Number(page.pagination?.total || matchedOrders.length),
       orders: matchedOrders,
       activeOrders,
       duplicateOrders: activeOrders,

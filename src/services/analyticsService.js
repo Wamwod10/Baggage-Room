@@ -29,12 +29,12 @@ const periodToParams = (period) => {
 const objectKeys = (...objects) => [...new Set(objects.flatMap((object) => Object.keys(object || {})))];
 
 const analyticsService = {
-  async getData(period = "all", branchName = null) {
+  async getData(period = "all", branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const reportParams = { branchId, ...periodToParams(period) };
     const [dashboard, reports] = await Promise.all([
-      apiClient.get("/analytics/dashboard", { params: { branchId } }),
-      apiClient.get("/analytics/reports", { params: reportParams }),
+      apiClient.get("/analytics/dashboard", { params: { branchId }, signal }),
+      apiClient.get("/analytics/reports", { params: reportParams, signal }),
     ]);
 
     const dashboardData = getData(dashboard, {}) || {};

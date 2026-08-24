@@ -63,13 +63,13 @@ const mapDashboard = (data = {}) => ({
 const dashboardService = {
   sync() {},
 
-  async getData(branchName = null) {
+  async getData(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
     const [dashboard, notifications, audit, cash] = await Promise.all([
-      apiClient.get("/analytics/dashboard", { params: { branchId } }),
-      apiClient.get("/notifications", { params: { branchId, limit: 20 } }),
-      apiClient.get("/audit", { params: { branchId, limit: 20 } }),
-      apiClient.get("/cash-movements", { params: { branchId, limit: 20 } }),
+      apiClient.get("/analytics/dashboard", { params: { branchId }, signal }),
+      apiClient.get("/notifications", { params: { branchId, isRead: "false", limit: 20 }, signal }),
+      apiClient.get("/audit", { params: { branchId, limit: 20 }, signal }),
+      apiClient.get("/cash-movements", { params: { branchId, limit: 20 }, signal }),
     ]);
 
     return {
@@ -84,9 +84,9 @@ const dashboardService = {
     return (await this.getData(branchName)).stats;
   },
 
-  async getLiveActivity(limit = 8, branchName = null) {
+  async getLiveActivity(limit = 8, branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/audit", { params: { branchId, limit } });
+    const response = await apiClient.get("/audit", { params: { branchId, limit }, signal });
     return getItems(response).map(mapActivityLog);
   },
 };

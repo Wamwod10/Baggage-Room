@@ -67,11 +67,11 @@ export default function Shifts() {
     error,
     retry,
   } = usePageResource(
-    async () => {
+    async ({ signal } = {}) => {
       const requestedBranch = branchName;
       const [shifts, currentShift] = await Promise.all([
-        shiftService.getAll(requestedBranch),
-        shiftService.getCurrent(requestedBranch),
+        shiftService.getAll(requestedBranch, { signal }),
+        shiftService.getCurrent(requestedBranch, { signal }),
       ]);
       return { branchName: requestedBranch, shifts: asArray(shifts), currentShift: currentShift || null };
     },

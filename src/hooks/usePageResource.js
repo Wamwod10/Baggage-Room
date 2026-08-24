@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-const LOADING_DELAY = 140;
-
 export default function usePageResource(loader, dependencies = [], initialData = null) {
   const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState({
@@ -12,44 +10,41 @@ export default function usePageResource(loader, dependencies = [], initialData =
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
 
-    const loadingTimer = window.setTimeout(() => {
-      if (active) {
-        setState((prev) => ({
-          ...prev,
-          isLoading: prev.data === initialData,
-          error: null,
-        }));
-      }
-    }, 0);
+    queueMicrotask(() => {
+      if (!active) return;
+      setState((previous) => ({
+        ...previous,
+        isLoading: previous.data == null || previous.data === initialData,
+        error: null,
+      }));
+    });
 
-    const timer = window.setTimeout(() => {
-      Promise.resolve()
-        .then(loader)
-        .then((data) => {
-          if (active) {
-            setState({
-              data,
-              isLoading: false,
-              error: null,
-            });
-          }
-        })
-        .catch((error) => {
-          if (active) {
-            setState((previous) => ({
-              data: previous.data ?? initialData,
-              isLoading: false,
-              error,
-            }));
-          }
-        });
-    }, LOADING_DELAY);
+    Promise.resolve()
+      .then(() => loader({ signal: controller.signal }))
+      .then((data) => {
+        if (active) {
+          setState({
+            data,
+            isLoading: false,
+            error: null,
+          });
+        }
+      })
+      .catch((error) => {
+        if (active && !error?.cancelled && error?.code !== "ERR_CANCELED") {
+          setState((previous) => ({
+            data: previous.data ?? initialData,
+            isLoading: false,
+            error,
+          }));
+        }
+      });
 
     return () => {
       active = false;
-      window.clearTimeout(loadingTimer);
-      window.clearTimeout(timer);
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...dependencies, retryKey]);

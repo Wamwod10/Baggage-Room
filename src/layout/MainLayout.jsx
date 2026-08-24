@@ -2,23 +2,10 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import notificationService from "../services/notificationService";
-import { useAuth } from "../store/AuthContext";
 import "./mainLayout.scss";
 
 export default function MainLayout() {
-  const { effectiveBranch } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    notificationService.checkDelayedTelegramAlerts(effectiveBranch);
-
-    const interval = setInterval(() => {
-      notificationService.checkDelayedTelegramAlerts(effectiveBranch);
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [effectiveBranch]);
 
   useEffect(() => {
     if (!sidebarOpen) return;

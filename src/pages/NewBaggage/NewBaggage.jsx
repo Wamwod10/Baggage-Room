@@ -101,17 +101,19 @@ export default function NewBaggage() {
     error,
     retry,
   } = usePageResource(
-    async () => {
-      const [lockers, orders, allOrders, tariffs] = await Promise.all([
-        lockerService.getAll(effectiveBranch || branch),
-        baggageService.getAll(effectiveBranch || branch),
-        baggageService.getAll(),
-        settingsService.getTariffs(effectiveBranch || branch),
+    async ({ signal } = {}) => {
+      const [lockers, orderCountPage, tariffs] = await Promise.all([
+        lockerService.getAll(effectiveBranch || branch, { signal }),
+        baggageService.getPage({ branchName: null, page: 1, limit: 1, signal }),
+        settingsService.getTariffs(effectiveBranch || branch, { signal }),
       ]);
       const safeLockers = asArray(lockers);
-      const safeOrders = asArray(orders);
-      const safeAllOrders = asArray(allOrders);
-      return { lockers: safeLockers, orders: safeOrders, orderCount: safeAllOrders.length, tariffs };
+      return {
+        lockers: safeLockers,
+        orders: [],
+        orderCount: Number(orderCountPage?.pagination?.total || 0),
+        tariffs,
+      };
     },
     [effectiveBranch, branch, refreshKey],
     { lockers: [], orders: [], orderCount: 0, tariffs: [] },
@@ -221,21 +223,37 @@ export default function NewBaggage() {
   };
 
   useEffect(() => {
-    let active = true;
-    baggageService
-      .getCustomerHistory({
-        phone: form.phone,
-        passport: form.passport,
-        branchName: effectiveBranch,
-      })
-      .then((items) => {
-        if (active) setCustomerHistory(items && typeof items === "object" ? items : emptyCustomerHistory);
-      })
-      .catch(() => {
-        if (active) setCustomerHistory(emptyCustomerHistory);
+    const phone = form.phone.trim();
+    const passport = form.passport.trim();
+    const hasSearchableIdentity = phone.length >= 5 || passport.length >= 3;
+    const controller = new AbortController();
+
+    if (!hasSearchableIdentity) {
+      queueMicrotask(() => {
+        if (!controller.signal.aborted) setCustomerHistory(emptyCustomerHistory);
       });
+      return () => controller.abort();
+    }
+
+    const timer = window.setTimeout(() => {
+      baggageService
+        .getCustomerHistory({
+          phone: phone.length >= 5 ? phone : "",
+          passport: passport.length >= 3 ? passport : "",
+          branchName: effectiveBranch,
+          signal: controller.signal,
+        })
+        .then((items) => {
+          if (!controller.signal.aborted) setCustomerHistory(items && typeof items === "object" ? items : emptyCustomerHistory);
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted && !error?.cancelled) setCustomerHistory(emptyCustomerHistory);
+        });
+    }, 300);
+
     return () => {
-      active = false;
+      window.clearTimeout(timer);
+      controller.abort();
     };
   }, [form.phone, form.passport, effectiveBranch]);
 
@@ -319,16 +337,19 @@ export default function NewBaggage() {
 
   const handleBlockLocker = async () => {
     if (!serviceLocker) return;
+    if (savingAction) return;
+    setSavingAction("locker");
 
     const locker = serviceLocker;
     const reason = serviceReason.trim();
     try {
-      await lockerService.block(locker.branch, locker.number, {
+      await lockerService.block(locker, {
         reason,
         admin: user?.fullName,
       });
     } catch (error) {
       setMessage(t(error.message || "Yacheykani servisga o'tkazishda xatolik yuz berdi."));
+      setSavingAction("");
       return;
     }
     if (selectedLocker?.id === locker.id) {
@@ -342,18 +363,23 @@ export default function NewBaggage() {
     void telegramService.sendLockerBlock(locker, reason).catch(() => {
       // Telegram is best-effort from the local frontend.
     });
+    setSavingAction("");
   };
 
   const handleUnblockLocker = async (locker) => {
+    if (savingAction) return;
+    setSavingAction("locker");
     try {
-      await lockerService.unblock(locker.branch, locker.number, {
+      await lockerService.unblock(locker, {
         admin: user?.fullName,
       });
     } catch (error) {
       setMessage(t(error.message || "Yacheykani qaytarishda xatolik yuz berdi."));
+      setSavingAction("");
       return;
     }
     setRefreshKey((value) => value + 1);
+    setSavingAction("");
   };
 
   const handleSave = async (print = false) => {
@@ -477,11 +503,13 @@ export default function NewBaggage() {
     }
 
     const orderLabel = order?.orderNumber || "-";
-    const telegramStatus = order?.telegram
-      ? order.telegram.sent
+    const telegramStatus = order?.telegram?.pending
+      ? ""
+      : order?.telegram?.sent
         ? ` ${t("Telegram xabar yuborildi.")}`
-        : ` ${t("Telegram yuborilmadi")}: ${order.telegram.message || order.telegram.reason || "-"}`
-      : "";
+        : order?.telegram?.sent === false
+          ? ` ${t("Telegram yuborilmadi")}: ${order.telegram.message || order.telegram.reason || "-"}`
+          : "";
     setMessage(
       (print
         ? `${orderLabel} ${t("saqlandi va chek chiqarishga tayyor")}`
@@ -947,7 +975,7 @@ export default function NewBaggage() {
               />
             </label>
 
-            <button type="button" className="locker-service-confirm" onClick={handleBlockLocker}>
+            <button type="button" className="locker-service-confirm" onClick={handleBlockLocker} disabled={Boolean(savingAction)}>
               <Wrench size={16} />
               {t("Servisga o'tkazish")}
             </button>

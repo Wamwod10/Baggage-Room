@@ -12,9 +12,9 @@ const settingsService = {
     return saveSettings(data);
   },
 
-  async getTariffs(branchName = null) {
+  async getTariffs(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/tariffs", { params: { branchId } });
+    const response = await apiClient.get("/tariffs", { params: { branchId }, signal });
     return getArrayData(response).map(mapTariff);
   },
 

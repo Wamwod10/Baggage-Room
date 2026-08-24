@@ -3,9 +3,9 @@ import branchService from "./branchService";
 import { getItems, mapActivityLog } from "./apiMappers";
 
 const activityService = {
-  async getAll(branchName = null) {
+  async getAll(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const response = await apiClient.get("/audit", { params: { branchId, limit: 200 } });
+    const response = await apiClient.get("/audit", { params: { branchId, limit: 200 }, signal });
     return getItems(response).map(mapActivityLog);
   },
 

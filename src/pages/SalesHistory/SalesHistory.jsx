@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarDays, Edit3, Eye, Search } from "lucide-react";
 import baggageService from "../../services/baggageService";
@@ -62,6 +62,20 @@ export default function SalesHistory() {
   const [debtClosePayment, setDebtClosePayment] = useState("Naqd");
   const [editOrder, setEditOrder] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [pendingAction, setPendingAction] = useState("");
+  const pendingActionRef = useRef(false);
+
+  const beginAction = (action) => {
+    if (pendingActionRef.current) return false;
+    pendingActionRef.current = true;
+    setPendingAction(action);
+    return true;
+  };
+
+  const endAction = () => {
+    pendingActionRef.current = false;
+    setPendingAction("");
+  };
 
   const {
     data: ordersPage = emptyOrdersPage,
@@ -69,13 +83,14 @@ export default function SalesHistory() {
     error,
     retry,
   } = usePageResource(
-    () => baggageService.getPage({
+    ({ signal } = {}) => baggageService.getPage({
       branchName: effectiveBranch || (branch === "Barcha filiallar" ? null : branch),
       page,
       limit: 50,
       search: debouncedSearch || orderIdFromUrl || "",
       status: status === "Status" ? undefined : status,
       payment: payment === "Payment" ? undefined : payment,
+      signal,
     }),
     [effectiveBranch, branch, page, debouncedSearch, orderIdFromUrl, payment, status, refreshKey],
     emptyOrdersPage,
@@ -112,7 +127,8 @@ export default function SalesHistory() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setDebouncedSearch(search.trim());
+      const query = search.trim();
+      setDebouncedSearch(query.length >= 2 ? query : "");
       setPage(1);
     }, 250);
     return () => window.clearTimeout(timer);
@@ -215,6 +231,7 @@ export default function SalesHistory() {
       return;
     }
 
+    if (!beginAction("edit")) return;
     try {
       await baggageService.update(editOrder.id, {
         clientName: editForm.clientName.trim(),
@@ -238,6 +255,8 @@ export default function SalesHistory() {
     } catch (error) {
       setStatusMessage(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
       return;
+    } finally {
+      endAction();
     }
 
     setRefreshKey((value) => value + 1);
@@ -251,9 +270,11 @@ export default function SalesHistory() {
     if (!order) return;
     const updatedOrder = { ...order, debtAmount: 0 };
 
+    if (!beginAction("debt")) return;
     try {
       await baggageService.closeDebt(order.id, {
         amount: order.debtAmount,
+        debtId: order.debtId,
         payment: debtClosePayment,
         currency: order.currency,
         admin: "Admin",
@@ -262,6 +283,8 @@ export default function SalesHistory() {
     } catch (error) {
       setStatusMessage(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
+    } finally {
+      endAction();
     }
 
     setSelectedOrder(updatedOrder);
@@ -581,7 +604,7 @@ export default function SalesHistory() {
               </div>
             )}
 
-            <button type="button" className="history-save-edit" onClick={handleSaveEdit}>
+            <button type="button" className="history-save-edit" onClick={handleSaveEdit} disabled={Boolean(pendingAction)}>
               <Edit3 size={17} />
               {t("Saqlash")}
             </button>
@@ -607,7 +630,7 @@ export default function SalesHistory() {
                 ))}
               </GlassSelect>
             </label>
-            <button type="button" className="history-debt-close" onClick={handleCloseDebt}>
+            <button type="button" className="history-debt-close" onClick={handleCloseDebt} disabled={Boolean(pendingAction)}>
               {t("Qarz yopish")}
             </button>
           </div>

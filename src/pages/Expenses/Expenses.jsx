@@ -38,7 +38,7 @@ export default function Expenses() {
     error,
     retry,
   } = usePageResource(
-    () => expenseService.getAll(effectiveBranch),
+    ({ signal } = {}) => expenseService.getAll(effectiveBranch, { signal }),
     [effectiveBranch, refreshKey],
     [],
   );

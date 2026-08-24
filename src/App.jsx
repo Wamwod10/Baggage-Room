@@ -9,14 +9,14 @@ import StateBlock from "./components/StateBlock/StateBlock";
 
 import MainLayout from "./layout/MainLayout";
 import Login from "./pages/Login/Login";
-import Dashboard from "./pages/Dashboard/Dashboard";
-import NewBaggage from "./pages/NewBaggage/NewBaggage";
-import ActiveBaggage from "./pages/ActiveBaggage/ActiveBaggage";
-import SalesHistory from "./pages/SalesHistory/SalesHistory";
-import Expenses from "./pages/Expenses/Expenses";
-import Shifts from "./pages/Shifts/Shifts";
-import Notifications from "./pages/Notifications/Notifications";
-import Settings from "./pages/Settings/Settings";
+const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
+const NewBaggage = lazy(() => import("./pages/NewBaggage/NewBaggage"));
+const ActiveBaggage = lazy(() => import("./pages/ActiveBaggage/ActiveBaggage"));
+const SalesHistory = lazy(() => import("./pages/SalesHistory/SalesHistory"));
+const Expenses = lazy(() => import("./pages/Expenses/Expenses"));
+const Shifts = lazy(() => import("./pages/Shifts/Shifts"));
+const Notifications = lazy(() => import("./pages/Notifications/Notifications"));
+const Settings = lazy(() => import("./pages/Settings/Settings"));
 
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
 
@@ -80,7 +80,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<HomeRoute />} />
+        <Route index element={<LazyPage><HomeRoute /></LazyPage>} />
         <Route
           path="analytics"
           element={
@@ -89,18 +89,20 @@ function AppRoutes() {
             </Suspense>
           }
         />
-        <Route path="new-baggage" element={<NewBaggage />} />
-        <Route path="active-baggage" element={<ActiveBaggage />} />
-        <Route path="sales-history" element={<SalesHistory />} />
-        <Route path="expenses" element={<Expenses />} />
-        <Route path="shifts" element={<Shifts />} />
-        <Route path="notifications" element={<Notifications />} />
+        <Route path="new-baggage" element={<LazyPage><NewBaggage /></LazyPage>} />
+        <Route path="active-baggage" element={<LazyPage><ActiveBaggage /></LazyPage>} />
+        <Route path="sales-history" element={<LazyPage><SalesHistory /></LazyPage>} />
+        <Route path="expenses" element={<LazyPage><Expenses /></LazyPage>} />
+        <Route path="shifts" element={<LazyPage><Shifts /></LazyPage>} />
+        <Route path="notifications" element={<LazyPage><Notifications /></LazyPage>} />
         <Route
           path="settings"
           element={
-            <SuperAdminRoute>
-              <Settings />
-            </SuperAdminRoute>
+            <LazyPage>
+              <SuperAdminRoute>
+                <Settings />
+              </SuperAdminRoute>
+            </LazyPage>
           }
         />
       </Route>
@@ -114,6 +116,10 @@ function RouteFallback() {
   const { t } = useTranslation();
 
   return <AppLoader label={`${t("Loading")}...`} />;
+}
+
+function LazyPage({ children }) {
+  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
 }
 
 export default function App() {
