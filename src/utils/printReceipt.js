@@ -275,6 +275,8 @@ const getPrintRoot = () => {
   return root;
 };
 
+let activeCleanup = null;
+
 export const printReceipt = (selector = "#thermal-receipt, .receipt-paper") => {
   const safeSelector =
     typeof selector === "string" ? selector : "#thermal-receipt, .receipt-paper";
@@ -286,6 +288,9 @@ export const printReceipt = (selector = "#thermal-receipt, .receipt-paper") => {
   }
 
   ensurePrintStyle();
+
+  // Repeated prints must not leave an old afterprint listener/timer alive.
+  activeCleanup?.();
 
   const root = getPrintRoot();
   root.innerHTML = "";
@@ -300,10 +305,12 @@ export const printReceipt = (selector = "#thermal-receipt, .receipt-paper") => {
     document.body.classList.remove("receipt-printing");
     root.innerHTML = "";
     window.removeEventListener("afterprint", cleanup);
+    if (activeCleanup === cleanup) activeCleanup = null;
   };
 
+  activeCleanup = cleanup;
   window.addEventListener("afterprint", cleanup);
   document.body.classList.add("receipt-printing");
-  cleanupTimer = window.setTimeout(cleanup, 120000);
+  cleanupTimer = window.setTimeout(cleanup, 30000);
   window.print();
 };

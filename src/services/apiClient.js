@@ -85,6 +85,18 @@ const apiClient = axios.create({
   },
 });
 
+const statusFallbackMessage = (status) => {
+  if (status >= 500) return "Serverda ichki xatolik yuz berdi. Qayta urinib ko'ring.";
+  return ({
+    400: "So'rov ma'lumotlari noto'g'ri.",
+    401: "Sessiya tugagan. Qayta kiring.",
+    403: "Bu amal uchun ruxsat yo'q.",
+    404: "So'ralgan ma'lumot topilmadi.",
+    409: "Ma'lumot boshqa operator tomonidan o'zgartirilgan. Yangilab qayta urinib ko'ring.",
+    429: "Juda ko'p so'rov yuborildi. Birozdan keyin qayta urinib ko'ring.",
+  }[status]);
+};
+
 // React StrictMode intentionally mounts effects twice in development. Keeping
 // identical GET requests in-flight also protects production from two mounted
 // consumers asking for the same resource at the same time.
@@ -226,6 +238,7 @@ apiClient.interceptors.response.use(
         payload?.message === "Validation failed" && firstValidationMessage
           ? firstValidationMessage
           : payload?.message ||
+            statusFallbackMessage(status) ||
             (error.code === "ECONNABORTED"
               ? "Server javobi kechikdi. Qayta urinib ko'ring."
               : !error.response
@@ -242,4 +255,11 @@ apiClient.interceptors.response.use(
 );
 
 export { TOKEN_KEY, AUTH_EVENT, getAuthContextKey };
+export const __apiClientTest = {
+  inFlightCount: () => inFlightGets.size,
+  resetInFlight: () => {
+    for (const entry of inFlightGets.values()) entry.controller.abort();
+    inFlightGets.clear();
+  },
+};
 export default apiClient;

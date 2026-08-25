@@ -1,6 +1,7 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
-import { asArray, getData, getItems, mapActivityLog, mapCashMovement, mapNotification, mapShift } from "./apiMappers";
+import { asArray, getData, getItems, mapActivityLog, mapShift } from "./apiMappers";
+import notificationService from "./notificationService";
 
 const toNumber = (value) => Number(value ?? 0) || 0;
 
@@ -65,19 +66,16 @@ const dashboardService = {
 
   async getData(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
-    const [dashboard, notifications, audit, cash] = await Promise.all([
-      apiClient.get("/analytics/dashboard", { params: { branchId }, signal }),
-      apiClient.get("/notifications", { params: { branchId, isRead: "false", limit: 20 }, signal }),
-      apiClient.get("/audit", { params: { branchId, limit: 20 }, signal }),
-      apiClient.get("/cash-movements", { params: { branchId, limit: 20 }, signal }),
-    ]);
+    const dashboard = await apiClient.get("/analytics/dashboard", { params: { branchId }, signal });
+    return mapDashboard(getData(dashboard, {}));
+  },
 
-    return {
-      ...mapDashboard(getData(dashboard, {})),
-      notifications: getItems(notifications).map(mapNotification),
-      activityLogs: getItems(audit).map(mapActivityLog),
-      cashMovements: getItems(cash).map(mapCashMovement),
-    };
+  async getSecondaryData(branchName = null, { signal } = {}) {
+    const [notifications, activityLogs] = await Promise.all([
+      notificationService.getSmartAlerts(branchName, { signal }),
+      this.getLiveActivity(20, branchName, { signal }),
+    ]);
+    return { notifications, activityLogs };
   },
 
   async getStats(branchName = null) {

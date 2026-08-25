@@ -12,6 +12,7 @@ import { useTranslation } from "../../i18n/useTranslation";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./expenses.scss";
 import { formatMoneyByCurrency } from "../../utils/currency";
+import { createIdempotencyKey } from "../../utils/idempotency";
 
 const getInitialForm = (defaultBranch = getBranchNames()[0] || "") => ({
   category: "Printer qog'ozi",
@@ -33,6 +34,7 @@ export default function Expenses() {
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const createExpenseKeyRef = useRef(createIdempotencyKey("expense-create"));
   const deletingExpenseIdsRef = useRef(new Set());
   const [deletingExpenseIds, setDeletingExpenseIds] = useState([]);
 
@@ -105,7 +107,7 @@ export default function Expenses() {
         branch,
         amount,
         currency: form.currency || "UZS",
-      });
+      }, { idempotencyKey: createExpenseKeyRef.current });
       setStatusMessage(`${createdExpense?.category || form.category} saqlandi: ${formatMoney(amount)}`);
     } catch (error) {
       fail(t(error.message || "Xarajatni saqlashda xatolik yuz berdi."));
@@ -116,6 +118,7 @@ export default function Expenses() {
     }
 
     setRefreshKey((value) => value + 1);
+    createExpenseKeyRef.current = createIdempotencyKey("expense-create");
     setFormError("");
     setForm(getInitialForm(defaultBranch));
   };

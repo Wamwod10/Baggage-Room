@@ -1,6 +1,7 @@
 import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { asArray, getArrayData, getData, getItems, mapOrder, mapLocker, toPaymentType } from "./apiMappers";
+import { idempotencyHeaders } from "../utils/idempotency";
 
 const statusByLabel = {
   Aktiv: "ACTIVE",
@@ -147,7 +148,7 @@ const baggageService = {
     return getData(response);
   },
 
-  async update(id, data) {
+  async update(id, data, { idempotencyKey } = {}) {
     const payload = {
       ...data,
       paymentType: data.payment !== undefined ? toPaymentType(data.payment) : data.paymentType,
@@ -158,11 +159,11 @@ const baggageService = {
     if (data.overtimePaymentType !== undefined && !payload.overtimePaymentType) throw new Error("Qo'shimcha to'lov turi tanlanmagan");
     if (data.doplataPaymentType !== undefined && !payload.doplataPaymentType) throw new Error("Qo'shimcha to'lov turi tanlanmagan");
     delete payload.payment;
-    const response = await apiClient.patch(`/orders/${id}`, payload);
+    const response = await apiClient.patch(`/orders/${id}`, payload, idempotencyHeaders(idempotencyKey));
     return mapOrder(getData(response));
   },
 
-  async pickup(id, data = {}) {
+  async pickup(id, data = {}, { idempotencyKey } = {}) {
     const response = await apiClient.post(`/orders/${id}/pickup`, {
       overtimeAmount: Number(data.overtimeAmount || 0),
       debtPaidAmount: data.debtPaidAmount !== undefined ? Number(data.debtPaidAmount) : undefined,
@@ -170,11 +171,11 @@ const baggageService = {
       overtimePaymentType: toPaymentType(data.overtimePayment || data.overtimePaymentType),
       doplataPaymentType: toPaymentType(data.overtimePayment || data.doplataPaymentType),
       currency: data.currency,
-    });
+    }, idempotencyHeaders(idempotencyKey));
     return mapOrder(getData(response));
   },
 
-  async closeDebt(id, data = {}) {
+  async closeDebt(id, data = {}, { idempotencyKey } = {}) {
     const order = data.debtId ? null : await this.getById(id);
     const debtId = data.debtId || order?.debtId;
     if (!debtId) throw new Error("Qarz topilmadi");
@@ -185,7 +186,7 @@ const baggageService = {
       paymentType,
       currency: data.currency || order?.currency,
       note: data.note || "",
-    });
+    }, idempotencyHeaders(idempotencyKey));
     return getData(response);
   },
 
@@ -233,8 +234,8 @@ const baggageService = {
     };
   },
 
-  async cancel(id, reason) {
-    const response = await apiClient.post(`/orders/${id}/cancel`, { cancelReason: reason });
+  async cancel(id, reason, { idempotencyKey } = {}) {
+    const response = await apiClient.post(`/orders/${id}/cancel`, { cancelReason: reason }, idempotencyHeaders(idempotencyKey));
     return mapOrder(getData(response));
   },
 

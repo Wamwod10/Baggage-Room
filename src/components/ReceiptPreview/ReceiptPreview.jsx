@@ -5,6 +5,7 @@ import settingsService from "../../services/settingsService";
 import { printReceipt } from "../../utils/printReceipt";
 import { formatMoneyByCurrency } from "../../utils/currency";
 import { getPaymentLabel } from "../../utils/paymentLabels";
+import { getReceiptTimestamp } from "../../utils/receiptTime";
 import "./receiptPreview.scss";
 
 const hasLockerPrice = (locker) =>
@@ -35,6 +36,7 @@ export default function ReceiptPreview({ order, onClose }) {
   const logoEnabled = printerSettings.logoEnabled !== false;
   const logoSrc = printerSettings.logoSrc || "/1.jpg";
   const totalPrice = Number(order.realPaidAmount || order.finalPrice || 0);
+  const receiptTimestamp = getReceiptTimestamp(order);
   const lockers =
     Array.isArray(order.lockers) && order.lockers.length ? order.lockers : [];
   const money = (value) => formatMoneyByCurrency(value, order.currency);
@@ -109,7 +111,7 @@ export default function ReceiptPreview({ order, onClose }) {
 
             <div className="receipt-row">
               <span>{t("Sana")}</span>
-              <b>{formatDateTime(new Date())}</b>
+              <b>{formatDateTime(receiptTimestamp)}</b>
             </div>
 
             <div className="receipt-row">

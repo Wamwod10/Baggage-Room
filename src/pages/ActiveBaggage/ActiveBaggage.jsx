@@ -25,6 +25,8 @@ import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
+import { formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
+import { createIdempotencyKey } from "../../utils/idempotency";
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -38,21 +40,6 @@ const hasLockerPrice = (locker) =>
     Number.isFinite(Number(locker.price));
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
-
-const toDateTimeLocal = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const offset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
-};
-
-const fromDateTimeLocal = (value) => {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-};
 
 const lockerPriceLabel = (order, t) => {
   const lockers = Array.isArray(order.lockers) ? order.lockers : [];
@@ -126,6 +113,11 @@ export default function ActiveBaggage() {
   const telegramSendingRef = useRef(new Set());
   const [pendingAction, setPendingAction] = useState("");
   const pendingActionRef = useRef(false);
+  const mutationKeysRef = useRef({});
+
+  const startLogicalMutation = (name) => {
+    mutationKeysRef.current[name] = createIdempotencyKey(name);
+  };
 
   const beginAction = (action) => {
     if (pendingActionRef.current) return false;
@@ -213,6 +205,7 @@ export default function ActiveBaggage() {
   };
 
   const openPickup = (order) => {
+    startLogicalMutation("order-pickup");
     setPickupOrder(order);
     setPickupForm({
       payment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
@@ -253,7 +246,7 @@ export default function ActiveBaggage() {
         overtimeAmount: overtimeMinor,
         debtPaidAmount: pickupOrder.debtAmount || undefined,
         admin: user?.fullName,
-      });
+      }, { idempotencyKey: mutationKeysRef.current["order-pickup"] });
     } catch (error) {
       setFormError(t(error.message || "Pickup tasdiqlashda xatolik yuz berdi."));
       return;
@@ -267,6 +260,7 @@ export default function ActiveBaggage() {
   };
 
   const openCloseDebt = (order) => {
+    startLogicalMutation("debt-close");
     setDebtCloseOrder(order);
     setDebtClosePayment("Naqd");
     setFormError("");
@@ -284,7 +278,7 @@ export default function ActiveBaggage() {
         currency: order.currency,
         admin: user?.fullName,
         note: "Debt closed from active baggage",
-      });
+      }, { idempotencyKey: mutationKeysRef.current["debt-close"] });
     } catch (error) {
       setFormError(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
@@ -296,18 +290,20 @@ export default function ActiveBaggage() {
   };
 
   const handleCancel = (order) => {
+    startLogicalMutation("order-cancel");
     setCancelOrder(order);
     setCancelReason("");
     setFormError("");
   };
 
   const openEdit = (order) => {
+    startLogicalMutation("order-edit");
     setEditOrder(order);
     setEditForm({
       clientName: order.client || "",
       phone: order.phone || "",
       passport: order.passport || "",
-      checkOut: toDateTimeLocal(order.checkOut),
+      checkOut: formatTashkentInputDateTime(order.checkOut),
       payment: getPaymentLabel(order.payment),
       currency: order.currency || "UZS",
       finalAmount: String(fromMinorUnits(order.finalAmount || order.finalPrice || 0, order.currency || "UZS")),
@@ -349,7 +345,7 @@ export default function ActiveBaggage() {
         clientName: editForm.clientName.trim(),
         phone: editForm.phone.trim(),
         passport: editForm.passport.trim(),
-        checkOut: fromDateTimeLocal(editForm.checkOut),
+        checkOut: parseTashkentInputToIso(editForm.checkOut),
         payment: editForm.payment,
         currency: editForm.currency,
         finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
@@ -361,7 +357,7 @@ export default function ActiveBaggage() {
           size: item.size,
           count: Number(item.count || 1),
         })),
-      });
+      }, { idempotencyKey: mutationKeysRef.current["order-edit"] });
     } catch (error) {
       setFormError(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
       return;
@@ -383,7 +379,7 @@ export default function ActiveBaggage() {
 
     if (!beginAction("cancel")) return;
     try {
-      await baggageService.cancel(cancelOrder.id, cancelReason.trim());
+      await baggageService.cancel(cancelOrder.id, cancelReason.trim(), { idempotencyKey: mutationKeysRef.current["order-cancel"] });
     } catch (error) {
       setFormError(t(error.message || "Orderni bekor qilishda xatolik yuz berdi."));
       return;
@@ -403,6 +399,7 @@ export default function ActiveBaggage() {
   };
 
   const openTransfer = (order) => {
+    startLogicalMutation("locker-transfer");
     const orderLockers = asArray(order.lockers);
     const firstLocker = orderLockers[0];
     setTransferOrder(order);
@@ -454,6 +451,7 @@ export default function ActiveBaggage() {
         fromLockerId: source.lockerId || source.id,
         toLockerId: target.id,
         note: transferForm.reason,
+        idempotencyKey: mutationKeysRef.current["locker-transfer"],
       });
     } catch (error) {
       setFormError(t(error.message || "Transfer saqlashda xatolik yuz berdi."));

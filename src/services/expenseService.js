@@ -2,6 +2,7 @@ import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { getData, getItems, mapExpense } from "./apiMappers";
 import { toMinorUnits } from "../utils/currency";
+import { idempotencyHeaders } from "../utils/idempotency";
 
 const expenseService = {
   async getAll(branchName = null, { signal } = {}) {
@@ -10,7 +11,7 @@ const expenseService = {
     return getItems(response).map(mapExpense);
   },
 
-  async create(data) {
+  async create(data, { idempotencyKey } = {}) {
     const branchId = await branchService.getBranchIdByName(data.branch);
     const reason = data.reason || data.note || data.category;
     const response = await apiClient.post("/expenses", {
@@ -19,7 +20,7 @@ const expenseService = {
       reason,
       amount: toMinorUnits(data.amount || 0, data.currency || "UZS"),
       currency: data.currency || "UZS",
-    });
+    }, idempotencyHeaders(idempotencyKey));
     return mapExpense(getData(response));
   },
 

@@ -1,6 +1,9 @@
-import apiClient from "./apiClient";
+import apiClient, { getAuthContextKey } from "./apiClient";
 import branchService from "./branchService";
 import { asArray, getData, getItems, mapActivityLog, mapNotification } from "./apiMappers";
+
+const SMART_ALERT_TTL_MS = 10000;
+const smartAlertCache = new Map();
 
 const notificationService = {
   async getAlerts(branchName = null, { signal } = {}) {
@@ -17,9 +20,15 @@ const notificationService = {
 
   async getSmartAlerts(branchName = null, { signal } = {}) {
     const branchId = await branchService.getBranchIdByName(branchName);
+    const cacheKey = `${getAuthContextKey()}|${branchId || "all"}`;
+    const cached = smartAlertCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < SMART_ALERT_TTL_MS) return cached.value;
     const response = await apiClient.get("/notifications", { params: { branchId, isRead: "false", limit: 20 }, signal });
     const alerts = getItems(response).map(mapNotification);
-    return asArray(alerts).filter((item) => !item.isRead).slice(0, 20);
+    const value = asArray(alerts).filter((item) => !item.isRead).slice(0, 20);
+    smartAlertCache.set(cacheKey, { at: Date.now(), value });
+    if (smartAlertCache.size > 12) smartAlertCache.delete(smartAlertCache.keys().next().value);
+    return value;
   },
 
   async markRead(id) {

@@ -2,6 +2,7 @@ import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { getArrayData, getData, mapShift } from "./apiMappers";
 import { toMinorUnits } from "../utils/currency";
+import { idempotencyHeaders } from "../utils/idempotency";
 
 const currencies = ["UZS", "USD", "EUR", "RUB"];
 const toMinorCurrencyMap = (values = {}) => Object.fromEntries(
@@ -26,7 +27,7 @@ const shiftService = {
     }
   },
 
-  async open(data) {
+  async open(data, { idempotencyKey } = {}) {
     const branchId = await branchService.getBranchIdByName(data.branch);
     if (!branchId) throw new Error("Filial tanlanmagan");
     const openingCashByCurrency = toMinorCurrencyMap(data.openingCashByCurrency);
@@ -40,21 +41,22 @@ const shiftService = {
       acceptedFromName: data.acceptedFromName || data.receivedFrom || "",
       acceptedByName: data.acceptedByName || data.admin || "",
       handoverToName: data.handoverToName || data.handoverTo || "",
-    });
+    }, idempotencyHeaders(idempotencyKey));
     return mapShift(getData(response));
   },
 
-  async close(branchName, data) {
-    const current = await this.getCurrent(branchName);
-    if (!current) throw new Error("Bu filialda ochiq smena yo'q");
+  async close(branchName, data, { idempotencyKey } = {}) {
+    void branchName;
+    const shiftId = data.shiftId;
+    if (!shiftId) throw new Error("Bu filialda ochiq smena yo'q");
     const closingCashByCurrency = toMinorCurrencyMap(data.closingCashByCurrency);
-    const response = await apiClient.post(`/shifts/${current.id}/close`, {
+    const response = await apiClient.post(`/shifts/${shiftId}/close`, {
       closingCash: closingCashByCurrency.UZS,
       closingCashByCurrency,
       handoverToName: data.handoverToName || data.handoverTo || "",
       salaryAmount: Number(data.salaryAmount || 0),
       salaryReceiver: data.salaryReceiver || "",
-    });
+    }, idempotencyHeaders(idempotencyKey));
     return mapShift(getData(response));
   },
 

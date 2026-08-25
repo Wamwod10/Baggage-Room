@@ -3,6 +3,22 @@ export const TASHKENT_TIME_ZONE = "Asia/Tashkent";
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
 const pad = (value, length = 2) => String(value).padStart(length, "0");
 
+const parseInstant = (value) => {
+  if (value instanceof Date) return new Date(value.getTime());
+  const date = new Date(value);
+  return date;
+};
+
+const isValidWallClock = ({ year, month, day, hour, minute, second = 0 }) => {
+  const normalized = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  return normalized.getUTCFullYear() === year &&
+    normalized.getUTCMonth() === month - 1 &&
+    normalized.getUTCDate() === day &&
+    normalized.getUTCHours() === hour &&
+    normalized.getUTCMinutes() === minute &&
+    normalized.getUTCSeconds() === second;
+};
+
 const shiftedTashkentDate = (date = new Date()) => new Date(new Date(date).getTime() + TASHKENT_OFFSET_MS);
 
 export const getTashkentDateKey = (date = new Date()) => {
@@ -18,7 +34,7 @@ export const getTashkentDateKeyOffset = (offsetDays = 0) => {
 
 export const formatTashkentDateTime = (value, locale = "uz-UZ") => {
   if (!value) return "-";
-  const date = new Date(value);
+  const date = parseInstant(value);
   if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat(locale, {
     timeZone: TASHKENT_TIME_ZONE,
@@ -28,7 +44,7 @@ export const formatTashkentDateTime = (value, locale = "uz-UZ") => {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).format(date);
 };
 
@@ -50,14 +66,26 @@ export const formatTashkentInputDateTime = (date = new Date()) => {
 
 export const parseTashkentInputToIso = (value) => {
   if (!value) return undefined;
-  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
   if (!match) {
-    const date = new Date(value);
+    // API instants must carry Z or an explicit offset. Never let the browser
+    // interpret an unzoned wall-clock using its own timezone.
+    if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(String(value))) return undefined;
+    const date = parseInstant(value);
     return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   }
-  const [, year, month, day, hour, minute] = match;
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  const parts = {
+    year: Number(year),
+    month: Number(month),
+    day: Number(day),
+    hour: Number(hour),
+    minute: Number(minute),
+    second: Number(second),
+  };
+  if (!isValidWallClock(parts)) return undefined;
   const utcMs =
-    Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)) -
+    Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second) -
     TASHKENT_OFFSET_MS;
   return new Date(utcMs).toISOString();
 };

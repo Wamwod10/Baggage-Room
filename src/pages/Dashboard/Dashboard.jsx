@@ -70,20 +70,30 @@ export default function Dashboard() {
   const [salesSending, setSalesSending] = useState(false);
   const salesSendingRef = useRef(false);
   const [salesMessage, setSalesMessage] = useState("");
+  const [secondaryData, setSecondaryData] = useState({ branchName: null, notifications: [], activityLogs: [] });
 
   const {
     data = emptyDashboardData,
     isLoading,
     error,
     retry,
-  } = usePageResource(({ signal } = {}) => {
-    return dashboardService.getData(effectiveBranch, { signal }).then((dashboardData) => ({
-      ...dashboardData,
-      smartAlerts: asArray(dashboardData.notifications)
-        .filter((item) => !item.isRead)
-        .slice(0, 20),
-    }));
-  }, [effectiveBranch, refreshKey], emptyDashboardData);
+  } = usePageResource(
+    ({ signal } = {}) => dashboardService.getData(effectiveBranch, { signal }),
+    [effectiveBranch, refreshKey],
+    emptyDashboardData,
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    dashboardService.getSecondaryData(effectiveBranch, { signal: controller.signal })
+      .then((value) => setSecondaryData({ ...value, branchName: effectiveBranch || null }))
+      .catch((secondaryError) => {
+        if (!secondaryError?.cancelled && import.meta.env.DEV) {
+          console.warn("Dashboard secondary data was not loaded", secondaryError);
+        }
+      });
+    return () => controller.abort();
+  }, [effectiveBranch, refreshKey]);
 
   useEffect(() => {
     let timerId = null;
@@ -116,8 +126,9 @@ export default function Dashboard() {
   const orders = asArray(safeData.orders);
   const lockers = asArray(safeData.lockers);
   const currentShifts = asArray(safeData.currentShifts);
-  const activityLogs = asArray(safeData.activityLogs);
-  const smartAlerts = asArray(safeData.smartAlerts);
+  const secondaryMatchesBranch = secondaryData.branchName === (effectiveBranch || null);
+  const activityLogs = secondaryMatchesBranch ? asArray(secondaryData.activityLogs) : [];
+  const smartAlerts = secondaryMatchesBranch ? asArray(secondaryData.notifications) : [];
 
   const summaryBranches = asArray(safeData.branchSummary);
   const branches = summaryBranches.length

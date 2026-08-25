@@ -31,10 +31,7 @@ import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import "./newBaggage.scss";
-
-const createActionKey = () =>
-  globalThis.crypto?.randomUUID?.() ||
-  `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+import { createIdempotencyKey } from "../../utils/idempotency";
 
 const getInitialForm = (defaultBranch, defaultCurrency = "UZS") => ({
   client: "",
@@ -99,10 +96,11 @@ export default function NewBaggage() {
   const [customerHistory, setCustomerHistory] = useState(emptyCustomerHistory);
   const [savingAction, setSavingAction] = useState("");
   const savingActionRef = useRef(false);
-  const createIdempotencyKeyRef = useRef(createActionKey());
+  const createIdempotencyKeyRef = useRef(createIdempotencyKey("order-create"));
+  const lockerMutationKeysRef = useRef(new Map());
 
   const resetCreateActionKey = () => {
-    createIdempotencyKeyRef.current = createActionKey();
+    createIdempotencyKeyRef.current = createIdempotencyKey("order-create");
   };
 
   const beginSavingAction = (action) => {
@@ -354,6 +352,7 @@ export default function NewBaggage() {
   };
 
   const openServiceModal = (locker) => {
+    lockerMutationKeysRef.current.set(`service:${locker.id}`, createIdempotencyKey("locker-service"));
     setServiceLocker(locker);
     setServiceReason(locker.serviceReason || "");
   };
@@ -368,6 +367,7 @@ export default function NewBaggage() {
       await lockerService.block(locker, {
         reason,
         admin: user?.fullName,
+        idempotencyKey: lockerMutationKeysRef.current.get(`service:${locker.id}`),
       });
     } catch (error) {
       setMessage(t(error.message || "Yacheykani servisga o'tkazishda xatolik yuz berdi."));
@@ -381,6 +381,7 @@ export default function NewBaggage() {
     }
     setServiceLocker(null);
     setServiceReason("");
+    lockerMutationKeysRef.current.delete(`service:${locker.id}`);
     setRefreshKey((value) => value + 1);
 
     void telegramService.sendLockerBlock(locker, reason).catch(() => {
@@ -391,15 +392,20 @@ export default function NewBaggage() {
 
   const handleUnblockLocker = async (locker) => {
     if (!beginSavingAction("locker")) return;
+    const keyName = `restore:${locker.id}`;
+    if (!lockerMutationKeysRef.current.has(keyName)) {
+      lockerMutationKeysRef.current.set(keyName, createIdempotencyKey("locker-restore"));
+    }
     try {
-      await lockerService.unblock(locker, {
-        admin: user?.fullName,
+      await lockerService.unblock(locker, undefined, {
+        idempotencyKey: lockerMutationKeysRef.current.get(keyName),
       });
     } catch (error) {
       setMessage(t(error.message || "Yacheykani qaytarishda xatolik yuz berdi."));
       endSavingAction();
       return;
     }
+    lockerMutationKeysRef.current.delete(keyName);
     setRefreshKey((value) => value + 1);
     endSavingAction();
   };

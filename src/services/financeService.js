@@ -2,6 +2,7 @@ import apiClient from "./apiClient";
 import branchService from "./branchService";
 import { getArrayData, getData, getItems, mapCashMovement, mapInkassa } from "./apiMappers";
 import { toMinorUnits } from "../utils/currency";
+import { idempotencyHeaders } from "../utils/idempotency";
 
 const financeService = {
   async getCashMovements(branchName = null) {
@@ -16,7 +17,7 @@ const financeService = {
     return getArrayData(response).map(mapInkassa);
   },
 
-  async createInkassa(data) {
+  async createInkassa(data, { idempotencyKey } = {}) {
     const branchId = await branchService.getBranchIdByName(data.branch);
     const receiverName = data.receiverName || data.receiver || data.recipient;
     const response = await apiClient.post("/inkassa", {
@@ -26,7 +27,7 @@ const financeService = {
       amount: toMinorUnits(data.amount || 0, data.currency || "UZS"),
       currency: data.currency || "UZS",
       note: data.note || data.reason || "Inkassa",
-    });
+    }, idempotencyHeaders(idempotencyKey));
     return mapInkassa(getData(response));
   },
 };

@@ -23,6 +23,7 @@ import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import "./shifts.scss";
+import { createIdempotencyKey } from "../../utils/idempotency";
 
 const emptyShiftData = {
   shifts: [],
@@ -63,6 +64,9 @@ export default function Shifts() {
   const [statusMessage, setStatusMessage] = useState("");
   const [pendingAction, setPendingAction] = useState("");
   const pendingActionRef = useRef(false);
+  const openShiftKeyRef = useRef(createIdempotencyKey("shift-open"));
+  const closeShiftKeyRef = useRef(createIdempotencyKey("shift-close"));
+  const inkassaKeyRef = useRef(createIdempotencyKey("inkassa-create"));
 
   const beginAction = (action) => {
     if (pendingActionRef.current) return false;
@@ -84,10 +88,8 @@ export default function Shifts() {
   } = usePageResource(
     async ({ signal } = {}) => {
       const requestedBranch = branchName;
-      const [shifts, currentShift] = await Promise.all([
-        shiftService.getAll(requestedBranch, { signal }),
-        shiftService.getCurrent(requestedBranch, { signal }),
-      ]);
+      const shifts = await shiftService.getAll(requestedBranch, { signal });
+      const currentShift = asArray(shifts).find((shift) => shift.status === "OPEN") || null;
       return { branchName: requestedBranch, shifts: asArray(shifts), currentShift: currentShift || null };
     },
     [effectiveBranch, branchName, refreshKey],
@@ -245,12 +247,13 @@ export default function Shifts() {
         openingCashByCurrency,
         acceptedCashByCurrency,
         receivedFrom: receivedFrom.trim(),
-      });
+      }, { idempotencyKey: openShiftKeyRef.current });
 
       setAdminName("");
       setOpeningCashByCurrency(emptyCurrencyInputs());
       setReceivedFrom("");
       setAcceptedCashByCurrency(emptyCurrencyInputs());
+      openShiftKeyRef.current = createIdempotencyKey("shift-open");
       setFormError("");
       refreshData();
 
@@ -267,11 +270,12 @@ export default function Shifts() {
 
     return financeService.createInkassa({
       branch: branchName,
+      shiftId: currentShift.id,
       admin: currentShift?.admin || adminName || "Admin",
       recipient: recipient.trim(),
       amount,
       currency,
-    });
+    }, { idempotencyKey: inkassaKeyRef.current });
   };
 
   const validateInkassa = (recipient, amountValue, currency) => {
@@ -330,16 +334,18 @@ export default function Shifts() {
 
     try {
       const closedShift = await shiftService.close(branchName, {
+        shiftId: currentShift.id,
         closingCashByCurrency: resolvedClosingCashByCurrency,
         handoverTo: handoverTo.trim(),
         salaryAmount: closeSalaryAmount,
         salaryReceiver: closingSalaryReceiver.trim(),
-      });
+      }, { idempotencyKey: closeShiftKeyRef.current });
 
       setClosingCashByCurrency(emptyCurrencyInputs());
       setHandoverTo("");
       setClosingSalaryReceiver("");
       setClosingSalaryAmount("");
+      closeShiftKeyRef.current = createIdempotencyKey("shift-close");
       setFormError("");
       refreshData();
       setReportShift(closedShift);
@@ -384,6 +390,7 @@ export default function Shifts() {
 
       setInkassaRecipient("");
       setInkassaAmount("");
+      inkassaKeyRef.current = createIdempotencyKey("inkassa-create");
       setFormError("");
       setStatusMessage(`${t("Inkassa saqlandi")}: ${formatMoneyByCurrency(toMinorUnits(amount, inkassaCurrency), inkassaCurrency)}`);
       refreshData();

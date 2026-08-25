@@ -16,6 +16,8 @@ import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
+import { formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
+import { createIdempotencyKey } from "../../utils/idempotency";
 
 const hasLockerPrice = (locker) =>
   locker?.price !== undefined &&
@@ -24,21 +26,6 @@ const hasLockerPrice = (locker) =>
     Number.isFinite(Number(locker.price));
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const overtimeCurrency = (order = {}) => order.overtimeCurrency || order.currency || "UZS";
-const toDateTimeLocal = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const offset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
-};
-
-const fromDateTimeLocal = (value) => {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-};
-
 const emptyOrdersPage = {
   items: [],
   pagination: { page: 1, limit: 50, total: 0, totalPages: 1 },
@@ -65,6 +52,8 @@ export default function SalesHistory() {
   const [editForm, setEditForm] = useState(null);
   const [pendingAction, setPendingAction] = useState("");
   const pendingActionRef = useRef(false);
+  const editKeyRef = useRef("");
+  const debtCloseKeyRef = useRef("");
 
   const beginAction = (action) => {
     if (pendingActionRef.current) return false;
@@ -181,12 +170,14 @@ export default function SalesHistory() {
   };
 
   const openCloseDebt = (order) => {
+    debtCloseKeyRef.current = createIdempotencyKey("debt-close");
     setDebtCloseOrder(order);
     setDebtClosePayment("Naqd");
     setStatusMessage("");
   };
 
   const openEdit = (order) => {
+    editKeyRef.current = createIdempotencyKey("order-edit");
     const orderCurrency = order.currency || "UZS";
     const extraCurrency = overtimeCurrency(order);
     setEditOrder(order);
@@ -194,7 +185,7 @@ export default function SalesHistory() {
       clientName: order.client || "",
       phone: order.phone || "",
       passport: order.passport || "",
-      checkOut: toDateTimeLocal(order.checkOut),
+      checkOut: formatTashkentInputDateTime(order.checkOut),
       payment: getPaymentLabel(order.payment),
       currency: orderCurrency,
       finalAmount: String(fromMinorUnits(order.finalAmount || order.finalPrice || 0, orderCurrency)),
@@ -238,7 +229,7 @@ export default function SalesHistory() {
         clientName: editForm.clientName.trim(),
         phone: editForm.phone.trim(),
         passport: editForm.passport.trim(),
-        checkOut: fromDateTimeLocal(editForm.checkOut),
+        checkOut: parseTashkentInputToIso(editForm.checkOut),
         payment: editForm.payment,
         currency: editForm.currency,
         finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
@@ -252,7 +243,7 @@ export default function SalesHistory() {
           size: item.size,
           count: Number(item.count || 1),
         })),
-      });
+      }, { idempotencyKey: editKeyRef.current });
     } catch (error) {
       setStatusMessage(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
       return;
@@ -280,7 +271,7 @@ export default function SalesHistory() {
         currency: order.currency,
         admin: "Admin",
         note: "Debt closed from sales history",
-      });
+      }, { idempotencyKey: debtCloseKeyRef.current });
     } catch (error) {
       setStatusMessage(t(error.message || "Qarz yopishda xatolik yuz berdi."));
       return;
