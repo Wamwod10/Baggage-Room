@@ -91,9 +91,20 @@ const apiClient = axios.create({
 const inFlightGets = new Map();
 
 const stableSerialize = (value) => {
+  if (value === undefined) return "undefined";
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(",")}}`;
+};
+
+const sharedGetKey = (url, config = {}) => {
+  const baseURL = config.baseURL || apiClient.defaults.baseURL || "";
+  return `${baseURL}|${getAuthContextKey()}|${url}?${stableSerialize({
+    params: config.params || {},
+    headers: config.headers || {},
+    responseType: config.responseType || "",
+    timeout: config.timeout || apiClient.defaults.timeout || "",
+  })}`;
 };
 
 const originalGet = apiClient.get.bind(apiClient);
@@ -159,8 +170,7 @@ const subscribeToGet = (entry, signal) => {
 
 apiClient.get = (url, config = {}) => {
   const safeConfig = config ?? {};
-  const baseURL = safeConfig.baseURL || apiClient.defaults.baseURL || "";
-  const key = `${baseURL}|${getAuthContextKey()}|${url}?${stableSerialize(safeConfig.params || {})}`;
+  const key = sharedGetKey(url, safeConfig);
   if (safeConfig.signal?.aborted) return Promise.reject(createCancelledError());
   const existing = inFlightGets.get(key);
   if (existing) return subscribeToGet(existing, safeConfig.signal);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Save,
   Settings as SettingsIcon,
@@ -15,6 +15,7 @@ import exportService from "../../services/exportService";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "../../i18n/translations";
 import { useTranslation } from "../../i18n/useTranslation";
@@ -176,6 +177,8 @@ export default function Settings() {
   const [showToken, setShowToken] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [resetPending, setResetPending] = useState(false);
+  const [pendingAction, setPendingAction] = useState("");
+  const pendingActionRef = useRef(false);
   const {
     data: loadedSettings,
     isLoading,
@@ -183,6 +186,18 @@ export default function Settings() {
     retry,
   } = usePageResource(() => settingsService.get(), [], fallbackSettings);
   const [apiBranches, setApiBranches] = useState([]);
+
+  const beginAction = (action) => {
+    if (pendingActionRef.current) return false;
+    pendingActionRef.current = true;
+    setPendingAction(action);
+    return true;
+  };
+
+  const endAction = () => {
+    pendingActionRef.current = false;
+    setPendingAction("");
+  };
 
   useEffect(() => {
     if (loadedSettings && !error) {
@@ -312,11 +327,18 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
+    if (!beginAction("save")) return;
+
+    const fail = (text) => {
+      setMessage(text);
+      endAction();
+    };
+
     if (
       !Number.isFinite(Number(settings.overtimePerHour)) ||
       Number(settings.overtimePerHour) < 0
     ) {
-      setMessage(t("Overtime narxi manfiy bo'lmasligi kerak."));
+      fail(t("Overtime narxi manfiy bo'lmasligi kerak."));
       return;
     }
 
@@ -330,7 +352,7 @@ export default function Settings() {
         (!settings.telegram?.botToken?.trim() ||
           !settings.telegram?.groupId?.trim())
       ) {
-        setMessage(
+        fail(
           t("Telegram yoqilgan bo'lsa, Bot token va Group ID majburiy."),
         );
         return;
@@ -387,10 +409,14 @@ export default function Settings() {
       setMessage(t("Settings saqlandi"));
     } catch (error) {
       setMessage(t(error.message || "Settings saqlashda xatolik yuz berdi."));
+    } finally {
+      endAction();
     }
   };
 
   const handleTestTelegram = async () => {
+    if (!beginAction("telegram-test")) return;
+
     const globalToken = settings.telegram?.botToken?.trim();
     const globalGroupId = settings.telegram?.groupId?.trim();
     const target = apiBranches
@@ -408,6 +434,7 @@ export default function Settings() {
 
     if (!target) {
       setTestStatus(t("Bot token va Group ID kiritilishi kerak"));
+      endAction();
       return;
     }
 
@@ -425,14 +452,37 @@ export default function Settings() {
       setTestStatus(t("Test xabar Telegram groupga yuborildi"));
     } catch (error) {
       setTestStatus(t(error.message || "Telegram bilan ulanishda xatolik yuz berdi"));
+    } finally {
+      endAction();
+    }
+  };
+
+  const handleExport = async (key, format) => {
+    const action = `export-${key}-${format}`;
+    if (!beginAction(action)) return;
+    setMessage("");
+
+    try {
+      if (format === "json") {
+        await exportService.exportJson(key);
+      } else {
+        await exportService.exportPdf(key);
+      }
+    } catch (error) {
+      setMessage(t(error.message || "Export qilishda xatolik yuz berdi."));
+    } finally {
+      endAction();
     }
   };
 
   const handleResetData = async () => {
-    if (resetPending || resetConfirmText !== "RESET") return;
+    if (resetPending || resetConfirmText !== "RESET" || !beginAction("reset")) return;
 
     const approved = window.confirm(t("Hamma order, smena, kassa va tarix ma'lumotlari o'chiriladi. Davom etasizmi?"));
-    if (!approved) return;
+    if (!approved) {
+      endAction();
+      return;
+    }
 
     setResetPending(true);
     setMessage("");
@@ -447,6 +497,7 @@ export default function Settings() {
       setMessage(t(error.message || "Data reset qilishda xatolik yuz berdi."));
     } finally {
       setResetPending(false);
+      endAction();
     }
   };
 
@@ -460,10 +511,16 @@ export default function Settings() {
           </p>
         </div>
 
-        <button className="settings-save-btn" onClick={handleSave}>
+        <LoadingButton
+          className="settings-save-btn"
+          onClick={handleSave}
+          loading={pendingAction === "save"}
+          loadingLabel={t("Saqlanmoqda...")}
+          disabled={Boolean(pendingAction)}
+        >
           <Save size={16} />
           {t("Save")}
-        </button>
+        </LoadingButton>
       </div>
 
       {error && (
@@ -802,14 +859,17 @@ export default function Settings() {
                 })}
               </div>
 
-              <button
+              <LoadingButton
                 type="button"
                 className="telegram-test-btn"
                 onClick={handleTestTelegram}
+                loading={pendingAction === "telegram-test"}
+                loadingLabel={t("Yuborilmoqda...")}
+                disabled={Boolean(pendingAction)}
               >
                 <Bell size={16} />
                 {t("Test send")}
-              </button>
+              </LoadingButton>
 
               {testStatus && (
                 <div className="telegram-test-status">{testStatus}</div>
@@ -919,12 +979,24 @@ export default function Settings() {
                 {["orders", "shifts", "finance", "analytics"].map((key) => (
                   <div key={key}>
                     <span>{t("Export")} {t(exportLabels[key])}</span>
-                    <button type="button" onClick={() => exportService.exportJson(key)}>
+                    <LoadingButton
+                      type="button"
+                      onClick={() => handleExport(key, "json")}
+                      loading={pendingAction === `export-${key}-json`}
+                      loadingLabel={t("Yuklanmoqda...")}
+                      disabled={Boolean(pendingAction)}
+                    >
                       JSON
-                    </button>
-                    <button type="button" onClick={() => exportService.exportPdf(key)}>
+                    </LoadingButton>
+                    <LoadingButton
+                      type="button"
+                      onClick={() => handleExport(key, "pdf")}
+                      loading={pendingAction === `export-${key}-pdf`}
+                      loadingLabel={t("Yuklanmoqda...")}
+                      disabled={Boolean(pendingAction)}
+                    >
                       PDF
-                    </button>
+                    </LoadingButton>
                   </div>
                 ))}
               </div>
@@ -953,14 +1025,16 @@ export default function Settings() {
                     />
                   </label>
 
-                  <button
+                  <LoadingButton
                     type="button"
                     onClick={handleResetData}
-                    disabled={resetPending || resetConfirmText !== "RESET"}
+                    loading={pendingAction === "reset" || resetPending}
+                    loadingLabel={t("Yakunlanmoqda...")}
+                    disabled={Boolean(pendingAction) || resetPending || resetConfirmText !== "RESET"}
                   >
                     <RotateCcw size={16} />
-                    {resetPending ? t("Loading") : t("Reset data")}
-                  </button>
+                    {t("Reset data")}
+                  </LoadingButton>
                 </div>
               </div>
             )}

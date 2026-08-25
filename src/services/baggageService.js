@@ -104,7 +104,8 @@ const baggageService = {
     if (!baggageItems.length) throw new Error("Kamida bitta bagaj razmerini tanlang");
     const paymentType = toPaymentType(data.payment);
     if (!paymentType) throw new Error("To'lov turi tanlanmagan");
-    const idempotencyKey = data.idempotencyKey || globalThis.crypto?.randomUUID?.() || `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const idempotencyKey = String(data.idempotencyKey || "").trim();
+    if (!idempotencyKey) throw new Error("Idempotency key topilmadi. Formani qayta ochib urinib ko'ring.");
     const response = await apiClient.post("/orders", {
       branchId,
       clientName: data.client,

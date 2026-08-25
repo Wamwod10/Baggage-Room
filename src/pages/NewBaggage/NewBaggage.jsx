@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Ban,
   Eye,
@@ -15,7 +15,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import baggageService from "../../services/baggageService";
 import lockerService from "../../services/lockerService";
-import shiftService from "../../services/shiftService";
 import settingsService from "../../services/settingsService";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
@@ -28,9 +27,14 @@ import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import telegramService from "../../services/telegramService";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import "./newBaggage.scss";
+
+const createActionKey = () =>
+  globalThis.crypto?.randomUUID?.() ||
+  `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const getInitialForm = (defaultBranch, defaultCurrency = "UZS") => ({
   client: "",
@@ -94,6 +98,24 @@ export default function NewBaggage() {
   const [message, setMessage] = useState("");
   const [customerHistory, setCustomerHistory] = useState(emptyCustomerHistory);
   const [savingAction, setSavingAction] = useState("");
+  const savingActionRef = useRef(false);
+  const createIdempotencyKeyRef = useRef(createActionKey());
+
+  const resetCreateActionKey = () => {
+    createIdempotencyKeyRef.current = createActionKey();
+  };
+
+  const beginSavingAction = (action) => {
+    if (savingActionRef.current) return false;
+    savingActionRef.current = true;
+    setSavingAction(action);
+    return true;
+  };
+
+  const endSavingAction = () => {
+    savingActionRef.current = false;
+    setSavingAction("");
+  };
 
   const {
     data: pageData = { lockers: [], orders: [], orderCount: 0, tariffs: [] },
@@ -321,6 +343,7 @@ export default function NewBaggage() {
   };
 
   const openOrderPanel = (locker) => {
+    resetCreateActionKey();
     setForm({
       ...getInitialForm(currentBranch, settings.defaultCurrency || "UZS"),
       lockers: [{ id: locker.id, lockerId: locker.id, number: locker.number, size: locker.size, price: locker.price }],
@@ -337,8 +360,7 @@ export default function NewBaggage() {
 
   const handleBlockLocker = async () => {
     if (!serviceLocker) return;
-    if (savingAction) return;
-    setSavingAction("locker");
+    if (!beginSavingAction("locker")) return;
 
     const locker = serviceLocker;
     const reason = serviceReason.trim();
@@ -349,12 +371,13 @@ export default function NewBaggage() {
       });
     } catch (error) {
       setMessage(t(error.message || "Yacheykani servisga o'tkazishda xatolik yuz berdi."));
-      setSavingAction("");
+      endSavingAction();
       return;
     }
     if (selectedLocker?.id === locker.id) {
       setSelectedLocker(null);
       setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));
+      resetCreateActionKey();
     }
     setServiceLocker(null);
     setServiceReason("");
@@ -363,34 +386,32 @@ export default function NewBaggage() {
     void telegramService.sendLockerBlock(locker, reason).catch(() => {
       // Telegram is best-effort from the local frontend.
     });
-    setSavingAction("");
+    endSavingAction();
   };
 
   const handleUnblockLocker = async (locker) => {
-    if (savingAction) return;
-    setSavingAction("locker");
+    if (!beginSavingAction("locker")) return;
     try {
       await lockerService.unblock(locker, {
         admin: user?.fullName,
       });
     } catch (error) {
       setMessage(t(error.message || "Yacheykani qaytarishda xatolik yuz berdi."));
-      setSavingAction("");
+      endSavingAction();
       return;
     }
     setRefreshKey((value) => value + 1);
-    setSavingAction("");
+    endSavingAction();
   };
 
   const handleSave = async (print = false) => {
-    if (savingAction) return;
     const nextAction = print ? "print" : "save";
-    setSavingAction(nextAction);
+    if (!beginSavingAction(nextAction)) return;
     setMessage("");
 
     const fail = (text) => {
       setMessage(text);
-      setSavingAction("");
+      endSavingAction();
     };
     const phoneRegex = /^\+?\d[\d\s-]{8,}$/;
 
@@ -444,24 +465,11 @@ export default function NewBaggage() {
       return;
     }
 
-    let currentShift;
-
-    try {
-      currentShift = await shiftService.getCurrent(currentBranch);
-    } catch (error) {
-      fail(error?.message || t("Ochiq shiftni tekshirishda xatolik yuz berdi."));
-      return;
-    }
-
-    if (!currentShift) {
-      fail(t("Avval kassani oching. Ochiq shift topilmadi."));
-      return;
-    }
-
     let order;
 
     try {
       order = await baggageService.create({
+        idempotencyKey: createIdempotencyKeyRef.current,
         client: form.client.trim(),
         phone: form.phone.trim(),
         passport: form.passport.trim(),
@@ -517,8 +525,9 @@ export default function NewBaggage() {
     );
     setSelectedLocker(null);
     setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));
+    resetCreateActionKey();
     setRefreshKey((value) => value + 1);
-    setSavingAction("");
+    endSavingAction();
   };
 
   const getStatusLabel = (status) => {
@@ -617,10 +626,16 @@ export default function NewBaggage() {
               {t("Transfer / Pickup")}
             </button>
             {selectedLocker.status === "Servisda" && (
-              <button type="button" onClick={() => handleUnblockLocker(selectedLocker)}>
+              <LoadingButton
+                type="button"
+                onClick={() => handleUnblockLocker(selectedLocker)}
+                loading={savingAction === "locker"}
+                loadingLabel={t("Qaytarilmoqda...")}
+                disabled={Boolean(savingAction)}
+              >
                 <Ban size={16} />
                 {t("Ishga qaytarish")}
-              </button>
+              </LoadingButton>
             )}
           </div>
         </div>
@@ -815,14 +830,28 @@ export default function NewBaggage() {
             </div>
           </div>
           <div className="panel-save-actions">
-            <button className="save-btn" type="button" onClick={() => handleSave(false)} disabled={Boolean(savingAction)}>
+            <LoadingButton
+              className="save-btn"
+              type="button"
+              onClick={() => handleSave(false)}
+              loading={savingAction === "save"}
+              loadingLabel={t("Saqlanmoqda...")}
+              disabled={Boolean(savingAction)}
+            >
               <Save size={17} />
-              {savingAction === "save" ? t("Loading") : t("Save")}
-            </button>
-            <button className="print-btn" type="button" onClick={() => handleSave(true)} disabled={Boolean(savingAction)}>
+              {t("Save")}
+            </LoadingButton>
+            <LoadingButton
+              className="print-btn"
+              type="button"
+              onClick={() => handleSave(true)}
+              loading={savingAction === "print"}
+              loadingLabel={t("Saqlanmoqda...")}
+              disabled={Boolean(savingAction)}
+            >
               <Printer size={17} />
-              {savingAction === "print" ? t("Loading") : t("Saqlash + Chek")}
-            </button>
+              {t("Saqlash + Chek")}
+            </LoadingButton>
           </div>
         </div>
       </>
@@ -939,6 +968,7 @@ export default function NewBaggage() {
                 onClick={() => {
                   setSelectedLocker(null);
                   setForm(getInitialForm(defaultBranch, settings.defaultCurrency || "UZS"));
+                  resetCreateActionKey();
                 }}
                 aria-label={t("Clear")}
               >
@@ -975,10 +1005,17 @@ export default function NewBaggage() {
               />
             </label>
 
-            <button type="button" className="locker-service-confirm" onClick={handleBlockLocker} disabled={Boolean(savingAction)}>
+            <LoadingButton
+              type="button"
+              className="locker-service-confirm"
+              onClick={handleBlockLocker}
+              loading={savingAction === "locker"}
+              loadingLabel={t("Yuborilmoqda...")}
+              disabled={Boolean(savingAction)}
+            >
               <Wrench size={16} />
               {t("Servisga o'tkazish")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}

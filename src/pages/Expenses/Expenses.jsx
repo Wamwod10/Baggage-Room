@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Wallet } from "lucide-react";
 import expenseService from "../../services/expenseService";
 import { useAuth } from "../../store/AuthContext";
@@ -6,6 +6,7 @@ import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
@@ -31,6 +32,9 @@ export default function Expenses() {
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const deletingExpenseIdsRef = useRef(new Set());
+  const [deletingExpenseIds, setDeletingExpenseIds] = useState([]);
 
   const {
     data: expenses = [],
@@ -69,13 +73,15 @@ export default function Expenses() {
 
   const handleAddExpense = async (event) => {
     event.preventDefault();
-    if (isSubmitting) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
     setFormError("");
     setStatusMessage("");
 
     const fail = (text) => {
       setFormError(text);
+      submittingRef.current = false;
       setIsSubmitting(false);
     };
 
@@ -105,6 +111,7 @@ export default function Expenses() {
       fail(t(error.message || "Xarajatni saqlashda xatolik yuz berdi."));
       return;
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
 
@@ -114,11 +121,19 @@ export default function Expenses() {
   };
 
   const handleDelete = async (id) => {
+    if (deletingExpenseIdsRef.current.has(id)) return;
+    deletingExpenseIdsRef.current.add(id);
+    setDeletingExpenseIds((items) => [...items, id]);
+    setFormError("");
+
     try {
       await expenseService.delete(id);
       setRefreshKey((value) => value + 1);
     } catch (error) {
       setFormError(t(error.message || "Xarajatni o'chirishda xatolik yuz berdi."));
+    } finally {
+      deletingExpenseIdsRef.current.delete(id);
+      setDeletingExpenseIds((items) => items.filter((item) => item !== id));
     }
   };
 
@@ -211,10 +226,16 @@ export default function Expenses() {
             />
           </label>
 
-          <button type="submit" className="expense-submit" disabled={isSubmitting}>
+          <LoadingButton
+            type="submit"
+            className="expense-submit"
+            loading={isSubmitting}
+            loadingLabel={t("Saqlanmoqda...")}
+            disabled={isSubmitting}
+          >
             <Plus size={17} />
-            {isSubmitting ? t("Loading") : t("Qo'shish")}
-          </button>
+            {t("Qo'shish")}
+          </LoadingButton>
         </form>
 
         <div className="expense-list card">
@@ -258,12 +279,15 @@ export default function Expenses() {
                   <strong>
                     {formatMoneyByCurrency(expense.amount || 0, expense.currency || "UZS")}
                   </strong>
-                  <button
+                  <LoadingButton
                     type="button"
                     onClick={() => handleDelete(expense.id)}
+                    loading={deletingExpenseIds.includes(expense.id)}
+                    loadingLabel=""
+                    disabled={deletingExpenseIds.includes(expense.id)}
                   >
                     <Trash2 size={15} />
-                  </button>
+                  </LoadingButton>
                 </div>
               </div>
             ))}

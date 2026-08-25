@@ -8,6 +8,7 @@ import {
   Send,
   Square,
 } from "lucide-react";
+import { useRef } from "react";
 import shiftService from "../../services/shiftService";
 import financeService from "../../services/financeService";
 import { useAuth } from "../../store/AuthContext";
@@ -15,6 +16,7 @@ import { getBranchByName, getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { ListSkeleton } from "../../components/Skeleton/Skeleton";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
@@ -60,6 +62,19 @@ export default function Shifts() {
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [pendingAction, setPendingAction] = useState("");
+  const pendingActionRef = useRef(false);
+
+  const beginAction = (action) => {
+    if (pendingActionRef.current) return false;
+    pendingActionRef.current = true;
+    setPendingAction(action);
+    return true;
+  };
+
+  const endAction = () => {
+    pendingActionRef.current = false;
+    setPendingAction("");
+  };
 
   const {
     data: shiftData = emptyShiftData,
@@ -198,14 +213,13 @@ export default function Shifts() {
   ]));
 
   const handleOpenShift = async () => {
-    if (pendingAction) return;
-    setPendingAction("open");
+    if (!beginAction("open")) return;
     setFormError("");
     setStatusMessage("");
 
     const fail = (text) => {
       setFormError(text);
-      setPendingAction("");
+      endAction();
     };
 
     if (!adminName.trim()) {
@@ -244,7 +258,7 @@ export default function Shifts() {
     } catch (error) {
       setFormError(t(error.message || "Kassani ochishda xatolik yuz berdi."));
     } finally {
-      setPendingAction("");
+      endAction();
     }
   };
 
@@ -277,14 +291,13 @@ export default function Shifts() {
   };
 
   const handleCloseShift = async () => {
-    if (pendingAction) return;
-    setPendingAction("close");
+    if (!beginAction("close")) return;
     setFormError("");
     setStatusMessage("");
 
     const fail = (text) => {
       setFormError(text);
-      setPendingAction("");
+      endAction();
     };
 
     if (!handoverTo.trim()) {
@@ -335,19 +348,18 @@ export default function Shifts() {
     } catch (error) {
       setFormError(t(error.message || "Kassani yopishda xatolik yuz berdi."));
     } finally {
-      setPendingAction("");
+      endAction();
     }
   };
 
   const handleInkassa = async () => {
-    if (pendingAction) return;
-    setPendingAction("inkassa");
+    if (!beginAction("inkassa")) return;
     setFormError("");
     setStatusMessage("");
 
     const fail = (text) => {
       setFormError(text);
-      setPendingAction("");
+      endAction();
     };
 
     const amount = Number(inkassaAmount || 0);
@@ -378,13 +390,12 @@ export default function Shifts() {
     } catch (error) {
       setFormError(t(error.message || "Inkassa saqlashda xatolik yuz berdi."));
     } finally {
-      setPendingAction("");
+      endAction();
     }
   };
 
   const handleSendSalesTelegram = async () => {
-    if (pendingAction || !currentShift) return;
-    setPendingAction("sales");
+    if (!currentShift || !beginAction("sales")) return;
     setFormError("");
     setStatusMessage("");
 
@@ -395,7 +406,7 @@ export default function Shifts() {
     } catch (error) {
       setFormError(t(error.message || "Telegram bilan ulanishda xatolik yuz berdi"));
     } finally {
-      setPendingAction("");
+      endAction();
     }
   };
 
@@ -573,10 +584,17 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
                   </label>
                 ))}
               </div>
-              <button type="button" className="open-shift-btn" onClick={handleOpenShift} disabled={Boolean(pendingAction)}>
+              <LoadingButton
+                type="button"
+                className="open-shift-btn"
+                onClick={handleOpenShift}
+                loading={pendingAction === "open"}
+                loadingLabel={t("Ochilmoqda...")}
+                disabled={Boolean(pendingAction)}
+              >
                 <PlayCircle size={17} />
-                {pendingAction === "open" ? t("Loading") : t("Kassani ochish")}
-              </button>
+                {t("Kassani ochish")}
+              </LoadingButton>
             </div>
           ) : (
             <div className="shift-form">
@@ -587,10 +605,17 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
                 <div><span>{t("Qabul qilingan")}</span><b>{formatCurrencyMap(currentStats.acceptedCashByCurrency)}</b></div>
                 <div><span>{t("Baggage count")}</span><b>{currentStats.baggage} {t("ta")}</b></div>
               </div>
-              <button type="button" className="send-sales-btn" onClick={handleSendSalesTelegram} disabled={Boolean(pendingAction)}>
+              <LoadingButton
+                type="button"
+                className="send-sales-btn"
+                onClick={handleSendSalesTelegram}
+                loading={pendingAction === "sales"}
+                loadingLabel={t("Yuborilmoqda...")}
+                disabled={Boolean(pendingAction)}
+              >
                 <Send size={16} />
-                {pendingAction === "sales" ? t("Loading") : t("Savdoni yuborish")}
-              </button>
+                {t("Savdoni yuborish")}
+              </LoadingButton>
               <label>
                 <span>{t("Kimga")}</span>
                 <input value={handoverTo} onChange={(event) => setHandoverTo(event.target.value)} placeholder={t("Keyingi admin")} />
@@ -623,10 +648,17 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
                   <input inputMode="numeric" value={formatNumberInput(closingSalaryAmount)} onChange={(event) => setClosingSalaryAmount(cleanNumericInput(event.target.value))} placeholder={t("Masalan: 300000")} />
                 </label>
               </div>
-              <button type="button" className="close-shift-btn" onClick={handleCloseShift} disabled={Boolean(pendingAction)}>
+              <LoadingButton
+                type="button"
+                className="close-shift-btn"
+                onClick={handleCloseShift}
+                loading={pendingAction === "close"}
+                loadingLabel={t("Yopilmoqda...")}
+                disabled={Boolean(pendingAction)}
+              >
                 <Square size={16} />
-                {pendingAction === "close" ? t("Loading") : t("Kassani yopish")}
-              </button>
+                {t("Kassani yopish")}
+              </LoadingButton>
             </div>
           )}
         </div>
@@ -671,9 +703,15 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
                 <span>{t("Summa")}</span>
                 <input inputMode={inkassaCurrency === "UZS" ? "numeric" : "decimal"} value={formatNumberInput(inkassaAmount, { decimal: inkassaCurrency !== "UZS" })} onChange={(event) => setInkassaAmount(cleanNumericInput(event.target.value, { decimal: inkassaCurrency !== "UZS" }))} placeholder={inkassaCurrency === "UZS" ? t("Masalan: 500000") : "214.29"} />
               </label>
-              <button type="button" onClick={handleInkassa} disabled={Boolean(pendingAction)}>
-                {pendingAction === "inkassa" ? t("Loading") : t("Inkassa qilish")}
-              </button>
+              <LoadingButton
+                type="button"
+                onClick={handleInkassa}
+                loading={pendingAction === "inkassa"}
+                loadingLabel={t("Yakunlanmoqda...")}
+                disabled={Boolean(pendingAction)}
+              >
+                {t("Inkassa qilish")}
+              </LoadingButton>
             </div>
           )}
         </div>

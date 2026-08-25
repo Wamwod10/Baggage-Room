@@ -9,6 +9,7 @@ import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { TableSkeleton } from "../../components/Skeleton/Skeleton";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
@@ -604,10 +605,17 @@ export default function SalesHistory() {
               </div>
             )}
 
-            <button type="button" className="history-save-edit" onClick={handleSaveEdit} disabled={Boolean(pendingAction)}>
+            <LoadingButton
+              type="button"
+              className="history-save-edit"
+              onClick={handleSaveEdit}
+              loading={pendingAction === "edit"}
+              loadingLabel={t("Saqlanmoqda...")}
+              disabled={Boolean(pendingAction)}
+            >
               <Edit3 size={17} />
               {t("Saqlash")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}
@@ -630,9 +638,16 @@ export default function SalesHistory() {
                 ))}
               </GlassSelect>
             </label>
-            <button type="button" className="history-debt-close" onClick={handleCloseDebt} disabled={Boolean(pendingAction)}>
+            <LoadingButton
+              type="button"
+              className="history-debt-close"
+              onClick={handleCloseDebt}
+              loading={pendingAction === "debt"}
+              loadingLabel={t("Yopilmoqda...")}
+              disabled={Boolean(pendingAction)}
+            >
               {t("Qarz yopish")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}

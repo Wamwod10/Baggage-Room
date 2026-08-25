@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, User, ArrowRight } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
 import { useTranslation } from "../../i18n/useTranslation";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import "./login.scss";
 
 export default function Login() {
@@ -17,6 +18,7 @@ export default function Login() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -31,8 +33,9 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (loading) return;
+    if (loadingRef.current) return;
 
+    loadingRef.current = true;
     setLoading(true);
     setError("");
 
@@ -42,6 +45,7 @@ export default function Login() {
     } catch (err) {
       setError(t(err.message || "Login yoki parol noto'g'ri"));
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };
@@ -94,10 +98,16 @@ export default function Login() {
 
           {error && <div className="login-error">{error}</div>}
 
-          <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? t("Loading") : t("Kirish")}
+          <LoadingButton
+            type="submit"
+            className="login-btn"
+            loading={loading}
+            loadingLabel={t("Kirilmoqda...")}
+            disabled={loading}
+          >
+            {t("Kirish")}
             <ArrowRight size={18} />
-          </button>
+          </LoadingButton>
         </form>
       </section>
     </main>

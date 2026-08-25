@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRef } from "react";
 import {
   Briefcase,
   CreditCard,
@@ -19,6 +20,7 @@ import "./dashboard.scss";
 import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
 import { StatSkeleton } from "../../components/Skeleton/Skeleton";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
@@ -66,6 +68,7 @@ export default function Dashboard() {
   const { effectiveBranch } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [salesSending, setSalesSending] = useState(false);
+  const salesSendingRef = useRef(false);
   const [salesMessage, setSalesMessage] = useState("");
 
   const {
@@ -158,8 +161,9 @@ export default function Dashboard() {
 
   const handleSendSales = async (event) => {
     animateButtonIcon(event);
-    if (!canSendSales || salesSending) return;
+    if (!canSendSales || salesSendingRef.current) return;
 
+    salesSendingRef.current = true;
     setSalesSending(true);
     setSalesMessage("");
 
@@ -170,6 +174,7 @@ export default function Dashboard() {
     } catch (sendError) {
       setSalesMessage(t(sendError.message || "Telegram bilan ulanishda xatolik yuz berdi"));
     } finally {
+      salesSendingRef.current = false;
       setSalesSending(false);
     }
   };
@@ -240,15 +245,17 @@ export default function Dashboard() {
         </div>
 
         <div className="dashboard-header-actions">
-          <button
+          <LoadingButton
             className="dashboard-sales-btn"
             onClick={handleSendSales}
+            loading={salesSending}
+            loadingLabel={t("Yuborilmoqda...")}
             disabled={!canSendSales || salesSending}
             title={!effectiveBranch ? t("Filial tanlang") : !safeData.currentShift ? t("Kassa yopiq") : t("Savdoni yuborish")}
           >
             <Send size={16} />
-            {salesSending ? t("Loading") : t("Savdoni yuborish")}
-          </button>
+            {t("Savdoni yuborish")}
+          </LoadingButton>
 
           <button
             className="dashboard-filter"

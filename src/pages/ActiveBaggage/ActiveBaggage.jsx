@@ -21,6 +21,7 @@ import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
 import ReceiptPreview from "../../components/ReceiptPreview/ReceiptPreview";
+import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
@@ -122,6 +123,7 @@ export default function ActiveBaggage() {
   });
   const [formError, setFormError] = useState("");
   const [telegramSendingId, setTelegramSendingId] = useState("");
+  const telegramSendingRef = useRef(new Set());
   const [pendingAction, setPendingAction] = useState("");
   const pendingActionRef = useRef(false);
 
@@ -464,7 +466,8 @@ export default function ActiveBaggage() {
   };
 
   const handleSendTelegram = async (order) => {
-    if (!order?.id || telegramSendingId) return;
+    if (!order?.id || telegramSendingRef.current.has(order.id)) return;
+    telegramSendingRef.current.add(order.id);
     setTelegramSendingId(order.id);
     setFormError("");
     try {
@@ -473,6 +476,7 @@ export default function ActiveBaggage() {
     } catch (error) {
       setFormError(t(error.message || "Telegram bilan ulanishda xatolik yuz berdi"));
     } finally {
+      telegramSendingRef.current.delete(order.id);
       setTelegramSendingId("");
     }
   };
@@ -633,15 +637,17 @@ export default function ActiveBaggage() {
                   <button type="button" className="icon-action print" onClick={() => handleReprint(order)} disabled={Boolean(pendingAction)}>
                     <Printer size={16} />
                   </button>
-                  <button
+                  <LoadingButton
                     type="button"
                     className="icon-action telegram"
                     onClick={() => handleSendTelegram(order)}
+                    loading={telegramSendingId === order.id}
+                    loadingLabel=""
                     disabled={telegramSendingId === order.id}
                     title="Telegram"
                   >
                     <Send size={16} />
-                  </button>
+                  </LoadingButton>
                   {(order.status === "Aktiv" || order.status === "Kechikdi") && (
                     <>
                       <button type="button" className="icon-action transfer" onClick={() => openTransfer(order)} disabled={Boolean(pendingAction)}>
@@ -824,10 +830,17 @@ export default function ActiveBaggage() {
               ))}
             </div>
 
-            <button type="button" className="pickup-confirm-btn" onClick={handleSaveEdit} disabled={Boolean(pendingAction)}>
+            <LoadingButton
+              type="button"
+              className="pickup-confirm-btn"
+              onClick={handleSaveEdit}
+              loading={pendingAction === "edit"}
+              loadingLabel={t("Saqlanmoqda...")}
+              disabled={Boolean(pendingAction)}
+            >
               <Edit3 size={17} />
               {t("Saqlash")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}
@@ -920,10 +933,17 @@ export default function ActiveBaggage() {
               </label>
             </div>
 
-            <button type="button" className="pickup-confirm-btn" onClick={handlePickup} disabled={Boolean(pendingAction)}>
+            <LoadingButton
+              type="button"
+              className="pickup-confirm-btn"
+              onClick={handlePickup}
+              loading={pendingAction === "pickup"}
+              loadingLabel={t("Tasdiqlanmoqda...")}
+              disabled={Boolean(pendingAction)}
+            >
               <CheckCircle size={17} />
               {t("Pickup tasdiqlash")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}
@@ -948,10 +968,17 @@ export default function ActiveBaggage() {
                 </GlassSelect>
               </label>
             </div>
-            <button type="button" className="pickup-confirm-btn" onClick={handleCloseDebt} disabled={Boolean(pendingAction)}>
+            <LoadingButton
+              type="button"
+              className="pickup-confirm-btn"
+              onClick={handleCloseDebt}
+              loading={pendingAction === "debt"}
+              loadingLabel={t("Yopilmoqda...")}
+              disabled={Boolean(pendingAction)}
+            >
               <CheckCircle size={17} />
               {t("Qarz yopish")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}
@@ -995,10 +1022,17 @@ export default function ActiveBaggage() {
               </label>
             </div>
 
-            <button type="button" className="pickup-confirm-btn" onClick={handleTransfer} disabled={Boolean(pendingAction)}>
+            <LoadingButton
+              type="button"
+              className="pickup-confirm-btn"
+              onClick={handleTransfer}
+              loading={pendingAction === "transfer"}
+              loadingLabel={t("Ko'chirilmoqda...")}
+              disabled={Boolean(pendingAction)}
+            >
               <MoveRight size={17} />
               {t("Transfer saqlash")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}
@@ -1020,9 +1054,16 @@ export default function ActiveBaggage() {
               <textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
             </label>
 
-            <button type="button" className="cancel-confirm-btn" onClick={handleConfirmCancel} disabled={Boolean(pendingAction)}>
+            <LoadingButton
+              type="button"
+              className="cancel-confirm-btn"
+              onClick={handleConfirmCancel}
+              loading={pendingAction === "cancel"}
+              loadingLabel={t("Bekor qilinmoqda...")}
+              disabled={Boolean(pendingAction)}
+            >
               {t("Bekor qilishni tasdiqlash")}
-            </button>
+            </LoadingButton>
           </div>
         </div>
       )}
