@@ -118,7 +118,7 @@ export default function CurrentShift() {
         const currencies = Object.entries(values || {}).filter(([currency, amount]) => currency === "UZS" || Number(amount) !== 0);
         return <div className="shift-dashboard__summary-row" key={key}><span>{label}</span><b>{currencies.map(([currency, amount]) => <span key={currency}>{money(amount, currency)}</span>)}</b></div>;
       })}</div></section>
-      <section className="shift-dashboard__footer"><div><b>Statistika chegarasi</b><p>Faqat shu filial, shu OPEN shift va joriy foydalanuvchi amallari hisoblanadi.</p></div><button type="button" onClick={load}><RotateCcw size={16}/>Yangilash</button></section>
+      <section className="shift-dashboard__footer"><div><b>Statistika chegarasi</b><p>Faqat tanlangan filial va joriy OPEN shift oralig'idagi amallar hisoblanadi.</p></div><button type="button" onClick={load}><RotateCcw size={16}/>Yangilash</button></section>
     </>}
   </div>;
 }
