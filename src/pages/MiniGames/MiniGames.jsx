@@ -52,6 +52,7 @@ export default function MiniGames() {
           return (
             <button key={item.id} type="button" className={`game-card ${item.accent}`} onClick={() => setActive(item.id)}>
               <div className="game-card__visual"><Icon size={42} /></div>
+              <div className="game-card__body"><h2>{item.title}</h2><p>{item.subtitle}</p></div>
               <div className="game-card__arrow">→</div>
             </button>
           );
