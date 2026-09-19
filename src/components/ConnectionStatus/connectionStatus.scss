@@ -1,0 +1,10 @@
+.connection-status { height: 42px; padding: 0 11px; border-radius: 999px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--border-soft); background: color-mix(in srgb, var(--surface-muted) 88%, transparent); color: var(--success); font-size: 12px; font-weight: 800; }
+.connection-status i { font-style: normal; font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.connection-status.slow { color: var(--warning); }
+.connection-status.offline { color: var(--danger); }
+.connection-banner { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 200; min-height: 42px; padding: 0 16px; border-radius: 999px; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-panel); backdrop-filter: blur(18px); font-size: 13px; }
+.connection-banner.offline { color: #fff; background: rgba(190,35,35,.92); }
+.connection-banner.restored { color: #fff; background: rgba(22,145,73,.92); }
+.connection-banner span { opacity: .82; }
+@media (max-width: 1260px) { .connection-status i { display:none; } .connection-status { padding: 0 9px; } }
+@media (max-width: 820px) { .connection-status { display:none; } }

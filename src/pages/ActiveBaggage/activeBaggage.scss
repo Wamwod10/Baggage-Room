@@ -947,3 +947,6 @@
     display: none !important;
   }
 }
+
+.pickup-countdown { font-weight: 700; color: var(--success) !important; }
+.pickup-countdown.late { color: var(--danger) !important; }

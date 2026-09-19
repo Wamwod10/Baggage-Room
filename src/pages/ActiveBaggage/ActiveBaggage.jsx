@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle,
   Clock3,
@@ -70,6 +70,19 @@ const getPickupExpectedTotal = (order = {}) => {
   return previousPaid + Number(order.overtimeAmount || 0);
 };
 
+
+const countdownLabel = (target) => {
+  const time = new Date(target).getTime();
+  if (!Number.isFinite(time)) return { text: "—", late: false };
+  const diff = time - Date.now();
+  const late = diff < 0;
+  const minutes = Math.max(0, Math.floor(Math.abs(diff) / 60000));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  const text = hours > 0 ? `${hours} soat ${rest} daqiqa` : `${rest} daqiqa`;
+  return { text: late ? `${text} kechikdi` : `${text} qoldi`, late };
+};
+
 const emptyPageData = {
   ordersPage: { items: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 1 } },
   lockers: [],
@@ -80,6 +93,7 @@ export default function ActiveBaggage() {
   const { effectiveBranch, user } = useAuth();
   const branchNames = getBranchNames();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [, setCountdownTick] = useState(0);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -115,9 +129,14 @@ export default function ActiveBaggage() {
   const pendingActionRef = useRef(false);
   const mutationKeysRef = useRef({});
 
-  const startLogicalMutation = (name) => {
+  const startLogicalMutation = useCallback((name) => {
     mutationKeysRef.current[name] = createIdempotencyKey(name);
-  };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCountdownTick((value) => value + 1), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const beginAction = (action) => {
     if (pendingActionRef.current) return false;
@@ -204,7 +223,7 @@ export default function ActiveBaggage() {
     setPage(Math.min(Math.max(Number(nextPage) || 1, 1), totalPages));
   };
 
-  const openPickup = (order) => {
+  const openPickup = useCallback((order) => {
     startLogicalMutation("order-pickup");
     setPickupOrder(order);
     setPickupForm({
@@ -216,7 +235,17 @@ export default function ActiveBaggage() {
       paymentReason: "",
     });
     setFormError("");
-  };
+  }, [startLogicalMutation]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (selectedOrder && (selectedOrder.status === "Aktiv" || selectedOrder.status === "Kechikdi")) {
+        openPickup(selectedOrder);
+      }
+    };
+    window.addEventListener("br:shortcut-pickup", handler);
+    return () => window.removeEventListener("br:shortcut-pickup", handler);
+  }, [selectedOrder, openPickup]);
 
   const handlePickup = async () => {
     if (!pickupOrder) return;
@@ -605,6 +634,7 @@ export default function ActiveBaggage() {
 
                 <div data-label={t("Check-out")}>
                   <span>{formatDateTime(order.checkOut)}</span>
+                  {(() => { const countdown = countdownLabel(order.checkOut); return <small className={`pickup-countdown ${countdown.late ? "late" : ""}`}>{countdown.text}</small>; })()}
                 </div>
 
                 <div data-label={t("Narx")}>
@@ -934,6 +964,7 @@ export default function ActiveBaggage() {
             <LoadingButton
               type="button"
               className="pickup-confirm-btn"
+              data-shortcut-primary="true"
               onClick={handlePickup}
               loading={pendingAction === "pickup"}
               loadingLabel={t("Tasdiqlanmoqda...")}

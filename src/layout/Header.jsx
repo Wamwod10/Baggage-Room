@@ -7,6 +7,8 @@ import {
   Menu,
   Search,
   SunMoon,
+  Keyboard,
+  Gamepad2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/AuthContext";
@@ -18,6 +20,8 @@ import { getPaymentLabel } from "../utils/paymentLabels";
 import { useTranslation } from "../i18n/useTranslation";
 import { LANGUAGE_OPTIONS } from "../i18n/translations";
 import { getTashkentClock } from "../utils/formatDate";
+import BackgroundPicker from "../components/BackgroundPicker/BackgroundPicker";
+import ConnectionStatus from "../components/ConnectionStatus/ConnectionStatus";
 import "./header.scss";
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
@@ -27,7 +31,7 @@ const languageLabels = {
   ru: "Русский",
 };
 
-export default function Header({ onMenuClick }) {
+export default function Header({ onMenuClick, onShortcutsOpen }) {
   const { t, language, setLanguage } = useTranslation();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const navigate = useNavigate();
@@ -149,6 +153,7 @@ export default function Header({ onMenuClick }) {
           <Search size={18} />
 
           <input
+            id="global-order-search"
             value={search}
             onChange={handleSearchChange}
             placeholder={t("Order, telefon, passport, filial, payment...")}
@@ -212,6 +217,30 @@ export default function Header({ onMenuClick }) {
         )}
 
         <HeaderClock label={t("Joriy sana va vaqt")} />
+
+        <ConnectionStatus t={t} />
+
+        <button
+          type="button"
+          onClick={() => navigate("/mini-games")}
+          className="header-icon-btn"
+          aria-label={t("Mini Games")}
+          title={t("Mini Games")}
+        >
+          <Gamepad2 size={18} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onShortcutsOpen}
+          className="header-icon-btn"
+          aria-label={t("Keyboard shortcuts")}
+          title={t("Keyboard shortcuts")}
+        >
+          <Keyboard size={18} />
+        </button>
+
+        <BackgroundPicker t={t} />
 
         <button
           onClick={toggleTheme}

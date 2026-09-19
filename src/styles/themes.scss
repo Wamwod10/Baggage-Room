@@ -81,3 +81,9 @@ body.dark {
     --modal-backdrop-blur: blur(60px) saturate(200%);
   }
 }
+
+/* User-selectable premium dark backgrounds. The image is decorative only; all UI remains glass based. */
+body.dark[data-background="aurora"] { --bg-main: linear-gradient(rgba(3,6,14,.26),rgba(3,6,14,.42)), url('/backgrounds/aurora-blue.png') center/cover fixed; }
+body.dark[data-background="emerald"] { --bg-main: linear-gradient(rgba(2,8,10,.30),rgba(2,8,10,.46)), url('/backgrounds/emerald-night.png') center/cover fixed; }
+body.dark[data-background="sunset"] { --bg-main: linear-gradient(rgba(8,4,12,.26),rgba(8,4,12,.44)), url('/backgrounds/sunset-noir.png') center/cover fixed; }
+body.dark[data-background="steel"] { --bg-main: linear-gradient(rgba(3,5,10,.28),rgba(3,5,10,.46)), url('/backgrounds/steel-night.png') center/cover fixed; }

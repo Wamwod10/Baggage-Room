@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./store/AuthContext";
 import { I18nProvider, useTranslation } from "./i18n/useTranslation";
 import { getSettings } from "./utils/storage";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
+import { initializeUiPreferences } from "./utils/uiPreferences";
 import AppLoader from "./components/AppLoader/AppLoader";
 import StateBlock from "./components/StateBlock/StateBlock";
 
@@ -19,6 +20,8 @@ const Notifications = lazy(() => import("./pages/Notifications/Notifications"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
 
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
+const MiniGames = lazy(() => import("./pages/MiniGames/MiniGames"));
+const CurrentShift = lazy(() => import("./pages/CurrentShift/CurrentShift"));
 
 function ProtectedRoute({ children }) {
   const { authLoading, isAuth } = useAuth();
@@ -59,6 +62,7 @@ function AppRoutes() {
     const settings = getSettings();
 
     document.body.classList.toggle("dark", settings.theme === "dark");
+    initializeUiPreferences();
   }, []);
 
   return (
@@ -95,6 +99,8 @@ function AppRoutes() {
         <Route path="expenses" element={<LazyPage><Expenses /></LazyPage>} />
         <Route path="shifts" element={<LazyPage><Shifts /></LazyPage>} />
         <Route path="notifications" element={<LazyPage><Notifications /></LazyPage>} />
+        <Route path="my-shift" element={<LazyPage><CurrentShift /></LazyPage>} />
+        <Route path="mini-games" element={<LazyPage><MiniGames /></LazyPage>} />
         <Route
           path="settings"
           element={

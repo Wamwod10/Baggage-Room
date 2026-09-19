@@ -12,6 +12,7 @@ import {
   BarChart3,
   Lock,
   X,
+  UserCheck,
 } from "lucide-react";
 import { useAuth } from "../store/AuthContext";
 import { useTranslation } from "../i18n/useTranslation";
@@ -54,6 +55,11 @@ const menuItems = [
     title: "Kassa / Shift",
     path: "/shifts",
     icon: Clock3,
+  },
+  {
+    title: "Mening smenam",
+    path: "/my-shift",
+    icon: UserCheck,
   },
   {
     title: "Notifications",

@@ -838,6 +838,7 @@ export default function NewBaggage() {
           <div className="panel-save-actions">
             <LoadingButton
               className="save-btn"
+              data-shortcut-primary="true"
               type="button"
               onClick={() => handleSave(false)}
               loading={savingAction === "save"}

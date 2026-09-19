@@ -1,0 +1,10 @@
+.shortcut-help__backdrop { position: fixed; inset: 0; z-index: 140; display: grid; place-items: center; padding: 20px; background: rgba(2,6,23,.72); backdrop-filter: blur(18px); }
+.shortcut-help { width: min(520px, 100%); padding: 18px; border-radius: 28px; background: var(--modal-surface-bg); border: 1px solid var(--glass-edge); box-shadow: var(--shadow-panel); }
+.shortcut-help header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-bottom: 14px; }
+.shortcut-help header h3 { color: var(--text-main); font-size: 18px; }
+.shortcut-help header p, .shortcut-help small { color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+.shortcut-help header button { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-muted); color: var(--text-muted); }
+.shortcut-help__icon { width: 44px; height: 44px; border-radius: 16px; display: grid; place-items: center; color: var(--primary); background: var(--primary-soft); }
+.shortcut-help__list { display: grid; gap: 7px; margin-bottom: 12px; }
+.shortcut-help__list > div { min-height: 44px; padding: 8px 10px 8px 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-radius: 16px; background: color-mix(in srgb, var(--surface-muted) 76%, transparent); color: var(--text-soft); }
+kbd { padding: 6px 9px; border-radius: 9px; border: 1px solid var(--glass-edge); background: var(--surface-strong); color: var(--text-main); font: 700 12px/1 system-ui; box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--glass-edge) 60%, transparent); }

@@ -27,6 +27,12 @@ const shiftService = {
     }
   },
 
+  async getOperatorStats(branchName = null, { signal } = {}) {
+    const branchId = await branchService.getBranchIdByName(branchName);
+    const response = await apiClient.get("/shifts/current/operator-stats", { params: { branchId }, signal });
+    return getData(response) || null;
+  },
+
   async open(data, { idempotencyKey } = {}) {
     const branchId = await branchService.getBranchIdByName(data.branch);
     if (!branchId) throw new Error("Filial tanlanmagan");
