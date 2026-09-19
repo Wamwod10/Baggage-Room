@@ -5,7 +5,6 @@ import {
   Lock,
   PlayCircle,
   RefreshCcw,
-  Send,
   Square,
 } from "lucide-react";
 import { useRef } from "react";
@@ -401,22 +400,6 @@ export default function Shifts() {
     }
   };
 
-  const handleSendSalesTelegram = async () => {
-    if (!currentShift || !beginAction("sales")) return;
-    setFormError("");
-    setStatusMessage("");
-
-    try {
-      await shiftService.sendCurrentSalesTelegram(branchName);
-      setStatusMessage(t("Savdo hisoboti Telegram guruhga yuborildi"));
-      refreshData();
-    } catch (error) {
-      setFormError(t(error.message || "Telegram bilan ulanishda xatolik yuz berdi"));
-    } finally {
-      endAction();
-    }
-  };
-
   const getReportText = (shift) => {
     if (!shift) return "";
     const salaryMap = shift.salaryByCurrency || shift.report?.salaryByCurrency || {};
@@ -612,17 +595,6 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
                 <div><span>{t("Qabul qilingan")}</span><b>{formatCurrencyMap(currentStats.acceptedCashByCurrency)}</b></div>
                 <div><span>{t("Baggage count")}</span><b>{currentStats.baggage} {t("ta")}</b></div>
               </div>
-              <LoadingButton
-                type="button"
-                className="send-sales-btn"
-                onClick={handleSendSalesTelegram}
-                loading={pendingAction === "sales"}
-                loadingLabel={t("Yuborilmoqda...")}
-                disabled={Boolean(pendingAction)}
-              >
-                <Send size={16} />
-                {t("Savdoni yuborish")}
-              </LoadingButton>
               <label>
                 <span>{t("Kimga")}</span>
                 <input value={handoverTo} onChange={(event) => setHandoverTo(event.target.value)} placeholder={t("Keyingi admin")} />
