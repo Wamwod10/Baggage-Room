@@ -42,7 +42,6 @@ export default function MiniGames() {
         <div>
           <span className="game-center__eyebrow">MINI GAMES</span>
           <h1>Tanaffus uchun kichik o'yinlar</h1>
-          <p>Hammasi brauzer ichida ishlaydi. Backendga so'rov yubormaydi va ish jarayoniga xalaqit bermaydi.</p>
         </div>
         <div className="game-center__badge"><Trophy size={17} /><span>Best score<br/><b>local saqlanadi</b></span></div>
       </section>
@@ -53,13 +52,11 @@ export default function MiniGames() {
           return (
             <button key={item.id} type="button" className={`game-card ${item.accent}`} onClick={() => setActive(item.id)}>
               <div className="game-card__visual"><Icon size={42} /></div>
-              <div className="game-card__body"><span>PLAY</span><h2>{item.title}</h2><p>{item.subtitle}</p></div>
               <div className="game-card__arrow">→</div>
             </button>
           );
         })}
       </div>
-      <p className="game-center__note">O'yin ochiq paytda mijoz kelsa sidebar yoki shortcut orqali darhol ish sahifasiga qaytishingiz mumkin.</p>
     </div>
   );
 }

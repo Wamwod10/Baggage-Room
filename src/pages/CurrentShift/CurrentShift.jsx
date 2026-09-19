@@ -14,6 +14,8 @@ const cards = [
   ["transfers", "Transfer", MoveRight, "violet"],
   ["cashOperations", "Kassa amallari", ListChecks, "blue"],
 ];
+const money = (map) => Object.entries(map || {}).filter(([, amount]) => Number(amount) !== 0)
+  .map(([currency, amount]) => `${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: currency === "UZS" ? 0 : 2 }).format(Number(amount) / (currency === "UZS" ? 1 : 100))} ${currency}`);
 
 const durationText = (from, now) => {
   if (!from) return "—";
@@ -77,7 +79,7 @@ export default function CurrentShift() {
   useEffect(() => { const id=window.setInterval(()=>setTick(Date.now()),30000); return()=>window.clearInterval(id); }, []);
 
   const stats = data?.stats || {};
-  const operatorName = data?.shift?.operatorName || data?.shift?.acceptedByName || data?.shift?.operator?.name || data?.shift?.operator?.login || "—";
+  const operatorName = user?.name || user?.login || "—";
   const duration = useMemo(() => durationText(data?.shift?.openedAt, tick), [data?.shift?.openedAt, tick]);
 
   return <div className="shift-dashboard">
@@ -91,9 +93,13 @@ export default function CurrentShift() {
     {!loading && error && <StateBlock type="error" title="Statistika yuklanmadi" description={error} actionLabel="Qayta urinish" onAction={load}/>} 
     {!loading && !error && !data && !(isSuperAdmin && !effectiveBranch) && <StateBlock type="clock" title="Ochiq smena yo'q" description="Smena ochilgandan keyin xodimning statistikasi shu yerda 0 dan boshlanadi."/>}
     {!loading && !error && data && <>
-      {!data.viewerIsOperator && <div className="shift-dashboard__notice">Bu smena <b>{operatorName}</b> tomonidan qabul qilingan. Quyidagi raqamlar aynan shu smena operatoriga tegishli.</div>}
-      <div className="shift-dashboard__grid">{cards.map(([key,label,Icon,accent])=><article className={`shift-stat-card ${accent}`} key={key}><div><Icon size={20}/></div><span>{label}</span><b>{Number(stats[key]||0)}</b><small>shu smenada</small></article>)}</div>
-      <section className="shift-dashboard__footer"><div><b>Statistika chegarasi</b><p>Faqat shu filial, shu OPEN shift va smenani qabul qilgan xodim amallari hisoblanadi.</p></div><button type="button" onClick={load}><RotateCcw size={16}/>Yangilash</button></section>
+      <div className="shift-dashboard__grid">{cards.map(([key,label,Icon,accent])=>{
+        const amountLines = key === "cashOperations"
+          ? [...money(stats.cashInByCurrency).map((value) => `Kirim: ${value}`), ...money(stats.cashOutByCurrency).map((value) => `Chiqim: ${value}`)]
+          : money(stats[`${key}AmountByCurrency`]);
+        return <article className={`shift-stat-card ${accent}`} key={key}><div><Icon size={20}/></div><span>{label}</span><b>{Number(stats[key]||0)}</b>{amountLines.length ? <ul className="shift-stat-card__amounts">{amountLines.map((line)=><li key={line}>{line}</li>)}</ul> : <small>shu smenada</small>}</article>;
+      })}</div>
+      <section className="shift-dashboard__footer"><div><b>Statistika chegarasi</b><p>Faqat shu filial, shu OPEN shift va joriy foydalanuvchi amallari hisoblanadi.</p></div><button type="button" onClick={load}><RotateCcw size={16}/>Yangilash</button></section>
     </>}
   </div>;
 }
