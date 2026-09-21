@@ -949,4 +949,5 @@
 }
 
 .pickup-countdown { font-weight: 700; color: var(--success) !important; }
+.pickup-countdown.grace { color: var(--warning) !important; }
 .pickup-countdown.late { color: var(--danger) !important; }

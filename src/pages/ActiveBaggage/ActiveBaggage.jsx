@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import baggageService from "../../services/baggageService";
 import lockerService from "../../services/lockerService";
+import tariffService from "../../services/tariffService";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
 import StateBlock from "../../components/StateBlock/StateBlock";
@@ -27,6 +28,7 @@ import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 import { formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import { createIdempotencyKey } from "../../utils/idempotency";
+import { calculatePickupOvertime, getPickupCountdown } from "../../utils/pickupTime";
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -71,21 +73,10 @@ const getPickupExpectedTotal = (order = {}) => {
 };
 
 
-const countdownLabel = (target) => {
-  const time = new Date(target).getTime();
-  if (!Number.isFinite(time)) return { text: "—", late: false };
-  const diff = time - Date.now();
-  const late = diff < 0;
-  const minutes = Math.max(0, Math.floor(Math.abs(diff) / 60000));
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  const text = hours > 0 ? `${hours} soat ${rest} daqiqa` : `${rest} daqiqa`;
-  return { text: late ? `${text} kechikdi` : `${text} qoldi`, late };
-};
-
 const emptyPageData = {
   ordersPage: { items: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 1 } },
   lockers: [],
+  tariffs: [],
 };
 
 export default function ActiveBaggage() {
@@ -157,7 +148,7 @@ export default function ActiveBaggage() {
     retry,
   } = usePageResource(
     async ({ signal } = {}) => {
-      const [ordersPage, lockers] = await Promise.all([
+      const [ordersPage, lockers, tariffs] = await Promise.all([
         baggageService.getPage({
           branchName: effectiveBranch || (branch === "Barcha filiallar" ? null : branch),
           page,
@@ -169,8 +160,9 @@ export default function ActiveBaggage() {
           signal,
         }),
         lockerService.getAll(effectiveBranch || (branch === "Barcha filiallar" ? null : branch), { signal }),
+        tariffService.getAll(effectiveBranch || (branch === "Barcha filiallar" ? null : branch), { signal }),
       ]);
-      return { ordersPage, lockers: asArray(lockers) };
+      return { ordersPage, lockers: asArray(lockers), tariffs: asArray(tariffs) };
     },
     [effectiveBranch, branch, page, debouncedSearch, status, refreshKey],
     emptyPageData,
@@ -200,6 +192,7 @@ export default function ActiveBaggage() {
   const pageOrders = asArray(safeOrdersPage.items);
   const pagination = safeOrdersPage.pagination || emptyPageData.ordersPage.pagination;
   const pageLockers = asArray(safePageData.lockers);
+  const pageTariffs = asArray(safePageData.tariffs);
 
   const rawActiveOrders = pageOrders;
   const activeOrders = pageOrders;
@@ -225,17 +218,23 @@ export default function ActiveBaggage() {
 
   const openPickup = useCallback((order) => {
     startLogicalMutation("order-pickup");
-    setPickupOrder(order);
+    const overtime = calculatePickupOvertime({ order, tariffs: pageTariffs });
+    const pickupOrderWithOvertime = {
+      ...order,
+      overtimeHours: overtime.hours,
+      overtimeAmount: overtime.amount,
+    };
+    setPickupOrder(pickupOrderWithOvertime);
     setPickupForm({
       payment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
       overtimePayment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
       currency: order.currency || "UZS",
-      realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(order), order.currency || "UZS")),
-      overtimeAmount: String(fromMinorUnits(order.overtimeAmount || 0, order.currency || "UZS")),
+      realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(pickupOrderWithOvertime), order.currency || "UZS")),
+      overtimeAmount: String(fromMinorUnits(overtime.amount, order.currency || "UZS")),
       paymentReason: "",
     });
     setFormError("");
-  }, [startLogicalMutation]);
+  }, [pageTariffs, setFormError, setPickupForm, setPickupOrder, startLogicalMutation]);
 
   useEffect(() => {
     const handler = () => {
@@ -634,7 +633,7 @@ export default function ActiveBaggage() {
 
                 <div data-label={t("Check-out")}>
                   <span>{formatDateTime(order.checkOut)}</span>
-                  {(() => { const countdown = countdownLabel(order.checkOut); return <small className={`pickup-countdown ${countdown.late ? "late" : ""}`}>{countdown.text}</small>; })()}
+                  {(() => { const countdown = getPickupCountdown(order.checkOut); return <small className={`pickup-countdown ${countdown.tone}`}>{countdown.text}</small>; })()}
                 </div>
 
                 <div data-label={t("Narx")}>
@@ -923,13 +922,8 @@ export default function ActiveBaggage() {
                 <span>{t("Qo'shimcha to'lov")}</span>
                 <input
                   inputMode={pickupForm.currency === "UZS" ? "numeric" : "decimal"}
+                  readOnly
                   value={formatNumberInput(pickupForm.overtimeAmount, { decimal: pickupForm.currency !== "UZS" })}
-                  onChange={(event) =>
-                    setPickupForm((prev) => ({
-                      ...prev,
-                      overtimeAmount: cleanNumericInput(event.target.value, { decimal: prev.currency !== "UZS" }),
-                    }))
-                  }
                 />
               </label>
               {Number(pickupForm.overtimeAmount || 0) > 0 && (

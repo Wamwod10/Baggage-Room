@@ -131,6 +131,7 @@ const mapOrder = (order) => {
     number: item.lockerNumber,
     size: item.size,
     count: Number(item.count || 1),
+    tariffHours: Number(item.tariffHours || order.tariffHours || 1),
     unitPrice: item.unitPrice,
     price: item.finalPrice,
     originalPrice: item.originalPrice,
