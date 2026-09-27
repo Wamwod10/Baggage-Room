@@ -29,6 +29,7 @@ import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 import { formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import { createIdempotencyKey } from "../../utils/idempotency";
 import { calculatePickupOvertime, getPickupCountdown } from "../../utils/pickupTime";
+import { updatePickupOvertimeAmount } from "../../utils/pickupPayment";
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -922,8 +923,8 @@ export default function ActiveBaggage() {
                 <span>{t("Qo'shimcha to'lov")}</span>
                 <input
                   inputMode={pickupForm.currency === "UZS" ? "numeric" : "decimal"}
-                  readOnly
                   value={formatNumberInput(pickupForm.overtimeAmount, { decimal: pickupForm.currency !== "UZS" })}
+                  onChange={(event) => setPickupForm((prev) => updatePickupOvertimeAmount(prev, event.target.value))}
                 />
               </label>
               {Number(pickupForm.overtimeAmount || 0) > 0 && (
