@@ -3,6 +3,9 @@ import apiClient from '../../services/apiClient';
 import { getData } from '../../services/apiMappers';
 import { createIdempotencyKey, idempotencyHeaders } from '../../utils/idempotency';
 import { formatMoneyByCurrency, toMinorUnits } from '../../utils/currency';
+import { ShieldCheck, Send } from 'lucide-react';
+import Button from '../Button/Button';
+import './financialRequests.scss';
 const statusLabels = { PENDING: 'Tasdiq kutilmoqda', REJECTED: 'Rad etildi', APPROVED_AWAITING_PAYOUT: 'Tasdiqlandi, qaytarish kutilmoqda', EXECUTED: 'Bajarildi' };
 const kindLabels = { REFUND: 'Pul qaytarish', PAYMENT_CORRECTION: 'To‘lov turini tuzatish' };
 
@@ -64,17 +67,20 @@ export default function FinancialRequests({ order }) {
       setPaymentForm((value) => ({ ...value, amount: '' }));
     } catch (err) { setError(err.message); } finally { setBusy(false); }
   };
-  return <section aria-label="Moliyaviy so‘rovlar">
-    <h3>Moliyaviy so‘rovlar</h3>
-    {['ACTIVE', 'DELAYED'].includes(order.apiStatus) && order.paymentType !== 'DEBT' && order.realPaidAmount + received < order.finalAmount && <div>
+  return <section className="financial-requests" aria-label="Moliyaviy so‘rovlar">
+    <header className="financial-requests__heading">
+      <span className="financial-requests__icon"><ShieldCheck size={20} aria-hidden="true" /></span>
+      <div><h3>Moliyaviy so‘rovlar</h3><p>Pul qaytarish va to‘lov turini tuzatish uchun rahbariyat tasdig‘i talab qilinadi.</p></div>
+    </header>
+    {['ACTIVE', 'DELAYED'].includes(order.apiStatus) && order.paymentType !== 'DEBT' && order.realPaidAmount + received < order.finalAmount && <div className="financial-requests__payment">
       <p>Buyurtmani yopish uchun to‘lovni to‘liq amalga oshiring yoki qarz tartibida rasmiylashtiring.</p>
       <label>Qo‘shimcha to‘lov ({order.currency}) <input type="number" min="0" value={paymentForm.amount} onChange={(event) => setPaymentForm({ ...paymentForm, amount: event.target.value })} /></label>
       <label>To‘lov turi <select value={paymentForm.paymentType} onChange={(event) => setPaymentForm({ ...paymentForm, paymentType: event.target.value })}>
         {['CASH','TERMINAL','CLICK','PAYME'].map((type) => <option key={type}>{type}</option>)}
       </select></label>
-      <button disabled={busy || !paymentForm.amount} onClick={receive}>Haqiqiy to‘lovni qayd etish</button>
+      <Button disabled={busy || !paymentForm.amount} onClick={receive}>Haqiqiy to‘lovni qayd etish</Button>
     </div>}
-    <form onSubmit={submit}>
+    <form className="financial-requests__form" onSubmit={submit}>
       <label>Amal <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
         <option value="REFUND">Pul qaytarish uchun so‘rov yuborish</option>
         <option value="PAYMENT_CORRECTION">To‘lov turini tuzatish</option>
@@ -87,20 +93,22 @@ export default function FinancialRequests({ order }) {
         : <label>Yangi to‘lov turi <select value={form.newPaymentType} onChange={(e) => setForm({ ...form, newPaymentType: e.target.value })}>
           {['CASH','TERMINAL','CLICK','PAYME','CARD','TRANSFER'].map((type) => <option key={type}>{type}</option>)}
         </select></label>}
-      <label>Sabab <textarea required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
-      <button disabled={busy || !payment} type="submit">So‘rov yuborish</button>
+      <label className="financial-requests__reason">Sabab <textarea required rows={3} placeholder="So‘rov sababini yozing…" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
+      <div className="financial-requests__actions"><Button disabled={busy || !payment} type="submit"><Send size={16} aria-hidden="true" />{busy ? 'Yuborilmoqda…' : 'So‘rov yuborish'}</Button></div>
     </form>
-    {error && <p role="alert">{error}</p>}
-    {data.requests.map((r) => <div key={r.id}>
-      <p>{kindLabels[r.kind]} — {formatMoneyByCurrency(r.amount, r.currency)} — {statusLabels[r.status]} — {r.context.managerName || ''}</p>
+    {error && <p className="financial-requests__error" role="alert">{error}</p>}
+    {data.requests.map((r) => <div className="financial-requests__request" key={r.id}>
+      <div className="financial-requests__request-head"><strong>{kindLabels[r.kind]}</strong><span className="financial-requests__status" data-status={r.status}>{statusLabels[r.status]}</span></div>
+      <p className="financial-requests__amount">{formatMoneyByCurrency(r.amount, r.currency)}</p>
+      {r.context.managerName && <p className="financial-requests__manager">Rahbariyat: {r.context.managerName}</p>}
       {r.status === 'APPROVED_AWAITING_PAYOUT' && <p>Tasdiqlangan. Pul hali qaytarilgani qayd etilmagan.</p>}
-      {r.status === 'APPROVED_AWAITING_PAYOUT' && (data.canRecordPayout || r.canRecordPayout) && <>
+      {r.status === 'APPROVED_AWAITING_PAYOUT' && (data.canRecordPayout || r.canRecordPayout) && <div className="financial-requests__payout">
         <label>Haqiqiy qaytarish usuli <select value={payoutType} onChange={(event) => setPayoutType(event.target.value)}>
           {['CASH', 'TERMINAL', 'CLICK', 'PAYME', 'CARD', 'TRANSFER'].map((type) => <option key={type}>{type}</option>)}
         </select></label>
         <label>Haqiqiy qaytarish tasdig‘i / tranzaksiya raqami <input value={reference} onChange={(e) => setReference(e.target.value)} /></label>
-        <button disabled={busy || !reference.trim()} onClick={() => payout(r)}>Pul haqiqatan qaytarilganini qayd etish</button>
-      </>}
+        <Button disabled={busy || !reference.trim()} onClick={() => payout(r)}>Pul haqiqatan qaytarilganini qayd etish</Button>
+      </div>}
     </div>)}
   </section>;
 }

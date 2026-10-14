@@ -1,0 +1,52 @@
+.financial-requests {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--primary-soft), transparent 65%), var(--surface-muted);
+  color: var(--text-main);
+
+  &__heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  &__icon {
+    display: grid; place-items: center; flex-shrink: 0;
+    width: 42px; height: 42px; border-radius: 14px;
+    background: var(--primary-soft); color: var(--primary);
+  }
+  h3 { margin: 0; font-size: 17px; font-weight: 650; }
+  &__heading p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+  &__form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, .8fr); gap: 16px; }
+  label { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: 13px; font-weight: 600; color: var(--text-soft); }
+  input, select, textarea {
+    box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px;
+    padding: 11px 13px; border: 1px solid var(--border-soft); border-radius: 12px;
+    background: var(--surface); color: var(--text-main); font: inherit; font-size: 14px;
+    transition: border-color .15s, box-shadow .15s;
+    &:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-color: var(--primary); }
+    &::placeholder { color: var(--text-muted); font-weight: 400; }
+  }
+  select { text-overflow: ellipsis; }
+  textarea { resize: vertical; line-height: 1.6; }
+  &__reason, &__actions { grid-column: 1 / -1; }
+  &__actions { display: flex; justify-content: flex-end; }
+  .button { max-width: 100%; min-height: 44px; height: auto; padding: 11px 18px; white-space: normal; }
+  .button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  &__error { padding: 12px 14px; border-radius: 12px; background: var(--danger-soft); color: var(--danger); font-size: 13px; overflow-wrap: anywhere; }
+  &__request { margin-top: 14px; padding: 16px; border: 1px solid var(--border-soft); border-radius: 16px; background: var(--surface); }
+  &__request-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; font-size: 14px; }
+  &__status { padding: 5px 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 12px; line-height: 1.5;
+    &[data-status='REJECTED'] { background: var(--danger-soft); color: var(--danger); }
+    &[data-status='EXECUTED'], &[data-status='APPROVED_AWAITING_PAYOUT'] { background: var(--success-soft); color: var(--success); }
+  }
+  &__amount { margin: 12px 0 6px; font-size: 20px; font-weight: 650; }
+  &__manager, &__request > p:not(&__amount) { font-size: 13px; line-height: 1.6; color: var(--text-muted); }
+  &__payment, &__payout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  &__payment { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-soft); }
+  &__payment > p, &__payment > .button, &__payout > .button { grid-column: 1 / -1; }
+  &__payment > p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+  &__payout { margin-top: 16px; }
+  @media (max-width: 640px) {
+    padding: 16px; border-radius: 16px;
+    &__form, &__payment, &__payout { grid-template-columns: minmax(0, 1fr); }
+    &__actions .button { width: 100%; }
+  }
+}
