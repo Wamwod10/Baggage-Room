@@ -18,6 +18,16 @@ const paginationFrom = (response = {}, fallback = {}) => ({
 });
 
 const baggageService = {
+  async financialCapabilities() {
+    return getData(await apiClient.get('/orders/financial-capabilities'));
+  },
+  async quote({ branchName, ...data }, signal) {
+    const branchId = await branchService.getBranchIdByName(branchName);
+    return getData(await apiClient.post('/orders/quote', { ...data, branchId }, { signal }));
+  },
+  async pickupQuote(id) {
+    return getData(await apiClient.get(`/orders/${id}/pickup-quote`));
+  },
   async getPage({
     branchName = null,
     page = 1,
@@ -165,7 +175,9 @@ const baggageService = {
 
   async pickup(id, data = {}, { idempotencyKey } = {}) {
     const response = await apiClient.post(`/orders/${id}/pickup`, {
-      overtimeAmount: Number(data.overtimeAmount || 0),
+      // The backend recalculates at the actual pickup timestamp.
+      priceChangeReason: data.priceChangeReason,
+      quotedOvertimeAmount: data.quotedOvertimeAmount,
       debtPaidAmount: data.debtPaidAmount !== undefined ? Number(data.debtPaidAmount) : undefined,
       paymentType: toPaymentType(data.payment),
       overtimePaymentType: toPaymentType(data.overtimePayment || data.overtimePaymentType),

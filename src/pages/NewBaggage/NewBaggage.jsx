@@ -18,7 +18,7 @@ import lockerService from "../../services/lockerService";
 import settingsService from "../../services/settingsService";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
-import { convertFromUZS, formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
+import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { addHoursToIso, formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import { cleanNumericInput, cleanPhoneInput, formatNumberInput, formatPhoneInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
@@ -46,6 +46,7 @@ const getInitialForm = (defaultBranch, defaultCurrency = "UZS") => ({
   currency: defaultCurrency,
   payment: "Naqd",
   discount: "0",
+  discountReason: "",
   note: "",
   realPaidAmount: "",
   paymentReason: "",
@@ -60,17 +61,6 @@ const XL_BRANCHES = new Set([
   "Samarqand vokzal",
 ]);
 const MULTI_ORDER_LOCKER_BRANCHES = XL_BRANCHES;
-const priceForHours = (tariff, hours, isCustom = false) => {
-  const h = Number(hours || 1);
-  if (!tariff) return 0;
-  if (isCustom) return Number(tariff.price1h || 0) * Math.max(1, Math.ceil(h || 1));
-  if (h <= 1) return Number(tariff.price1h || 0);
-  if (h <= 12) return Number(tariff.price12h || 0);
-  if (h <= 24) return Number(tariff.price24h || 0);
-  if (h <= 48) return Number(tariff.price48h || 0);
-  if (h <= 72) return Number(tariff.price72h || 0);
-  return Math.round(Number(tariff.price72h || 0) + (h - 72) * (Number(tariff.after72hPrice || 0) / 24));
-};
 
 export default function NewBaggage() {
   const { t, formatDateTime } = useTranslation();
@@ -211,12 +201,23 @@ export default function NewBaggage() {
       }))
       .filter((item) => item.count > 0);
   }, [baggageCounts, baggageSizes, form.currency, selectedHours, selectedLockers]);
-  const originalAmountUZS = useMemo(() => {
-    return baggageItems.reduce((total, item) => total + priceForHours(tariffBySize[item.size], selectedHours, isCustomTariff) * item.count, 0);
-  }, [baggageItems, isCustomTariff, selectedHours, tariffBySize]);
+  const [priceQuote, setPriceQuote] = useState(null);
+  const quoteKey = JSON.stringify({ branchName: currentBranch, hours: selectedHours, isCustom: isCustomTariff,
+    currency: form.currency, exchangeRate, items: baggageSizes.map((size) => ({ size, count: 1 })) });
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      baggageService.quote(JSON.parse(quoteKey), controller.signal)
+        .then((result) => setPriceQuote({ ...result, key: quoteKey }))
+        .catch(() => { if (!controller.signal.aborted) setPriceQuote(null); });
+    }, 200);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [quoteKey]);
+  const quotedItems = useMemo(() => priceQuote?.key === quoteKey ? priceQuote.items : [], [priceQuote, quoteKey]);
+  const originalAmountUZS = baggageItems.reduce((sum, item) => sum + (quotedItems.find((row) => row.size === item.size)?.unitPriceUZS || 0) * item.count, 0);
   const calculatedAmount = useMemo(
-    () => convertFromUZS(originalAmountUZS, form.currency, settings.exchangeRates),
-    [form.currency, originalAmountUZS, settings.exchangeRates],
+    () => baggageItems.reduce((sum, item) => sum + (quotedItems.find((row) => row.size === item.size)?.unitPrice || 0) * item.count, 0),
+    [baggageItems, quotedItems],
   );
   const discount = useMemo(() => toMinorUnits(form.discount || 0, form.currency), [form.currency, form.discount]);
   const finalAmount = useMemo(() => Math.max(calculatedAmount - discount, 0), [calculatedAmount, discount]);
@@ -232,8 +233,8 @@ export default function NewBaggage() {
     return addHoursToIso(parseTashkentInputToIso(form.checkIn), selectedHours);
   }, [form.checkIn, selectedHours]);
   const formatSizePrice = (size) => {
-    const amountUZS = priceForHours(tariffBySize[size], selectedHours, isCustomTariff);
-    const amount = convertFromUZS(amountUZS, form.currency, settings.exchangeRates);
+    const amount = quotedItems.find((row) => row.size === size)?.unitPrice;
+    if (amount === undefined) return '...';
     return formatMoneyByCurrency(amount, form.currency);
   };
   const canCreateOrderOnLocker = (locker) => {
@@ -455,6 +456,14 @@ export default function NewBaggage() {
       fail(t("Tanlangan bagaj razmeri uchun backend tarifi topilmadi."));
       return;
     }
+    if (!priceQuote || priceQuote.key !== quoteKey) {
+      fail('Narx backendda hisoblanishi kutilmoqda. Qayta urinib ko‘ring.');
+      return;
+    }
+    if (discount > 0 && !form.discountReason?.trim()) {
+      fail('Chegirma uchun sabab majburiy.');
+      return;
+    }
 
     if (form.currency !== "UZS" && (!Number.isFinite(exchangeRate) || exchangeRate <= 0)) {
       fail(t("Tanlangan valyuta uchun kurs kiritilmagan."));
@@ -495,6 +504,7 @@ export default function NewBaggage() {
         originalAmountUZS,
         finalAmount,
         discount,
+        discountReason: form.discountReason,
         finalPrice: realPaidAmount,
         realPaidAmount,
         originalPrice: calculatedAmount,
@@ -796,6 +806,7 @@ export default function NewBaggage() {
                 <input
                   inputMode="decimal"
                   value={formatNumberInput(form.discount, { decimal: form.currency !== "UZS" })}
+                  disabled={!priceQuote?.canAdjustPrice}
                   onChange={(event) => updateForm("discount", cleanNumericInput(event.target.value, { decimal: form.currency !== "UZS" }))}
                 />
               </label>
@@ -808,6 +819,10 @@ export default function NewBaggage() {
                   onChange={(event) => updateForm("realPaidAmount", cleanNumericInput(event.target.value, { decimal: form.currency !== "UZS" }))}
                 />
               </label>
+              {discount > 0 && <label className="full">
+                <span>Chegirma sababi</span>
+                <input required value={form.discountReason} onChange={(event) => updateForm('discountReason', event.target.value)} />
+              </label>}
               <label className="full">
                 <span>{t("Sabab")}</span>
                 <input value={form.paymentReason} onChange={(event) => updateForm("paymentReason", event.target.value)} />

@@ -28,8 +28,9 @@ import { cleanNumericInput, formatNumberInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 import { formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import { createIdempotencyKey } from "../../utils/idempotency";
-import { calculatePickupOvertime, getPickupCountdown } from "../../utils/pickupTime";
+import { getPickupCountdown } from "../../utils/pickupTime";
 import { updatePickupOvertimeAmount } from "../../utils/pickupPayment";
+import FinancialRequests from '../../components/FinancialRequests/FinancialRequests';
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -83,6 +84,12 @@ const emptyPageData = {
 export default function ActiveBaggage() {
   const { t, formatDateTime } = useTranslation();
   const { effectiveBranch, user } = useAuth();
+  const [canAdjustPrice, setCanAdjustPrice] = useState(false);
+  useEffect(() => {
+    let active = true;
+    baggageService.financialCapabilities().then((value) => { if (active) setCanAdjustPrice(value.canAdjustPrice); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   const branchNames = getBranchNames();
   const [refreshKey, setRefreshKey] = useState(0);
   const [, setCountdownTick] = useState(0);
@@ -193,7 +200,6 @@ export default function ActiveBaggage() {
   const pageOrders = asArray(safeOrdersPage.items);
   const pagination = safeOrdersPage.pagination || emptyPageData.ordersPage.pagination;
   const pageLockers = asArray(safePageData.lockers);
-  const pageTariffs = asArray(safePageData.tariffs);
 
   const rawActiveOrders = pageOrders;
   const activeOrders = pageOrders;
@@ -217,9 +223,11 @@ export default function ActiveBaggage() {
     setPage(Math.min(Math.max(Number(nextPage) || 1, 1), totalPages));
   };
 
-  const openPickup = useCallback((order) => {
+  const openPickup = useCallback(async (order) => {
     startLogicalMutation("order-pickup");
-    const overtime = calculatePickupOvertime({ order, tariffs: pageTariffs });
+    let overtime;
+    try { overtime = await baggageService.pickupQuote(order.id); }
+    catch (error) { setFormError(error.message); return; }
     const pickupOrderWithOvertime = {
       ...order,
       overtimeHours: overtime.hours,
@@ -233,9 +241,11 @@ export default function ActiveBaggage() {
       realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(pickupOrderWithOvertime), order.currency || "UZS")),
       overtimeAmount: String(fromMinorUnits(overtime.amount, order.currency || "UZS")),
       paymentReason: "",
+      quotedOvertimeAmount: overtime.amount,
+      leaveDebtOpen: false,
     });
     setFormError("");
-  }, [pageTariffs, setFormError, setPickupForm, setPickupOrder, startLogicalMutation]);
+  }, [setFormError, setPickupForm, setPickupOrder, startLogicalMutation]);
 
   useEffect(() => {
     const handler = () => {
@@ -273,7 +283,7 @@ export default function ActiveBaggage() {
       await baggageService.pickup(pickupOrder.id, {
         ...pickupForm,
         overtimeAmount: overtimeMinor,
-        debtPaidAmount: pickupOrder.debtAmount || undefined,
+        debtPaidAmount: pickupForm.leaveDebtOpen ? undefined : pickupOrder.debtAmount || undefined,
         admin: user?.fullName,
       }, { idempotencyKey: mutationKeysRef.current["order-pickup"] });
     } catch (error) {
@@ -338,6 +348,7 @@ export default function ActiveBaggage() {
       finalAmount: String(fromMinorUnits(order.finalAmount || order.finalPrice || 0, order.currency || "UZS")),
       realPaidAmount: String(fromMinorUnits(order.realPaidAmount || 0, order.currency || "UZS")),
       note: order.note || "",
+      priceChangeReason: '',
       items: asArray(order.lockers).map((locker) => ({
         id: locker.itemId || locker.id,
         lockerId: locker.lockerId,
@@ -378,13 +389,15 @@ export default function ActiveBaggage() {
         payment: editForm.payment,
         currency: editForm.currency,
         finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
-        realPaidAmount: editForm.payment === "Qarz" ? 0 : toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
+        realPaidAmount: toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
+        priceChangeReason: editForm.priceChangeReason || undefined,
         note: editForm.note,
         items: asArray(editForm.items).map((item) => ({
           id: item.id,
           lockerId: item.lockerId,
           size: item.size,
           count: Number(item.count || 1),
+          remove: item.remove || undefined,
         })),
       }, { idempotencyKey: mutationKeysRef.current["order-edit"] });
     } catch (error) {
@@ -754,6 +767,7 @@ export default function ActiveBaggage() {
                 <p>{selectedOrder.note}</p>
               </div>
             )}
+            <FinancialRequests key={selectedOrder.id} order={selectedOrder} />
           </div>
         </div>
       )}
@@ -788,7 +802,7 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("To'lov turi")}</span>
-                <GlassSelect value={editForm.payment} onChange={(event) => updateEditForm("payment", event.target.value)}>
+                <GlassSelect disabled value={editForm.payment} onChange={(event) => updateEditForm("payment", event.target.value)}>
                   {PAYMENT_OPTIONS.map((option) => (
                     <option value={option.value} key={option.value}>{t(option.label)}</option>
                   ))}
@@ -796,7 +810,7 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect value={editForm.currency} onChange={(event) => updateEditForm("currency", event.target.value)}>
+                <GlassSelect disabled value={editForm.currency} onChange={(event) => updateEditForm("currency", event.target.value)}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
                   <option value="RUB">RUB</option>
@@ -808,6 +822,7 @@ export default function ActiveBaggage() {
               <label>
                 <span>{t("Summa")}</span>
                 <input
+                  disabled={!canAdjustPrice}
                   inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
                   value={formatNumberInput(editForm.finalAmount, { decimal: editForm.currency !== "UZS" })}
                   onChange={(event) => updateEditForm("finalAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}
@@ -817,8 +832,8 @@ export default function ActiveBaggage() {
                 <span>{t("Real paid")}</span>
                 <input
                   inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
-                  value={formatNumberInput(editForm.payment === "Qarz" ? "0" : editForm.realPaidAmount, { decimal: editForm.currency !== "UZS" })}
-                  disabled={editForm.payment === "Qarz"}
+                  value={formatNumberInput(editForm.realPaidAmount, { decimal: editForm.currency !== "UZS" })}
+                  readOnly
                   onChange={(event) => updateEditForm("realPaidAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}
                 />
               </label>
@@ -829,6 +844,7 @@ export default function ActiveBaggage() {
             </div>
 
             <div className="edit-items">
+              <label>Narxni o‘zgartirish sababi <input value={editForm.priceChangeReason} onChange={(event) => updateEditForm('priceChangeReason', event.target.value)} /></label>
               {asArray(editForm.items).map((item, index) => (
                 <div className="edit-item-row" key={item.id || index}>
                   <label>
@@ -847,15 +863,19 @@ export default function ActiveBaggage() {
                       <option value="S">S</option>
                       <option value="M">M</option>
                       <option value="L">L</option>
-                      <option value="XL">XL</option>
+                      {!String(editOrder.branch).toLowerCase().includes('aeroport') && <option value="XL">XL</option>}
                     </GlassSelect>
                   </label>
                   <label>
                     <span>{t("Soni")}</span>
                     <input inputMode="numeric" value={item.count} onChange={(event) => updateEditItem(index, "count", cleanNumericInput(event.target.value))} />
                   </label>
+                  <label><input type="checkbox" checked={Boolean(item.remove)} onChange={(event) => updateEditItem(index, 'remove', event.target.checked)} />Bagajni olib tashlash</label>
                 </div>
               ))}
+              <button type="button" onClick={() => updateEditForm('items', [...editForm.items, {
+                lockerId: editForm.items[0]?.lockerId, size: 'S', count: '1',
+              }])}>Bagaj qo‘shish</button>
             </div>
 
             <LoadingButton
@@ -900,6 +920,7 @@ export default function ActiveBaggage() {
             </div>
 
             <div className="pickup-form">
+              {pickupOrder.paymentType === 'DEBT' && pickupOrder.debtAmount > 0 && <label><input type={'checkbox'} checked={pickupForm.leaveDebtOpen} onChange={(event) => setPickupForm((prev) => ({ ...prev, leaveDebtOpen: event.target.checked }))} />Rasmiy qarzni ochiq qoldirib bagajni topshirish</label>}
               <label>
                 <span>{Number(pickupOrder.debtAmount || 0) > 0 ? t("Qarz to'lovi turi") : t("To'lov turi")}</span>
                 <GlassSelect value={pickupForm.payment} onChange={(event) => setPickupForm((prev) => ({ ...prev, payment: event.target.value }))}>
@@ -910,7 +931,7 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect value={pickupForm.currency} onChange={(event) => setPickupForm((prev) => ({ ...prev, currency: event.target.value }))}>
+                <GlassSelect disabled value={pickupForm.currency} onChange={(event) => setPickupForm((prev) => ({ ...prev, currency: event.target.value }))}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
                   <option value="RUB">RUB</option>
@@ -923,6 +944,7 @@ export default function ActiveBaggage() {
                 <span>{t("Qo'shimcha to'lov")}</span>
                 <input
                   inputMode={pickupForm.currency === "UZS" ? "numeric" : "decimal"}
+                  readOnly
                   value={formatNumberInput(pickupForm.overtimeAmount, { decimal: pickupForm.currency !== "UZS" })}
                   onChange={(event) => setPickupForm((prev) => updatePickupOvertimeAmount(prev, event.target.value))}
                 />
@@ -941,6 +963,7 @@ export default function ActiveBaggage() {
                 <span>{t("Real olingan summa")}</span>
                 <input
                   inputMode="decimal"
+                  readOnly
                   value={formatNumberInput(pickupForm.realPaidAmount, { decimal: pickupForm.currency !== "UZS" })}
                   onChange={(event) =>
                     setPickupForm((prev) => ({
