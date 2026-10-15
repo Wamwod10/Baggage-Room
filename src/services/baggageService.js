@@ -162,6 +162,7 @@ const baggageService = {
     const payload = {
       ...data,
       paymentType: data.payment !== undefined ? toPaymentType(data.payment) : data.paymentType,
+      paidPaymentType: data.paidPaymentType !== undefined ? toPaymentType(data.paidPaymentType) : undefined,
       overtimePaymentType: data.overtimePaymentType !== undefined ? toPaymentType(data.overtimePaymentType) : data.overtimePaymentType,
       doplataPaymentType: data.doplataPaymentType !== undefined ? toPaymentType(data.doplataPaymentType) : data.doplataPaymentType,
     };
@@ -179,6 +180,8 @@ const baggageService = {
       priceChangeReason: data.priceChangeReason,
       overtimeAmount: data.overtimeAmount,
       realPaidAmount: data.realPaidAmount,
+      exchangeRate: data.exchangeRate,
+      sourceExchangeRate: data.sourceExchangeRate,
       quotedOvertimeAmount: data.quotedOvertimeAmount,
       debtPaidAmount: data.debtPaidAmount !== undefined ? Number(data.debtPaidAmount) : undefined,
       paymentType: toPaymentType(data.payment),

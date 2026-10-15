@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { updatePickupOvertimeAmount, updatePickupRealPaidAmount } from "../src/utils/pickupPayment.js";
+import { updatePickupOvertimeAmount, updatePickupRealPaidAmount, updatePickupCurrency } from "../src/utils/pickupPayment.js";
 
 test('pickup edits keep additional payment and total in sync', () => {
   const form = { currency: 'UZS', overtimeAmount: '10000', realPaidAmount: '70000', overtimePayment: 'Naqd' };
@@ -16,6 +16,19 @@ test('fixed receipt base survives typing a lower total and handles foreign curre
   assert.equal(updatePickupRealPaidAmount(lower, '80,50').overtimeAmount, '20.5');
   assert.equal(updatePickupOvertimeAmount(form, '12,50').realPaidAmount, '72.5');
   assert.equal(updatePickupOvertimeAmount({ ...form, overtimePayment: 'Qarz' }, '12,50').realPaidAmount, '60');
+});
+test('pickup currency converts the receipt base, overtime, debt and quote together', () => {
+  const order={currency:'UZS',realPaidAmount:60000,debtAmount:12000};
+  const form={currency:'UZS',realPaidAmount:'84000',basePaidAmount:'72000',overtimeAmount:'12000',quotedOvertimeAmount:12000,overtimePayment:'Naqd'};
+  const usd=updatePickupCurrency(form,'USD',order,{USD:12000});
+  assert.equal(usd.basePaidAmount,'6');assert.equal(usd.overtimeAmount,'1');
+  assert.equal(usd.realPaidAmount,'7');assert.equal(usd.debtAmount,'1');
+  assert.equal(usd.quotedOvertimeAmount,100);
+  assert.equal(updatePickupCurrency({...usd,leaveDebtOpen:true},'USD',order,{USD:12000}).realPaidAmount,'6');
+  assert.equal(updatePickupCurrency(usd,'UZS',order,{USD:12000}).realPaidAmount,'84000');
+  const rounded=updatePickupCurrency({...form,overtimeAmount:'0',quotedOvertimeAmount:0},'USD',
+    {currency:'UZS',finalAmount:100,realPaidAmount:50,debtAmount:50},{USD:12500});
+  assert.equal(rounded.debtAmount,'0.01');assert.equal(rounded.realPaidAmount,'0.01');
 });
 
 test("pickup overtime amount can be edited in UZS", () => {

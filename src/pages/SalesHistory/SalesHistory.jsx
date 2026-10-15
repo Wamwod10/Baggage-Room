@@ -197,6 +197,7 @@ export default function SalesHistory() {
       overtimePayment: getPaymentLabel(order.overtimePayment || order.overtimePaymentType || order.payment),
       note: order.note || "",
       priceChangeReason: '',
+      paidPaymentType: '',
       items: asArray(order.lockers).map((locker) => ({
         id: locker.itemId || locker.id,
         size: locker.size,
@@ -237,6 +238,7 @@ export default function SalesHistory() {
         currency: editForm.currency,
         exchangeRate: editForm.exchangeRate,
         sourceExchangeRate: editForm.sourceExchangeRate,
+        paidPaymentType: editForm.paidPaymentType || undefined,
         priceChangeReason: editForm.priceChangeReason || undefined,
         finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
         realPaidAmount: toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
@@ -546,11 +548,11 @@ export default function SalesHistory() {
                 <span>{t("Real paid")}</span>
                 <input
                   inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
-                  value={formatNumberInput(editForm.payment === "Qarz" ? "0" : editForm.realPaidAmount, { decimal: editForm.currency !== "UZS" })}
-                  disabled={editForm.payment === "Qarz"}
+                  value={formatNumberInput(editForm.realPaidAmount, { decimal: editForm.currency !== "UZS" })}
                   onChange={(event) => updateEditForm("realPaidAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}
                 />
               </label>
+              {editForm.payment === 'Qarz' && <label><span>Olingan to‘lov turi</span><GlassSelect value={editForm.paidPaymentType || ''} onChange={(event) => updateEditForm('paidPaymentType', event.target.value)}><option value="">To‘lov turini tanlang</option>{PAYMENT_OPTIONS.filter((option) => option.value !== 'Qarz').map((option) => <option key={option.value} value={option.value}>{t(option.label)}</option>)}</GlassSelect></label>}
               <label>
                 <span>{t("Qo'shimcha to'lov")}</span>
                 <input
