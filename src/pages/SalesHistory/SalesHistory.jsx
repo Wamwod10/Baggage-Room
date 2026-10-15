@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CalendarDays, Edit3, Eye, Search } from "lucide-react";
 import baggageService from "../../services/baggageService";
+import settingsService from '../../services/settingsService';
+import { changeEditCurrency } from '../../utils/orderFinancialEdit';
 import telegramService from "../../services/telegramService";
 import { useAuth } from "../../store/AuthContext";
 import "./salesHistory.scss";
@@ -194,6 +196,7 @@ export default function SalesHistory() {
       overtimeCurrency: extraCurrency,
       overtimePayment: getPaymentLabel(order.overtimePayment || order.overtimePaymentType || order.payment),
       note: order.note || "",
+      priceChangeReason: '',
       items: asArray(order.lockers).map((locker) => ({
         id: locker.itemId || locker.id,
         size: locker.size,
@@ -232,8 +235,11 @@ export default function SalesHistory() {
         checkOut: parseTashkentInputToIso(editForm.checkOut),
         payment: editForm.payment,
         currency: editForm.currency,
+        exchangeRate: editForm.exchangeRate,
+        sourceExchangeRate: editForm.sourceExchangeRate,
+        priceChangeReason: editForm.priceChangeReason || undefined,
         finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
-        realPaidAmount: editForm.payment === "Qarz" ? 0 : toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
+        realPaidAmount: toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
         overtimeAmount: toMinorUnits(editForm.overtimeAmount || 0, editForm.overtimeCurrency),
         overtimeCurrency: editForm.overtimeCurrency,
         overtimePaymentType: editForm.overtimePayment,
@@ -489,6 +495,7 @@ export default function SalesHistory() {
             </div>
 
             <div className="history-edit-grid">
+              <label className="full"><span>To‘lov/valyutani o‘zgartirish sababi</span><input value={editForm.priceChangeReason || ''} onChange={(event) => updateEditForm('priceChangeReason', event.target.value)} /></label>
               <label>
                 <span>{t("Client")}</span>
                 <input value={editForm.clientName} onChange={(event) => updateEditForm("clientName", event.target.value)} />
@@ -515,7 +522,10 @@ export default function SalesHistory() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect value={editForm.currency} onChange={(event) => updateEditForm("currency", event.target.value)}>
+                <GlassSelect value={editForm.currency} onChange={(event) => {
+                  try { setEditForm(changeEditCurrency(editForm, editOrder, event.target.value, settingsService.get().exchangeRates)); }
+                  catch (error) { setStatusMessage(error.message); }
+                }}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
                   <option value="RUB">RUB</option>

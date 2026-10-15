@@ -31,6 +31,8 @@ import { createIdempotencyKey } from "../../utils/idempotency";
 import { getPickupCountdown } from "../../utils/pickupTime";
 import { updatePickupOvertimeAmount, updatePickupRealPaidAmount } from "../../utils/pickupPayment";
 import FinancialRequests from '../../components/FinancialRequests/FinancialRequests';
+import settingsService from '../../services/settingsService';
+import { changeEditCurrency } from '../../utils/orderFinancialEdit';
 import "./activeBaggage.scss";
 
 const formatCurrency = (value, currency) =>
@@ -84,12 +86,6 @@ const emptyPageData = {
 export default function ActiveBaggage() {
   const { t, formatDateTime } = useTranslation();
   const { effectiveBranch, user } = useAuth();
-  const [canAdjustPrice, setCanAdjustPrice] = useState(false);
-  useEffect(() => {
-    let active = true;
-    baggageService.financialCapabilities().then((value) => { if (active) setCanAdjustPrice(value.canAdjustPrice); }).catch(() => {});
-    return () => { active = false; };
-  }, []);
   const branchNames = getBranchNames();
   const [refreshKey, setRefreshKey] = useState(0);
   const [, setCountdownTick] = useState(0);
@@ -391,6 +387,8 @@ export default function ActiveBaggage() {
         checkOut: parseTashkentInputToIso(editForm.checkOut),
         payment: editForm.payment,
         currency: editForm.currency,
+        exchangeRate: editForm.exchangeRate,
+        sourceExchangeRate: editForm.sourceExchangeRate,
         finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
         realPaidAmount: toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
         priceChangeReason: editForm.priceChangeReason || undefined,
@@ -805,7 +803,7 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("To'lov turi")}</span>
-                <GlassSelect disabled value={editForm.payment} onChange={(event) => updateEditForm("payment", event.target.value)}>
+                <GlassSelect value={editForm.payment} onChange={(event) => updateEditForm("payment", event.target.value)}>
                   {PAYMENT_OPTIONS.map((option) => (
                     <option value={option.value} key={option.value}>{t(option.label)}</option>
                   ))}
@@ -813,7 +811,10 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect disabled value={editForm.currency} onChange={(event) => updateEditForm("currency", event.target.value)}>
+                <GlassSelect value={editForm.currency} onChange={(event) => {
+                  try { setEditForm(changeEditCurrency(editForm, editOrder, event.target.value, settingsService.get().exchangeRates)); }
+                  catch (error) { setFormError(error.message); }
+                }}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
                   <option value="RUB">RUB</option>
@@ -825,7 +826,6 @@ export default function ActiveBaggage() {
               <label>
                 <span>{t("Summa")}</span>
                 <input
-                  disabled={!canAdjustPrice}
                   inputMode={editForm.currency === "UZS" ? "numeric" : "decimal"}
                   value={formatNumberInput(editForm.finalAmount, { decimal: editForm.currency !== "UZS" })}
                   onChange={(event) => updateEditForm("finalAmount", cleanNumericInput(event.target.value, { decimal: editForm.currency !== "UZS" }))}

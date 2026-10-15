@@ -806,7 +806,6 @@ export default function NewBaggage() {
                 <input
                   inputMode="decimal"
                   value={formatNumberInput(form.discount, { decimal: form.currency !== "UZS" })}
-                  disabled={!priceQuote?.canAdjustPrice}
                   onChange={(event) => updateForm("discount", cleanNumericInput(event.target.value, { decimal: form.currency !== "UZS" }))}
                 />
               </label>

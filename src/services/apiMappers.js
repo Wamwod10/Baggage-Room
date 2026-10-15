@@ -164,6 +164,7 @@ const mapOrder = (order) => {
     count: lockers.reduce((total, locker) => total + Number(locker.count || 1), 0),
     size: lockers.map((locker) => `${locker.size}${Number(locker.count || 1) > 1 ? ` x${locker.count}` : ""}`).filter(Boolean).join(", ") || order.size || fallbackText,
     calculatedAmount: order.calculatedAmount,
+    exchangeRate: order.pricingSnapshot?.exchangeRate,
     discount: order.discountAmount,
     discountAmount: order.discountAmount,
     finalPrice: order.finalAmount,
