@@ -29,7 +29,7 @@ import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
 import { formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import { createIdempotencyKey } from "../../utils/idempotency";
 import { getPickupCountdown } from "../../utils/pickupTime";
-import { updatePickupOvertimeAmount } from "../../utils/pickupPayment";
+import { updatePickupOvertimeAmount, updatePickupRealPaidAmount } from "../../utils/pickupPayment";
 import FinancialRequests from '../../components/FinancialRequests/FinancialRequests';
 import "./activeBaggage.scss";
 
@@ -69,7 +69,7 @@ const getPickupExpectedTotal = (order = {}) => {
       order.calculatedAmount ??
       0,
   );
-  const previousPaid = order.payment === "Qarz" ? 0 : Number(order.realPaidAmount || basePayable);
+  const previousPaid = Number(order.realPaidAmount ?? basePayable) + Number(order.debtAmount || 0);
 
   return previousPaid + Number(order.overtimeAmount || 0);
 };
@@ -239,6 +239,7 @@ export default function ActiveBaggage() {
       overtimePayment: order.payment === "Qarz" ? "Naqd" : getPaymentLabel(order.payment),
       currency: order.currency || "UZS",
       realPaidAmount: String(fromMinorUnits(getPickupExpectedTotal(pickupOrderWithOvertime), order.currency || "UZS")),
+      basePaidAmount: String(fromMinorUnits(getPickupExpectedTotal({ ...pickupOrderWithOvertime, overtimeAmount: 0 }), order.currency || 'UZS')),
       overtimeAmount: String(fromMinorUnits(overtime.amount, order.currency || "UZS")),
       paymentReason: "",
       quotedOvertimeAmount: overtime.amount,
@@ -267,11 +268,11 @@ export default function ActiveBaggage() {
 
     const overtimeMinor = toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS");
     const expectedPaidTotal =
-      getPickupExpectedTotal({ ...pickupOrder, overtimeAmount: 0 }) +
+      toMinorUnits(pickupForm.basePaidAmount || 0, pickupForm.currency) +
       (pickupForm.overtimePayment === "Qarz" ? 0 : overtimeMinor);
 
     if (
-      toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS") !== expectedPaidTotal &&
+      (toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS") !== expectedPaidTotal || overtimeMinor !== pickupForm.quotedOvertimeAmount) &&
       !pickupForm.paymentReason.trim()
     ) {
       setFormError(t("Summani o'zgartirish sababini kiriting."));
@@ -283,6 +284,8 @@ export default function ActiveBaggage() {
       await baggageService.pickup(pickupOrder.id, {
         ...pickupForm,
         overtimeAmount: overtimeMinor,
+        realPaidAmount: toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency),
+        priceChangeReason: pickupForm.paymentReason.trim() || undefined,
         debtPaidAmount: pickupForm.leaveDebtOpen ? undefined : pickupOrder.debtAmount || undefined,
         admin: user?.fullName,
       }, { idempotencyKey: mutationKeysRef.current["order-pickup"] });
@@ -920,7 +923,7 @@ export default function ActiveBaggage() {
             </div>
 
             <div className="pickup-form">
-              {pickupOrder.paymentType === 'DEBT' && pickupOrder.debtAmount > 0 && <label><input type={'checkbox'} checked={pickupForm.leaveDebtOpen} onChange={(event) => setPickupForm((prev) => ({ ...prev, leaveDebtOpen: event.target.checked }))} />Rasmiy qarzni ochiq qoldirib bagajni topshirish</label>}
+              {pickupOrder.paymentType === 'DEBT' && pickupOrder.debtAmount > 0 && <label><input type={'checkbox'} checked={pickupForm.leaveDebtOpen} onChange={(event) => setPickupForm((prev) => updatePickupOvertimeAmount({ ...prev, leaveDebtOpen: event.target.checked, basePaidAmount: String(fromMinorUnits(Number(pickupOrder.realPaidAmount || 0) + (event.target.checked ? 0 : pickupOrder.debtAmount), prev.currency)) }, prev.overtimeAmount))} />Rasmiy qarzni ochiq qoldirib bagajni topshirish</label>}
               <label>
                 <span>{Number(pickupOrder.debtAmount || 0) > 0 ? t("Qarz to'lovi turi") : t("To'lov turi")}</span>
                 <GlassSelect value={pickupForm.payment} onChange={(event) => setPickupForm((prev) => ({ ...prev, payment: event.target.value }))}>
@@ -944,7 +947,6 @@ export default function ActiveBaggage() {
                 <span>{t("Qo'shimcha to'lov")}</span>
                 <input
                   inputMode={pickupForm.currency === "UZS" ? "numeric" : "decimal"}
-                  readOnly
                   value={formatNumberInput(pickupForm.overtimeAmount, { decimal: pickupForm.currency !== "UZS" })}
                   onChange={(event) => setPickupForm((prev) => updatePickupOvertimeAmount(prev, event.target.value))}
                 />
@@ -952,7 +954,7 @@ export default function ActiveBaggage() {
               {Number(pickupForm.overtimeAmount || 0) > 0 && (
                 <label>
                   <span>{t("Qo'shimcha to'lov turi")}</span>
-                  <GlassSelect value={pickupForm.overtimePayment} onChange={(event) => setPickupForm((prev) => ({ ...prev, overtimePayment: event.target.value }))}>
+                  <GlassSelect value={pickupForm.overtimePayment} onChange={(event) => setPickupForm((prev) => updatePickupOvertimeAmount({ ...prev, overtimePayment: event.target.value }, prev.overtimeAmount))}>
                     {PAYMENT_OPTIONS.map((option) => (
                       <option value={option.value} key={option.value}>{t(option.label)}</option>
                     ))}
@@ -963,13 +965,9 @@ export default function ActiveBaggage() {
                 <span>{t("Real olingan summa")}</span>
                 <input
                   inputMode="decimal"
-                  readOnly
                   value={formatNumberInput(pickupForm.realPaidAmount, { decimal: pickupForm.currency !== "UZS" })}
                   onChange={(event) =>
-                    setPickupForm((prev) => ({
-                      ...prev,
-                      realPaidAmount: cleanNumericInput(event.target.value, { decimal: prev.currency !== "UZS" }),
-                    }))
+                    setPickupForm((prev) => updatePickupRealPaidAmount(prev, event.target.value))
                   }
                 />
               </label>

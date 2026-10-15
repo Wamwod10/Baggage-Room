@@ -177,6 +177,8 @@ const baggageService = {
     const response = await apiClient.post(`/orders/${id}/pickup`, {
       // The backend recalculates at the actual pickup timestamp.
       priceChangeReason: data.priceChangeReason,
+      overtimeAmount: data.overtimeAmount,
+      realPaidAmount: data.realPaidAmount,
       quotedOvertimeAmount: data.quotedOvertimeAmount,
       debtPaidAmount: data.debtPaidAmount !== undefined ? Number(data.debtPaidAmount) : undefined,
       paymentType: toPaymentType(data.payment),
