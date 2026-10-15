@@ -6,8 +6,10 @@ import {
   Eye,
   MoveRight,
   Printer,
+  Plus,
   Search,
   Send,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import baggageService from "../../services/baggageService";
@@ -847,9 +849,13 @@ export default function ActiveBaggage() {
             </div>
 
             <div className="edit-items">
-              <label>Narxni o‘zgartirish sababi <input value={editForm.priceChangeReason} onChange={(event) => updateEditForm('priceChangeReason', event.target.value)} /></label>
+              <label className="edit-change-reason">
+                <span>O‘zgartirish sababi</span>
+                <input placeholder="Narx, to‘lov yoki valyuta o‘zgarishi sababini yozing" value={editForm.priceChangeReason} onChange={(event) => updateEditForm('priceChangeReason', event.target.value)} />
+              </label>
               {asArray(editForm.items).map((item, index) => (
-                <div className="edit-item-row" key={item.id || index}>
+                <div className={`edit-item-row${item.remove ? ' edit-item-row--removed' : ''}`} key={item.id || index}>
+                  <div className="edit-item-heading"><span>Bagaj {index + 1}</span></div>
                   <label>
                     <span>{t("Yacheyka")}</span>
                     <GlassSelect value={item.lockerId || ""} onChange={(event) => updateEditItem(index, "lockerId", event.target.value)}>
@@ -873,12 +879,16 @@ export default function ActiveBaggage() {
                     <span>{t("Soni")}</span>
                     <input inputMode="numeric" value={item.count} onChange={(event) => updateEditItem(index, "count", cleanNumericInput(event.target.value))} />
                   </label>
-                  <label><input type="checkbox" checked={Boolean(item.remove)} onChange={(event) => updateEditItem(index, 'remove', event.target.checked)} />Bagajni olib tashlash</label>
+                  <label className="edit-item-remove">
+                    <input type="checkbox" checked={Boolean(item.remove)} onChange={(event) => updateEditItem(index, 'remove', event.target.checked)} />
+                    <Trash2 size={15} aria-hidden="true" />
+                    <span>{item.remove ? 'Saqlanganda olib tashlanadi' : 'Bagajni olib tashlash'}</span>
+                  </label>
                 </div>
               ))}
-              <button type="button" onClick={() => updateEditForm('items', [...editForm.items, {
+              <button type="button" className="edit-add-item" onClick={() => updateEditForm('items', [...editForm.items, {
                 lockerId: editForm.items[0]?.lockerId, size: 'S', count: '1',
-              }])}>Bagaj qo‘shish</button>
+              }])}><Plus size={17} aria-hidden="true" />Bagaj qo‘shish</button>
             </div>
 
             <LoadingButton
