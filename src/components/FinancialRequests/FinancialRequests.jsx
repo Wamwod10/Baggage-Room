@@ -6,7 +6,7 @@ import { formatMoneyByCurrency, toMinorUnits } from '../../utils/currency';
 import { ShieldCheck, Send } from 'lucide-react';
 import Button from '../Button/Button';
 import './financialRequests.scss';
-const statusLabels = { PENDING: 'Tasdiq kutilmoqda', REJECTED: 'Rad etildi', APPROVED_AWAITING_PAYOUT: 'Tasdiqlandi, qaytarish kutilmoqda', EXECUTED: 'Bajarildi' };
+const statusLabels = { PENDING: 'Tasdiq kutilmoqda', REJECTED: 'Rad etildi', APPROVED_AWAITING_PAYOUT: 'Qaytarish kutilmoqda', EXECUTED: 'Bajarildi' };
 const kindLabels = { REFUND: 'Pul qaytarish', PAYMENT_CORRECTION: 'To‘lov turini tuzatish' };
 
 export default function FinancialRequests({ order }) {
@@ -70,7 +70,7 @@ export default function FinancialRequests({ order }) {
   return <section className="financial-requests" aria-label="Moliyaviy so‘rovlar">
     <header className="financial-requests__heading">
       <span className="financial-requests__icon"><ShieldCheck size={20} aria-hidden="true" /></span>
-      <div><h3>Moliyaviy so‘rovlar</h3><p>Pul qaytarish va to‘lov turini tuzatish uchun rahbariyat tasdig‘i talab qilinadi.</p></div>
+      <div><h3>Moliyaviy so‘rovlar</h3><p>Pul qaytarish va to‘lov turini tuzatishni mustaqil bajaring.</p></div>
     </header>
     {['ACTIVE', 'DELAYED'].includes(order.apiStatus) && order.paymentType !== 'DEBT' && order.realPaidAmount + received < order.finalAmount && <div className="financial-requests__payment">
       <p>Buyurtmani yopish uchun to‘lovni to‘liq amalga oshiring yoki qarz tartibida rasmiylashtiring.</p>
@@ -101,7 +101,7 @@ export default function FinancialRequests({ order }) {
       <div className="financial-requests__request-head"><strong>{kindLabels[r.kind]}</strong><span className="financial-requests__status" data-status={r.status}>{statusLabels[r.status]}</span></div>
       <p className="financial-requests__amount">{formatMoneyByCurrency(r.amount, r.currency)}</p>
       {r.context.managerName && <p className="financial-requests__manager">Rahbariyat: {r.context.managerName}</p>}
-      {r.status === 'APPROVED_AWAITING_PAYOUT' && <p>Tasdiqlangan. Pul hali qaytarilgani qayd etilmagan.</p>}
+      {r.kind === 'REFUND' && ['PENDING', 'APPROVED_AWAITING_PAYOUT'].includes(r.status) && <p>Pul hali qaytarilgani qayd etilmagan.</p>}
       {r.status === 'APPROVED_AWAITING_PAYOUT' && (data.canRecordPayout || r.canRecordPayout) && <div className="financial-requests__payout">
         <label>Haqiqiy qaytarish usuli <select value={payoutType} onChange={(event) => setPayoutType(event.target.value)}>
           {['CASH', 'TERMINAL', 'CLICK', 'PAYME', 'CARD', 'TRANSFER'].map((type) => <option key={type}>{type}</option>)}

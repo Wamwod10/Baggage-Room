@@ -266,18 +266,6 @@ export default function ActiveBaggage() {
     }
 
     const overtimeMinor = toMinorUnits(pickupForm.overtimeAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS");
-    const expectedPaidTotal =
-      toMinorUnits(pickupForm.basePaidAmount || 0, pickupForm.currency) +
-      (pickupForm.overtimePayment === "Qarz" ? 0 : overtimeMinor);
-
-    if (
-      (pickupForm.currency !== pickupOrder.currency || toMinorUnits(pickupForm.realPaidAmount || 0, pickupForm.currency || pickupOrder.currency || "UZS") !== expectedPaidTotal || overtimeMinor !== pickupForm.quotedOvertimeAmount) &&
-      !pickupForm.paymentReason.trim()
-    ) {
-      setFormError(t("Summani o'zgartirish sababini kiriting."));
-      return;
-    }
-
     if (!beginAction("pickup")) return;
     try {
       await baggageService.pickup(pickupOrder.id, {

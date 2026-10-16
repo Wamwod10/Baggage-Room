@@ -460,10 +460,6 @@ export default function NewBaggage() {
       fail('Narx backendda hisoblanishi kutilmoqda. Qayta urinib ko‘ring.');
       return;
     }
-    if (discount > 0 && !form.discountReason?.trim()) {
-      fail('Chegirma uchun sabab majburiy.');
-      return;
-    }
 
     if (form.currency !== "UZS" && (!Number.isFinite(exchangeRate) || exchangeRate <= 0)) {
       fail(t("Tanlangan valyuta uchun kurs kiritilmagan."));
@@ -820,7 +816,7 @@ export default function NewBaggage() {
               </label>
               {discount > 0 && <label className="full">
                 <span>Chegirma sababi</span>
-                <input required value={form.discountReason} onChange={(event) => updateForm('discountReason', event.target.value)} />
+                <input value={form.discountReason} onChange={(event) => updateForm('discountReason', event.target.value)} />
               </label>}
               <label className="full">
                 <span>{t("Sabab")}</span>
