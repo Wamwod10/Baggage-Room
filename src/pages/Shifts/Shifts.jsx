@@ -488,15 +488,15 @@ ${t("Kassada qolgan")}: ${formatCurrencyMap(shift.cashBalanceByCurrency || shift
 
         <div className="shift-mini-stat card">
           <span>{t("Revenue")}</span>
-          <b>{formatMoney(currentStats.revenue)}</b>
+          <b>{formatCurrencyMap(currentStats.revenueByCurrency)}</b>
         </div>
         <div className="shift-mini-stat card">
           <span>{t("Qarz")}</span>
-          <b>{formatMoney(currentStats.debt)}</b>
+          <b>{formatCurrencyMap(currentStats.debtByCurrency)}</b>
         </div>
         <div className="shift-mini-stat card">
           <span>{t("Kassada qolgan")}</span>
-          <b>{formatMoney(currentStats.cashLeft)}</b>
+          <b>{formatCurrencyMap(currentStats.cashBalanceByCurrency)}</b>
         </div>
       </div>
 

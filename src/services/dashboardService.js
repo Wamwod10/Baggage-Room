@@ -43,6 +43,7 @@ const mapDashboard = (data = {}) => ({
     ...branch,
     name: branch.name || branch.branch || "-",
     revenue: toNumber(branch.revenue),
+    revenueByCurrency: branch.revenueByCurrency,
     active: toNumber(branch.active ?? branch.activeOrders),
     delayed: toNumber(branch.delayed ?? branch.delayedOrders),
     freeLockers: toNumber(branch.freeLockers ?? branch.emptyLockers),
