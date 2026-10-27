@@ -19,7 +19,7 @@ const lockerStatusMap = {
 
 const paymentMap = {
   CASH: "Naqd",
-  CARD: "Terminal",
+  CARD: "Karta",
   TERMINAL: "Terminal",
   CLICK: "Click",
   PAYME: "Payme",
