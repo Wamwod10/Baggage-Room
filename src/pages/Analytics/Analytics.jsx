@@ -43,7 +43,7 @@ import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
-import { formatMoneyByCurrency } from "../../utils/currency";
+import { formatMoneyByCurrency, formatMoneyMap } from "../../utils/currency";
 import "./analytics.scss";
 
 const emptyAnalyticsData = {
@@ -720,10 +720,10 @@ export default function Analytics() {
                 </div>
 
                 <div className="branch-analytics-money">
-                  <b>{formatMoney(branch.revenue)}</b>
+                  <b>{formatMoneyMap(branch.revenueByCurrency, branch.revenue)}</b>
 
                   <small>
-                    {t("Net profit")}: {formatMoney(branch.profit)}
+                    {t("Net profit")}: {formatMoneyMap(branch.profitByCurrency, branch.profit)}
                   </small>
                 </div>
               </div>
@@ -841,9 +841,9 @@ export default function Analytics() {
                 </div>
 
                 <div className="admin-performance-money">
-                  <b>{formatMoney(item.revenue)}</b>
+                  <b>{formatMoneyMap(item.revenueByCurrency, item.revenue)}</b>
                   <small>
-                    {t("Net profit")}: {formatMoney(item.profit)}
+                    {t("Net profit")}: {formatMoneyMap(item.revenueByCurrency, item.profit)}
                   </small>
                 </div>
               </div>

@@ -93,6 +93,8 @@ const analyticsService = {
       branchComparison: asArray(reportData.branchComparison).length ? asArray(reportData.branchComparison).map((branch) => ({
         branch: branch.branch || branch.name || "-",
         revenue: toNumber(branch.revenue),
+        revenueByCurrency: branch.revenueByCurrency,
+        profitByCurrency: branch.profitByCurrency,
         profit: toNumber(branch.profit ?? branch.netProfit),
         orders: toNumber(branch.orders ?? branch.totalOrders),
         active: toNumber(branch.active ?? branch.activeOrders),
@@ -127,6 +129,7 @@ const analyticsService = {
         admin: item.admin || "-",
         orders: toNumber(item.orders),
         revenue: toNumber(item.revenue),
+        revenueByCurrency: item.revenueByCurrency,
         profit: toNumber(item.profit),
         shifts: toNumber(item.shifts),
         actions: toNumber(item.actions),

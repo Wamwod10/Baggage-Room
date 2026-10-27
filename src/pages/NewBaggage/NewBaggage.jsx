@@ -18,7 +18,7 @@ import lockerService from "../../services/lockerService";
 import settingsService from "../../services/settingsService";
 import { useAuth } from "../../store/AuthContext";
 import { getBranchNames } from "../../utils/branches";
-import { formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
+import { availableOrderCurrencies, formatMoneyByCurrency, fromMinorUnits, toMinorUnits } from "../../utils/currency";
 import { addHoursToIso, formatTashkentInputDateTime, parseTashkentInputToIso } from "../../utils/formatDate";
 import { cleanNumericInput, cleanPhoneInput, formatNumberInput, formatPhoneInput } from "../../utils/inputFormat";
 import { PAYMENT_OPTIONS, getPaymentLabel } from "../../utils/paymentLabels";
@@ -165,9 +165,7 @@ export default function NewBaggage() {
     [currentBranch],
   );
   const currencies = useMemo(() => {
-    const supportedCurrencies = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
-    const configuredCurrencies = asArray(settings.currencies).filter((currency) => supportedCurrencies.includes(currency));
-    return configuredCurrencies.length ? configuredCurrencies : supportedCurrencies;
+    return availableOrderCurrencies(asArray(settings.currencies));
   }, [settings.currencies]);
   const nextOrderId = useMemo(
     () => `BR-${String(Number(safePageData.orderCount || 0) + 1).padStart(6, "0")}`,

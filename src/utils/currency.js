@@ -7,6 +7,12 @@ const currencyMeta = {
   TJS: { suffix: "TJS", decimals: 2, prefix: "" },
 };
 
+export const availableOrderCurrencies = (configured = []) => {
+  const supported = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
+  const currencies = configured.filter((currency) => supported.includes(currency));
+  return currencies.length ? [...new Set([...currencies, "KZT"])] : supported;
+};
+
 const getCurrencyMeta = (currency = "UZS") =>
   currencyMeta[currency] || { suffix: String(currency || ""), decimals: 2, prefix: "" };
 
@@ -49,3 +55,10 @@ export const convertFromUZS = (amountUZS, currency = "UZS", rates = {}) => {
 
 export const getCurrencySymbol = (currency = "UZS") =>
   getCurrencyMeta(currency).prefix || getCurrencyMeta(currency).suffix || currency;
+
+// Currency maps contain native minor units; never add different currencies.
+export const formatMoneyMap = (values, fallbackUZS = 0) =>
+  Object.entries(values || {})
+    .filter(([, amount]) => Number(amount) !== 0)
+    .map(([currency, amount]) => formatMoneyByCurrency(amount, currency))
+    .join(' / ') || formatMoneyByCurrency(values ? 0 : fallbackUZS, 'UZS');

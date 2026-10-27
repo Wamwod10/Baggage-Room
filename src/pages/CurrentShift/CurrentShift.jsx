@@ -1,3 +1,4 @@
+import { formatMoneyByCurrency } from '../../utils/currency';
 import { Briefcase, CheckCircle, Clock3, ListChecks, MoveRight, RotateCcw, Send, Wallet, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import StateBlock from "../../components/StateBlock/StateBlock";
@@ -14,7 +15,7 @@ const cards = [
   ["transfers", "Transfer", MoveRight, "violet"],
   ["cashOperations", "Kassa amallari", ListChecks, "blue"],
 ];
-const money = (amount, currency) => `${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: currency === "UZS" ? 0 : 2 }).format(Number(amount || 0) / (currency === "UZS" ? 1 : 100))} ${currency === "UZS" ? "so'm" : currency}`;
+const money = formatMoneyByCurrency;
 const paymentRows = [["Umumiy summa", "revenueByCurrency"], ["Naqd", "CASH"], ["Terminal", "TERMINAL"], ["Click", "CLICK"], ["Payme", "PAYME"]];
 
 const durationText = (from, now) => {

@@ -24,7 +24,7 @@ import LoadingButton from "../../components/LoadingButton/LoadingButton";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
-import { formatMoneyByCurrency } from "../../utils/currency";
+import { formatMoneyByCurrency, formatMoneyMap } from "../../utils/currency";
 
 const emptyDashboardData = {
   stats: {
@@ -60,7 +60,7 @@ const emptyDashboardData = {
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const toNumber = (value) => Number(value ?? 0) || 0;
 const formatCurrencyMap = (items = {}) =>
-  formatMoneyByCurrency(Number(items?.UZS || 0), "UZS");
+  formatMoneyMap(items);
 
 export default function Dashboard() {
   const { t, formatMoney } = useTranslation();
@@ -358,7 +358,7 @@ export default function Dashboard() {
                   <div className="branch-row" key={branch.name}>
                     <div>
                       <h4>{t(branch.name)}</h4>
-                      <p>{formatMoney(branch.revenue)}</p>
+                      <p>{formatMoneyMap(branch.revenueByCurrency, branch.revenue)}</p>
                     </div>
 
                     <div className="branch-meta">

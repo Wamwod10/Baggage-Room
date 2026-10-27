@@ -139,7 +139,7 @@ const entries = [
   ["Bekor qilindi", "Bekor qilindi", "Бекор қилинди", "Отменено"],
   ["Barcha statuslar", "Barcha holatlar", "Барча ҳолатлар", "Все статусы"],
   ["Naqd", "Naqd", "Нақд", "Наличные"],
-  ["Karta", "Terminal", "Терминал", "Терминал"],
+  ["Karta", "Karta", "Карта", "Карта"],
   ["Terminal", "Terminal", "Терминал", "Терминал"],
   ["Click/Payme", "Click/Payme", "Click/Payme", "Click/Payme"],
   ["O'tkazma", "Terminal", "Терминал", "Терминал"],

@@ -35,7 +35,10 @@ const overtimeHours = (plannedCheckOut, actualTime) => {
   return chargeableMs > 0 ? Math.max(1, Math.ceil(chargeableMs / HOUR_MS)) : 0;
 };
 
-const presetPrice = (tariff, hours, isCustom) => {
+const presetPrice = (tariff, hours, isCustom, rule) => {
+  if (rule === 'TJV_12H_PLUS_HOURLY' && isCustom && hours > 12 && hours <= 72) {
+    return Number(tariff.price12h || 0) + Math.ceil(hours - 12) * Number(tariff.price1h || 0);
+  }
   if (isCustom) return Number(tariff.price1h || 0) * Math.max(1, Math.ceil(hours || 1));
   if (hours <= 1) return Number(tariff.price1h || 0);
   if (hours <= 12) return Number(tariff.price12h || 0);
@@ -63,6 +66,7 @@ export const calculatePickupOvertime = ({ order = {}, tariffs = [], actualTime =
         tariff,
         Number(item.tariffHours || order.tariffHours || 1),
         order.customHours !== null && order.customHours !== undefined,
+        order.pricingSnapshot?.customTariffRule,
       );
       hourlyPrice = originalUzsPrice > 0
         ? Math.round(hourlyPrice * (Number(item.unitPrice || 0) / originalUzsPrice))

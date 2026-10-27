@@ -1,5 +1,6 @@
 export const PAYMENT_OPTIONS = [
   { value: "Naqd", label: "Naqd" },
+  { value: "Karta", label: "Karta" },
   { value: "Terminal", label: "Terminal" },
   { value: "Click", label: "Click" },
   { value: "Payme", label: "Payme" },
@@ -8,14 +9,14 @@ export const PAYMENT_OPTIONS = [
 
 const paymentLabelMap = {
   CASH: "Naqd",
-  CARD: "Terminal",
+  CARD: "Karta",
   TERMINAL: "Terminal",
   CLICK: "Click",
   PAYME: "Payme",
   TRANSFER: "Terminal",
   DEBT: "Qarz",
   Naqd: "Naqd",
-  Karta: "Terminal",
+  Karta: "Karta",
   Terminal: "Terminal",
   Click: "Click",
   Payme: "Payme",
