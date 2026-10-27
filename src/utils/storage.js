@@ -10,7 +10,7 @@ const SETTINGS_KEY = "br_settings";
 const CASH_MOVEMENTS_KEY = "br_cash_movements";
 const INKASSA_KEY = "br_inkassa";
 
-export const PAYMENT_TYPES = ["Naqd", "Terminal", "Click", "Payme", "Qarz"];
+export const PAYMENT_TYPES = ["Naqd", "Karta", "Terminal", "Click", "Payme", "Qarz"];
 export const CURRENCIES = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
 export const OVERTIME_GRACE_MINUTES = 10;
 export const OVERTIME_GRACE_MS = OVERTIME_GRACE_MINUTES * 60 * 1000;

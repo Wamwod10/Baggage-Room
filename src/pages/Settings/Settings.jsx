@@ -666,10 +666,10 @@ export default function Settings() {
                         currencies: event.target.value
                           .split(",")
                           .map((item) => item.trim().toUpperCase())
-                          .filter((currency) => ["UZS", "USD", "RUB", "EUR"].includes(currency)),
+                          .filter((currency) => ["UZS", "USD", "RUB", "EUR", "KZT"].includes(currency)),
                       }))
                     }
-                    placeholder="UZS,USD,RUB,EUR"
+                    placeholder="UZS,USD,RUB,EUR,KZT"
                   />
                 </label>
 
@@ -692,7 +692,7 @@ export default function Settings() {
                   </GlassSelect>
                 </label>
 
-                {["USD", "RUB", "EUR"].map((currency) => (
+                {["USD", "RUB", "EUR", "KZT"].map((currency) => (
                   <label key={currency}>
                     <span>{currency} / UZS</span>
                     <input

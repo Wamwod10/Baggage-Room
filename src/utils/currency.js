@@ -7,6 +7,12 @@ const currencyMeta = {
   TJS: { suffix: "TJS", decimals: 2, prefix: "" },
 };
 
+export const availableOrderCurrencies = (configured = []) => {
+  const supported = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
+  const currencies = configured.filter((currency) => supported.includes(currency));
+  return currencies.length ? [...new Set([...currencies, "KZT"])] : supported;
+};
+
 const getCurrencyMeta = (currency = "UZS") =>
   currencyMeta[currency] || { suffix: String(currency || ""), decimals: 2, prefix: "" };
 
