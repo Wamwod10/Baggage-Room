@@ -165,6 +165,8 @@ const mapOrder = (order) => {
     size: lockers.map((locker) => `${locker.size}${Number(locker.count || 1) > 1 ? ` x${locker.count}` : ""}`).filter(Boolean).join(", ") || order.size || fallbackText,
     calculatedAmount: order.calculatedAmount,
     exchangeRate: order.pricingSnapshot?.exchangeRate,
+    fx: order.pricingSnapshot?.fx || null,
+    paymentFxMovements: asArray(order.cashMovements).filter((movement) => movement.fxRateDate && movement.uzsEquivalent !== null && movement.uzsEquivalent !== undefined),
     discount: order.discountAmount,
     discountAmount: order.discountAmount,
     finalPrice: order.finalAmount,
