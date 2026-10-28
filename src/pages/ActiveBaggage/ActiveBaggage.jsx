@@ -818,9 +818,12 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect value={editForm.currency} onChange={(event) => {
-                  try { setEditForm(changeEditCurrency(editForm, editOrder, event.target.value, settingsService.get().exchangeRates)); }
-                  catch (error) { setFormError(error.message); }
+                <GlassSelect value={editForm.currency} onChange={async (event) => {
+                  const nextCurrency = event.target.value;
+                  try {
+                    const rates = await settingsService.getOfficialRateMap();
+                    setEditForm((previous) => changeEditCurrency(previous, editOrder, nextCurrency, rates));
+                  } catch (error) { setFormError(error.message || "CBU kursini olib bo‘lmadi"); }
                 }}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
@@ -950,9 +953,12 @@ export default function ActiveBaggage() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect value={pickupForm.currency} onChange={(event) => {
-                  try { setPickupForm(updatePickupCurrency(pickupForm, event.target.value, pickupOrder, settingsService.get().exchangeRates)); }
-                  catch (error) { setFormError(error.message); }
+                <GlassSelect value={pickupForm.currency} onChange={async (event) => {
+                  const nextCurrency = event.target.value;
+                  try {
+                    const rates = await settingsService.getOfficialRateMap();
+                    setPickupForm((previous) => updatePickupCurrency(previous, nextCurrency, pickupOrder, rates));
+                  } catch (error) { setFormError(error.message || "CBU kursini olib bo‘lmadi"); }
                 }}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
