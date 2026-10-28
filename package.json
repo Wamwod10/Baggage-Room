@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/cbuBuildProbe.mjs && vite build",
     "lint": "eslint .",
     "test": "node test/run.mjs",
     "test:timezone": "node --test test/timezone.test.mjs",
