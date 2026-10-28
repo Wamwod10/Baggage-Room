@@ -180,7 +180,6 @@ export default function NewBaggage() {
   );
   const isCustomTariff = form.tariffPreset === "custom";
   const isAfter72Tariff = form.tariffPreset === "after72";
-  const exchangeRate = form.currency === "UZS" ? 1 : Number(priceQuote?.exchangeRate || 0);
   const baggageItems = useMemo(() => {
     const locker = selectedLockers[0];
     if (!locker) return [];
@@ -197,6 +196,7 @@ export default function NewBaggage() {
       .filter((item) => item.count > 0);
   }, [baggageCounts, baggageSizes, form.currency, selectedHours, selectedLockers]);
   const [priceQuote, setPriceQuote] = useState(null);
+  const exchangeRate = form.currency === "UZS" ? 1 : Number(priceQuote?.exchangeRate || 0);
   const quoteKey = JSON.stringify({ branchName: currentBranch, hours: selectedHours, isCustom: isCustomTariff,
     currency: form.currency, items: baggageSizes.map((size) => ({ size, count: 1 })) });
   useEffect(() => {
