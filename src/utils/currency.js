@@ -10,7 +10,7 @@ const currencyMeta = {
 export const availableOrderCurrencies = (configured = []) => {
   const supported = ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"];
   const currencies = configured.filter((currency) => supported.includes(currency));
-  return currencies.length ? [...new Set([...currencies, "KZT"])] : supported;
+  return [...new Set([...currencies, ...supported])];
 };
 
 const getCurrencyMeta = (currency = "UZS") =>
