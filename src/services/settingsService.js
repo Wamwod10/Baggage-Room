@@ -7,6 +7,10 @@ const settingsService = {
   async getOfficialRates() {
     return getData(await apiClient.get('/orders/exchange-rates'));
   },
+  async getOfficialRateMap() {
+    const data = await this.getOfficialRates();
+    return Object.fromEntries(Object.entries(data.rates || {}).map(([currency, fx]) => [currency, Number(fx.rate)]));
+  },
   get() {
     return getSettings();
   },
