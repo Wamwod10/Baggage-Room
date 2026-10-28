@@ -666,10 +666,10 @@ export default function Settings() {
                         currencies: event.target.value
                           .split(",")
                           .map((item) => item.trim().toUpperCase())
-                          .filter((currency) => ["UZS", "USD", "RUB", "EUR", "KZT"].includes(currency)),
+                          .filter((currency) => ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"].includes(currency)),
                       }))
                     }
-                    placeholder="UZS,USD,RUB,EUR,KZT"
+                    placeholder="UZS,USD,RUB,EUR,KZT,TJS"
                   />
                 </label>
 
@@ -692,7 +692,8 @@ export default function Settings() {
                   </GlassSelect>
                 </label>
 
-                {["USD", "RUB", "EUR", "KZT"].map((currency) => (
+                {/* Rates are read-only: quotations now come directly from the CBU backend. */}
+                {false && ["USD", "RUB", "EUR", "KZT", "TJS"].map((currency) => (
                   <label key={currency}>
                     <span>{currency} / UZS</span>
                     <input
@@ -712,6 +713,7 @@ export default function Settings() {
                   </label>
                 ))}
 
+                <p>Valyuta kursлари Марказий банкдан автоматик олинади. Кассир томонидан ўзгартирилмайди.</p>
                 <label>
                   <span>{t("Theme")}</span>
                   <GlassSelect
