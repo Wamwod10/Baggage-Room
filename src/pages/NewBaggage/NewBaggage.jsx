@@ -180,10 +180,7 @@ export default function NewBaggage() {
   );
   const isCustomTariff = form.tariffPreset === "custom";
   const isAfter72Tariff = form.tariffPreset === "after72";
-  const exchangeRate = useMemo(
-    () => (form.currency === "UZS" ? 1 : Number(settings.exchangeRates?.[form.currency] || 0)),
-    [form.currency, settings.exchangeRates],
-  );
+  const exchangeRate = form.currency === "UZS" ? 1 : Number(priceQuote?.exchangeRate || 0);
   const baggageItems = useMemo(() => {
     const locker = selectedLockers[0];
     if (!locker) return [];
@@ -201,7 +198,7 @@ export default function NewBaggage() {
   }, [baggageCounts, baggageSizes, form.currency, selectedHours, selectedLockers]);
   const [priceQuote, setPriceQuote] = useState(null);
   const quoteKey = JSON.stringify({ branchName: currentBranch, hours: selectedHours, isCustom: isCustomTariff,
-    currency: form.currency, exchangeRate, items: baggageSizes.map((size) => ({ size, count: 1 })) });
+    currency: form.currency, items: baggageSizes.map((size) => ({ size, count: 1 })) });
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -460,7 +457,7 @@ export default function NewBaggage() {
     }
 
     if (form.currency !== "UZS" && (!Number.isFinite(exchangeRate) || exchangeRate <= 0)) {
-      fail(t("Tanlangan valyuta uchun kurs kiritilmagan."));
+      fail("Markaziy bank kursi olinmadi. Buyurtmani saqlashdan oldin qayta tekshiring.");
       return;
     }
 
@@ -838,6 +835,10 @@ export default function NewBaggage() {
               <span>{t("Skidka")}</span>
               <b>{formatMoneyByCurrency(discount, form.currency)}</b>
             </div>
+            {form.currency !== "UZS" && priceQuote?.key === quoteKey && (
+              <div><span>Markaziy bank kursi ({priceQuote.exchangeRateDate || "-"})</span>
+                <b>1 {form.currency} = {priceQuote.exchangeRate} so‘m</b></div>
+            )}
             <div className="payable">
               <span>{t("To'lovga")}</span>
               <b>{formatMoneyByCurrency(realPaidAmount, form.currency)}</b>
