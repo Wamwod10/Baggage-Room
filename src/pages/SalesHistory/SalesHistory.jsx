@@ -229,27 +229,34 @@ export default function SalesHistory() {
 
     if (!beginAction("edit")) return;
     try {
+      const currencyChanged = editForm.currency !== (editOrder.currency || "UZS");
+      const nextFinalAmount = toMinorUnits(editForm.finalAmount || 0, editForm.currency);
+      const nextPaidAmount = toMinorUnits(editForm.realPaidAmount || 0, editForm.currency);
+      const originalOvertime = Number(editOrder.overtimeAmount || 0);
+      const overtimeCurrencyChanged = editForm.overtimeCurrency !== overtimeCurrency(editOrder);
+      const nextOvertime = toMinorUnits(editForm.overtimeAmount || 0, editForm.overtimeCurrency);
+      const originalOvertimePayment = getPaymentLabel(editOrder.overtimePayment || editOrder.overtimePaymentType || editOrder.payment);
       await baggageService.update(editOrder.id, {
         clientName: editForm.clientName.trim(),
         phone: editForm.phone.trim(),
         passport: editForm.passport.trim(),
         checkOut: parseTashkentInputToIso(editForm.checkOut),
-        payment: editForm.payment,
-        currency: editForm.currency,
+        payment: editForm.payment !== getPaymentLabel(editOrder.payment) ? editForm.payment : undefined,
+        currency: currencyChanged ? editForm.currency : undefined,
         exchangeRate: editForm.exchangeRate,
         sourceExchangeRate: editForm.sourceExchangeRate,
         paidPaymentType: editForm.paidPaymentType || undefined,
         priceChangeReason: editForm.priceChangeReason || undefined,
-        finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
-        realPaidAmount: toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
-        overtimeAmount: toMinorUnits(editForm.overtimeAmount || 0, editForm.overtimeCurrency),
-        overtimeCurrency: editForm.overtimeCurrency,
-        overtimePaymentType: editForm.overtimePayment,
+        finalAmount: currencyChanged || nextFinalAmount !== Number(editOrder.finalAmount ?? editOrder.finalPrice ?? 0) ? nextFinalAmount : undefined,
+        realPaidAmount: currencyChanged || nextPaidAmount !== Number(editOrder.realPaidAmount || 0) ? nextPaidAmount : undefined,
+        overtimeAmount: overtimeCurrencyChanged || nextOvertime !== originalOvertime ? nextOvertime : undefined,
+        overtimeCurrency: overtimeCurrencyChanged ? editForm.overtimeCurrency : undefined,
+        overtimePaymentType: (originalOvertime > 0 || nextOvertime > 0) && editForm.overtimePayment !== originalOvertimePayment ? editForm.overtimePayment : undefined,
         note: editForm.note,
         items: asArray(editForm.items).map((item) => ({
           id: item.id,
           size: item.size,
-          count: Number(item.count || 1),
+          count: Number(item.count),
         })),
       }, { idempotencyKey: editKeyRef.current });
     } catch (error) {
