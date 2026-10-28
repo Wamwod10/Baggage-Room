@@ -52,6 +52,7 @@ export default function SalesHistory() {
   const [debtClosePayment, setDebtClosePayment] = useState("Naqd");
   const [editOrder, setEditOrder] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [editError, setEditError] = useState("");
   const [pendingAction, setPendingAction] = useState("");
   const pendingActionRef = useRef(false);
   const editKeyRef = useRef("");
@@ -205,10 +206,12 @@ export default function SalesHistory() {
       })),
     });
     setStatusMessage("");
+    setEditError("");
   };
 
   const updateEditForm = (key, value) => {
     setEditForm((prev) => ({ ...prev, [key]: value }));
+    setEditError("");
   };
 
   const updateEditItem = (index, key, value) => {
@@ -236,6 +239,17 @@ export default function SalesHistory() {
       const overtimeCurrencyChanged = editForm.overtimeCurrency !== overtimeCurrency(editOrder);
       const nextOvertime = toMinorUnits(editForm.overtimeAmount || 0, editForm.overtimeCurrency);
       const originalOvertimePayment = getPaymentLabel(editOrder.overtimePayment || editOrder.overtimePaymentType || editOrder.payment);
+      const paymentChanged = currencyChanged
+        || editForm.payment !== getPaymentLabel(editOrder.payment)
+        || nextFinalAmount !== Number(editOrder.finalAmount ?? editOrder.finalPrice ?? 0)
+        || nextPaidAmount !== Number(editOrder.realPaidAmount || 0)
+        || overtimeCurrencyChanged || nextOvertime !== originalOvertime
+        || ((originalOvertime > 0 || nextOvertime > 0) && editForm.overtimePayment !== originalOvertimePayment);
+      if (paymentChanged && !editForm.priceChangeReason.trim()) {
+        setEditError("To‘lov yoki kechikish summasini o‘zgartirish sababini kiriting. O‘zgarish hali saqlanmadi.");
+        return;
+      }
+      setEditError("");
       await baggageService.update(editOrder.id, {
         clientName: editForm.clientName.trim(),
         phone: editForm.phone.trim(),
@@ -260,7 +274,7 @@ export default function SalesHistory() {
         })),
       }, { idempotencyKey: editKeyRef.current });
     } catch (error) {
-      setStatusMessage(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
+      setEditError(t(error.message || "Orderni tahrirlashda xatolik yuz berdi."));
       return;
     } finally {
       endAction();
@@ -269,7 +283,7 @@ export default function SalesHistory() {
     setRefreshKey((value) => value + 1);
     setEditOrder(null);
     setSelectedOrder(null);
-    setStatusMessage(t("Order tahrirlandi. Telegram xabar yuborildi."));
+    setStatusMessage(t("Order saqlandi. Google Sheets sinxronlanishi biroz vaqt olishi mumkin."));
   };
 
   const handleCloseDebt = async () => {
@@ -503,8 +517,13 @@ export default function SalesHistory() {
               <button type="button" onClick={() => setEditOrder(null)}>{t("Close")}</button>
             </div>
 
+            {editError && <div className="history-status-message" role="alert">{editError}</div>}
             <div className="history-edit-grid">
-              <label className="full"><span>To‘lov/valyutani o‘zgartirish sababi</span><input value={editForm.priceChangeReason || ''} onChange={(event) => updateEditForm('priceChangeReason', event.target.value)} /></label>
+              <label className="full">
+                <span>Moliyaviy yoki kechikish summasini tuzatish sababi *</span>
+                <input aria-invalid={Boolean(editError)} placeholder="Masalan: 15 daqiqalik bepul muddatda noto‘g‘ri kechikish hisoblangan" value={editForm.priceChangeReason || ''} onChange={(event) => updateEditForm('priceChangeReason', event.target.value)} />
+                <small>Summani 0 ga tushirsangiz ham sabab yozing. Google Sheetsda eski tushumni o‘chirish o‘rniga alohida minus tuzatish yozuvi yaratiladi.</small>
+              </label>
               <label>
                 <span>{t("Client")}</span>
                 <input value={editForm.clientName} onChange={(event) => updateEditForm("clientName", event.target.value)} />
