@@ -373,25 +373,28 @@ export default function ActiveBaggage() {
     }
     if (!beginAction("edit")) return;
     try {
+      const currencyChanged = editForm.currency !== (editOrder.currency || "UZS");
+      const nextFinalAmount = toMinorUnits(editForm.finalAmount || 0, editForm.currency);
+      const nextPaidAmount = toMinorUnits(editForm.realPaidAmount || 0, editForm.currency);
       await baggageService.update(editOrder.id, {
         clientName: editForm.clientName.trim(),
         phone: editForm.phone.trim(),
         passport: editForm.passport.trim(),
         checkOut: parseTashkentInputToIso(editForm.checkOut),
-        payment: editForm.payment,
-        currency: editForm.currency,
+        payment: editForm.payment !== getPaymentLabel(editOrder.payment) ? editForm.payment : undefined,
+        currency: currencyChanged ? editForm.currency : undefined,
         exchangeRate: editForm.exchangeRate,
         sourceExchangeRate: editForm.sourceExchangeRate,
         paidPaymentType: editForm.paidPaymentType || undefined,
-        finalAmount: toMinorUnits(editForm.finalAmount || 0, editForm.currency),
-        realPaidAmount: toMinorUnits(editForm.realPaidAmount || 0, editForm.currency),
+        finalAmount: currencyChanged || nextFinalAmount !== Number(editOrder.finalAmount ?? editOrder.finalPrice ?? 0) ? nextFinalAmount : undefined,
+        realPaidAmount: currencyChanged || nextPaidAmount !== Number(editOrder.realPaidAmount || 0) ? nextPaidAmount : undefined,
         priceChangeReason: editForm.priceChangeReason || undefined,
         note: editForm.note,
         items: asArray(editForm.items).map((item) => ({
           id: item.id,
           lockerId: item.lockerId,
           size: item.size,
-          count: Number(item.count || 1),
+          count: Number(item.count),
           remove: item.remove || undefined,
         })),
       }, { idempotencyKey: mutationKeysRef.current["order-edit"] });
