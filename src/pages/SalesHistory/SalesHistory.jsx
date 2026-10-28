@@ -430,6 +430,20 @@ export default function SalesHistory() {
                 <b>{formatCurrency(selectedOrder, selectedOrder.realPaidAmount || selectedOrder.finalPrice)}</b>
               </div>
 
+              {selectedOrder.pricingSnapshot?.exchangeRateSource === "CBU" && (
+                <>
+                  <div>
+                    <span>Markaziy bank kursi ({selectedOrder.pricingSnapshot.exchangeRateDate})</span>
+                    <b>1 {selectedOrder.currency} = {selectedOrder.exchangeRate} so‘m</b>
+                  </div>
+                  <div>
+                    <span>To‘langan summa (so‘m ekvivalenti)</span>
+                    <b>{formatMoneyByCurrency((selectedOrder.cashMovements || [])
+                      .filter((m) => m.uzsEquivalent !== null && m.uzsEquivalent !== undefined)
+                      .reduce((sum, m) => sum + (m.direction === "OUT" ? -1 : 1) * Number(m.uzsEquivalent), 0), "UZS")}</b>
+                  </div>
+                </>
+              )}
               <div>
                 <span>{t("Difference")}</span>
                 <b>{formatCurrency(selectedOrder, selectedOrder.difference)}</b>
