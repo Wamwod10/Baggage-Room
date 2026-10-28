@@ -956,6 +956,12 @@ export default function Analytics() {
             </div>
 
             <div>
+              <span>Янги хорижий тўловлар эквиваленти (сўм)</span>
+              <b>{formatMoney(financeAnalytics?.fxRevenueUzsEquivalent || 0)}</b>
+              <small>Фақат курс сақланган янги тўловлар. Эски буюртмалар ҳисобланмаган.</small>
+            </div>
+
+            <div>
               <span>{t("Expenses")}</span>
               <b>{formatMoney(financeAnalytics?.totalExpenses)}</b>
             </div>
