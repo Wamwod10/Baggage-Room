@@ -404,6 +404,22 @@ export default function SalesHistory() {
                 <span>{t("Payment")}</span>
                 <b>{t(getPaymentLabel(selectedOrder.payment))} / {selectedOrder.currency || "UZS"}</b>
               </div>
+              {selectedOrder.fx && (
+                <>
+                  <div><span>CBU rasmiy kursi</span>
+                    <b>1 {selectedOrder.fx.currency} = {Number(selectedOrder.fx.rate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m</b>
+                  </div>
+                  <div><span>Kurs sanasi va manbasi</span>
+                    <b>{selectedOrder.fx.effectiveDate} · {selectedOrder.fx.source}</b>
+                  </div>
+                  <div><span>Dastlab olingan summa</span>
+                    <b>{formatMoneyByCurrency(selectedOrder.fx.amountMinor, selectedOrder.fx.currency)}</b>
+                  </div>
+                  <div><span>To‘lovning so‘mdagi ekvivalenti</span>
+                    <b>{formatMoneyByCurrency(selectedOrder.fx.uzsEquivalent, "UZS")}</b>
+                  </div>
+                </>
+              )}
 
               <div>
                 <span>{t("Status")}</span>
