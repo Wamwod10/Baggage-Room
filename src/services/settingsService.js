@@ -4,6 +4,9 @@ import { getArrayData, getData, mapTariff } from "./apiMappers";
 import { getSettings, saveSettings } from "../utils/storage";
 
 const settingsService = {
+  async getOfficialRates() {
+    return getData(await apiClient.get('/orders/exchange-rates'));
+  },
   get() {
     return getSettings();
   },
