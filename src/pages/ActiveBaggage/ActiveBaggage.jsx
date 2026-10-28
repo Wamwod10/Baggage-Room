@@ -376,6 +376,15 @@ export default function ActiveBaggage() {
       const currencyChanged = editForm.currency !== (editOrder.currency || "UZS");
       const nextFinalAmount = toMinorUnits(editForm.finalAmount || 0, editForm.currency);
       const nextPaidAmount = toMinorUnits(editForm.realPaidAmount || 0, editForm.currency);
+      const financialChanged = currencyChanged
+        || editForm.payment !== getPaymentLabel(editOrder.payment)
+        || nextFinalAmount !== Number(editOrder.finalAmount ?? editOrder.finalPrice ?? 0)
+        || nextPaidAmount !== Number(editOrder.realPaidAmount || 0);
+      if (financialChanged && !editForm.priceChangeReason.trim()) {
+        setFormError("Narx yoki to‘lov summasini o‘zgartirish sababini kiriting. O‘zgarish hali saqlanmadi.");
+        return;
+      }
+      setFormError("");
       await baggageService.update(editOrder.id, {
         clientName: editForm.clientName.trim(),
         phone: editForm.phone.trim(),
@@ -781,6 +790,7 @@ export default function ActiveBaggage() {
               <button type="button" onClick={() => setEditOrder(null)}>{t("Close")}</button>
             </div>
 
+            {formError && <div className="form-error active-form-error" role="alert">{formError}</div>}
             <div className="edit-form-grid">
               <label>
                 <span>{t("Client")}</span>
@@ -845,8 +855,9 @@ export default function ActiveBaggage() {
 
             <div className="edit-items">
               <label className="edit-change-reason">
-                <span>O‘zgartirish sababi</span>
-                <input placeholder="Narx, to‘lov yoki valyuta o‘zgarishi sababini yozing" value={editForm.priceChangeReason} onChange={(event) => updateEditForm('priceChangeReason', event.target.value)} />
+                <span>Moliyaviy o‘zgartirish sababi *</span>
+                <input aria-invalid={Boolean(formError)} placeholder="Masalan: hisoblashdagi xato sabab summa tuzatildi" value={editForm.priceChangeReason} onChange={(event) => { updateEditForm('priceChangeReason', event.target.value); setFormError(""); }} />
+                <small>Narx yoki to‘lovni o‘zgartirsangiz sabab majburiy. Saqlanmaguncha Google Sheets ham o‘zgarmaydi.</small>
               </label>
               {asArray(editForm.items).map((item, index) => (
                 <div className={`edit-item-row${item.remove ? ' edit-item-row--removed' : ''}`} key={item.id || index}>
