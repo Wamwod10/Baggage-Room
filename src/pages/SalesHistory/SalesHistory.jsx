@@ -47,6 +47,7 @@ export default function SalesHistory() {
   const [payment, setPayment] = useState("Payment");
   const [status, setStatus] = useState("Status");
   const [manualSelectedOrder, setSelectedOrder] = useState(null);
+  const [loadedOrderDetails, setLoadedOrderDetails] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [debtCloseOrder, setDebtCloseOrder] = useState(null);
   const [debtClosePayment, setDebtClosePayment] = useState("Naqd");
@@ -97,7 +98,17 @@ export default function SalesHistory() {
     () => asArray(orders).find((order) => order.orderNumber === orderIdFromUrl || order.id === orderIdFromUrl) || null,
     [orderIdFromUrl, orders],
   );
-  const selectedOrder = manualSelectedOrder || orderFromUrl;
+  const baseSelectedOrder = manualSelectedOrder || orderFromUrl;
+  const selectedOrder = loadedOrderDetails?.id === baseSelectedOrder?.id ? loadedOrderDetails : baseSelectedOrder;
+  useEffect(() => {
+    if (!baseSelectedOrder?.id) { setLoadedOrderDetails(null); return; }
+    let active = true;
+    setLoadedOrderDetails(null);
+    baggageService.getById(baseSelectedOrder.id)
+      .then((detail) => { if (active) setLoadedOrderDetails(detail); })
+      .catch(() => { /* Keep read-only list view if detail query fails. */ });
+    return () => { active = false; };
+  }, [baseSelectedOrder?.id, refreshKey]);
 
   useEffect(() => {
     if (!selectedOrder && !debtCloseOrder && !editOrder) return;
@@ -421,6 +432,13 @@ export default function SalesHistory() {
                 </>
               )}
 
+              {asArray(selectedOrder.paymentFxMovements).map((payment) => (
+                <div key={payment.id}>
+                  <span>To‘lov · {payment.fxRateDate} · {payment.fxSource || "CBU"}</span>
+                  <b>{formatMoneyByCurrency(payment.amount, payment.currency)} = {formatMoneyByCurrency(payment.uzsEquivalent, "UZS")}</b>
+                  <small>1 {payment.currency} = {Number(payment.fxRate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m</small>
+                </div>
+              ))}
               <div>
                 <span>{t("Status")}</span>
                 <b>{t(selectedOrder.status)}</b>
