@@ -584,9 +584,12 @@ export default function SalesHistory() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect value={editForm.currency} onChange={(event) => {
-                  try { setEditForm(changeEditCurrency(editForm, editOrder, event.target.value, settingsService.get().exchangeRates)); }
-                  catch (error) { setStatusMessage(error.message); }
+                <GlassSelect value={editForm.currency} onChange={async (event) => {
+                  const nextCurrency = event.target.value;
+                  try {
+                    const rates = await settingsService.getOfficialRateMap();
+                    setEditForm((previous) => changeEditCurrency(previous, editOrder, nextCurrency, rates));
+                  } catch (error) { setEditError(error.message || "CBU kursini olib bo‘lmadi"); }
                 }}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
