@@ -436,12 +436,12 @@ export default function SalesHistory() {
                     <span>Markaziy bank kursi ({selectedOrder.pricingSnapshot.exchangeRateDate})</span>
                     <b>1 {selectedOrder.currency} = {selectedOrder.exchangeRate} so‘m</b>
                   </div>
-                  <div>
-                    <span>To‘langan summa (so‘m ekvivalenti)</span>
+                  {Array.isArray(selectedOrder.cashMovements) && <div>
+                    <span>To‘ланган сумма (сўм эквиваленти)</span>
                     <b>{formatMoneyByCurrency((selectedOrder.cashMovements || [])
                       .filter((m) => m.uzsEquivalent !== null && m.uzsEquivalent !== undefined)
                       .reduce((sum, m) => sum + (m.direction === "OUT" ? -1 : 1) * Number(m.uzsEquivalent), 0), "UZS")}</b>
-                  </div>
+                  </div>}
                 </>
               )}
               <div>
@@ -851,7 +851,10 @@ export default function SalesHistory() {
                 <button
                   type="button"
                   className="view-btn"
-                  onClick={() => setSelectedOrder(item)}
+                  onClick={async () => {
+                     try { setSelectedOrder(await baggageService.getById(item.id)); }
+                     catch { setSelectedOrder(item); }
+                   }}
                 >
                   <Eye size={16} />
                 </button>
