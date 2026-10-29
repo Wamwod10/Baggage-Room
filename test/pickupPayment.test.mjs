@@ -60,7 +60,7 @@ test("pickup overtime amount accepts decimals for foreign currency", () => {
 test('tenge and card are available and card keeps its label', async () => {
   const { availableOrderCurrencies } = await import('../src/utils/currency.js');
   const { PAYMENT_OPTIONS, getPaymentLabel } = await import('../src/utils/paymentLabels.js');
-  assert.deepEqual(availableOrderCurrencies(['UZS', 'USD', 'RUB', 'EUR']), ['UZS', 'USD', 'RUB', 'EUR', 'KZT']);
+  assert.deepEqual(availableOrderCurrencies(['UZS', 'USD', 'RUB', 'EUR']), ['UZS', 'USD', 'RUB', 'EUR', 'KZT', 'TJS']);
   assert.ok(PAYMENT_OPTIONS.some(({ value }) => value === 'Karta'));
   assert.equal(getPaymentLabel('CARD'), 'Karta');
 });

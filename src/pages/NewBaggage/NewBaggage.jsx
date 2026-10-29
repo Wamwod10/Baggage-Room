@@ -180,10 +180,6 @@ export default function NewBaggage() {
   );
   const isCustomTariff = form.tariffPreset === "custom";
   const isAfter72Tariff = form.tariffPreset === "after72";
-  const exchangeRate = useMemo(
-    () => (form.currency === "UZS" ? 1 : Number(settings.exchangeRates?.[form.currency] || 0)),
-    [form.currency, settings.exchangeRates],
-  );
   const baggageItems = useMemo(() => {
     const locker = selectedLockers[0];
     if (!locker) return [];
@@ -200,8 +196,16 @@ export default function NewBaggage() {
       .filter((item) => item.count > 0);
   }, [baggageCounts, baggageSizes, form.currency, selectedHours, selectedLockers]);
   const [priceQuote, setPriceQuote] = useState(null);
+  const [rateRefreshTick, setRateRefreshTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setRateRefreshTick((tick) => tick + 1), 15 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   const quoteKey = JSON.stringify({ branchName: currentBranch, hours: selectedHours, isCustom: isCustomTariff,
-    currency: form.currency, exchangeRate, items: baggageSizes.map((size) => ({ size, count: 1 })) });
+    currency: form.currency, rateRefreshTick, items: baggageSizes.map((size) => ({ size, count: 1 })) });
+  const exchangeRate = form.currency === "UZS" ? 1
+    : priceQuote?.key === quoteKey ? Number(priceQuote.exchangeRate || 0) : 0;
+  const displayedFx = priceQuote?.key === quoteKey ? priceQuote : null;
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -786,6 +790,13 @@ export default function NewBaggage() {
                     <option value={currency} key={currency}>{currency}</option>
                   ))}
                 </GlassSelect>
+                {form.currency !== "UZS" && (
+                  <small role="status">
+                    {displayedFx?.exchangeRate
+                      ? `Google Finance: 1 ${form.currency} = ${Number(displayedFx.exchangeRate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m · kuzatilgan sana: ${displayedFx.fxEffectiveDate}`
+                      : "Google Finance kursi yuklanmoqda. Kurs olinmasa buyurtma saqlanmaydi."}
+                  </small>
+                )}
               </label>
               <label>
                 <span>{t("To'lov turi")}</span>
@@ -841,6 +852,9 @@ export default function NewBaggage() {
             <div className="payable">
               <span>{t("To'lovga")}</span>
               <b>{formatMoneyByCurrency(realPaidAmount, form.currency)}</b>
+              {form.currency !== "UZS" && exchangeRate > 0 && (
+                <small>Google Finance bo‘yicha ≈ {Math.round(fromMinorUnits(realPaidAmount, form.currency) * exchangeRate).toLocaleString("uz-UZ")} so‘m</small>
+              )}
             </div>
           </div>
           <div className="panel-save-actions">

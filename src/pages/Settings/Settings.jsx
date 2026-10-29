@@ -172,6 +172,17 @@ export default function Settings() {
   const { isSuperAdmin } = useAuth();
   const branchNames = getBranchNames();
   const [settings, setSettings] = useState(fallbackSettings);
+  const [officialRates, setOfficialRates] = useState(null);
+  const [rateError, setRateError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    const load = () => settingsService.getOfficialRates()
+      .then((data) => { if (alive) { setOfficialRates(data?.rates || null); setRateError(""); } })
+      .catch(() => { if (alive) { setOfficialRates(null); setRateError("Google Finance kursi olinmadi. Xorijiy buyurtmalar kurs bo‘lmaguncha saqlanmaydi."); } });
+    void load();
+    const timer = window.setInterval(load, 15 * 60 * 1000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, []);
   const [message, setMessage] = useState("");
   const [testStatus, setTestStatus] = useState("");
   const [showToken, setShowToken] = useState(false);
@@ -666,7 +677,7 @@ export default function Settings() {
                         currencies: event.target.value
                           .split(",")
                           .map((item) => item.trim().toUpperCase())
-                          .filter((currency) => ["UZS", "USD", "RUB", "EUR", "KZT"].includes(currency)),
+                          .filter((currency) => ["UZS", "USD", "RUB", "EUR", "KZT", "TJS"].includes(currency)),
                       }))
                     }
                     placeholder="UZS,USD,RUB,EUR,KZT"
@@ -692,23 +703,17 @@ export default function Settings() {
                   </GlassSelect>
                 </label>
 
-                {["USD", "RUB", "EUR", "KZT"].map((currency) => (
+                <div className="full" role="status">
+                  <strong>Google Finance bozor kursi (avtomatik)</strong>
+                  <small>Har 15 daqiqada yangilanadi. Bu kurs qo‘lda o‘zgartirilmaydi; eski buyurtmalar qayta hisoblanmaydi.</small>
+                  {rateError && <small>{rateError}</small>}
+                </div>
+                {["USD", "RUB", "EUR", "KZT", "TJS"].map((currency) => (
                   <label key={currency}>
-                    <span>{currency} / UZS</span>
-                    <input
-                      inputMode="numeric"
-                      value={formatNumberInput(settings.exchangeRates?.[currency] || 0)}
-                      onChange={(event) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          exchangeRates: {
-                            ...(prev.exchangeRates || {}),
-                            UZS: 1,
-                            [currency]: Number(cleanNumericInput(event.target.value) || 0),
-                          },
-                        }))
-                      }
-                    />
+                    <span>1 {currency} / UZS · {officialRates?.[currency]?.effectiveDate || "—"}</span>
+                    <input readOnly value={officialRates?.[currency]
+                      ? Number(officialRates[currency].rate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })
+                      : "Google Finance kursi yuklanmoqda"} />
                   </label>
                 ))}
 

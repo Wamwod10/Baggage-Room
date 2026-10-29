@@ -956,6 +956,21 @@ export default function Analytics() {
             </div>
 
             <div>
+              <span>Yangi xorijiy to‘lovlar (so‘m ekvivalenti)</span>
+              <b>{formatMoney(financeAnalytics?.foreignRevenueUzsEquivalent ?? 0)}</b>
+            </div>
+            <div>
+              <span>Jami tushum: UZS + yangi xorijiy to‘lovlar ekvivalenti</span>
+              <b>{formatMoney(financeAnalytics?.revenueUzsEquivalent ?? financeAnalytics?.revenue ?? 0)}</b>
+              <small>Eski xorijiy to‘lovlar joriy kursga qayta hisoblanmaydi.</small>
+            </div>
+            {(financeAnalytics?.legacyForeignMovementsWithoutRate ?? 0) > 0 && (
+              <div>
+                <span>Kursi saqlanmagan avvalgi xorijiy to‘lovлар</span>
+                <b>{financeAnalytics.legacyForeignMovementsWithoutRate} ta</b>
+              </div>
+            )}
+            <div>
               <span>{t("Expenses")}</span>
               <b>{formatMoney(financeAnalytics?.totalExpenses)}</b>
             </div>

@@ -18,6 +18,9 @@ const paginationFrom = (response = {}, fallback = {}) => ({
 });
 
 const baggageService = {
+  async getExchangeRates() {
+    return getData(await apiClient.get('/orders/exchange-rates'));
+  },
   async financialCapabilities() {
     return getData(await apiClient.get('/orders/financial-capabilities'));
   },

@@ -8,6 +8,8 @@ const toNumber = (value) => Number(value ?? 0) || 0;
 const mapDashboard = (data = {}) => ({
   stats: {
     revenue: toNumber(data.todayRevenue ?? data.totalRevenue ?? data.revenue),
+    revenueUzsEquivalent: data.revenueUzsEquivalent == null ? null : toNumber(data.revenueUzsEquivalent),
+    legacyForeignMovementsWithoutRate: toNumber(data.legacyForeignMovementsWithoutRate),
     active: toNumber(data.activeOrders),
     ordersCount: toNumber(data.todayOrders ?? data.todayClients ?? data.totalOrders),
     totalOrders: toNumber(data.totalOrders),

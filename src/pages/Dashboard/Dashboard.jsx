@@ -197,6 +197,12 @@ export default function Dashboard() {
       icon: TrendingUp,
       action: () => navigate("/sales-history"),
     },
+    ...(safeStats.revenueUzsEquivalent == null ? [] : [{
+      title: "Bugungi savdo · Google Finance bo‘yicha so‘m ekvivalenti",
+      value: formatMoneyByCurrency(safeStats.revenueUzsEquivalent, "UZS"),
+      icon: TrendingUp,
+      action: () => navigate("/sales-history"),
+    }]),
     {
       title: t("Aktiv baggage"),
       value: `${safeStats.active} ${t("ta")}`,

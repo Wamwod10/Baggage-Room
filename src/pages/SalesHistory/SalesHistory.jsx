@@ -47,6 +47,7 @@ export default function SalesHistory() {
   const [payment, setPayment] = useState("Payment");
   const [status, setStatus] = useState("Status");
   const [manualSelectedOrder, setSelectedOrder] = useState(null);
+  const [loadedOrderDetails, setLoadedOrderDetails] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [debtCloseOrder, setDebtCloseOrder] = useState(null);
   const [debtClosePayment, setDebtClosePayment] = useState("Naqd");
@@ -97,7 +98,17 @@ export default function SalesHistory() {
     () => asArray(orders).find((order) => order.orderNumber === orderIdFromUrl || order.id === orderIdFromUrl) || null,
     [orderIdFromUrl, orders],
   );
-  const selectedOrder = manualSelectedOrder || orderFromUrl;
+  const baseSelectedOrder = manualSelectedOrder || orderFromUrl;
+  const selectedOrder = loadedOrderDetails?.id === baseSelectedOrder?.id ? loadedOrderDetails : baseSelectedOrder;
+  useEffect(() => {
+    if (!baseSelectedOrder?.id) { setLoadedOrderDetails(null); return; }
+    let active = true;
+    setLoadedOrderDetails(null);
+    baggageService.getById(baseSelectedOrder.id)
+      .then((detail) => { if (active) setLoadedOrderDetails(detail); })
+      .catch(() => { /* Keep read-only list view if detail query fails. */ });
+    return () => { active = false; };
+  }, [baseSelectedOrder?.id, refreshKey]);
 
   useEffect(() => {
     if (!selectedOrder && !debtCloseOrder && !editOrder) return;
@@ -404,7 +415,30 @@ export default function SalesHistory() {
                 <span>{t("Payment")}</span>
                 <b>{t(getPaymentLabel(selectedOrder.payment))} / {selectedOrder.currency || "UZS"}</b>
               </div>
+              {selectedOrder.fx && (
+                <>
+                  <div><span>Google Finance bozor kursi</span>
+                    <b>1 {selectedOrder.fx.currency} = {Number(selectedOrder.fx.rate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m</b>
+                  </div>
+                  <div><span>Kurs sanasi va manbasi</span>
+                    <b>{selectedOrder.fx.effectiveDate} · {selectedOrder.fx.source}</b>
+                  </div>
+                  <div><span>Dastlab olingan summa</span>
+                    <b>{formatMoneyByCurrency(selectedOrder.fx.amountMinor, selectedOrder.fx.currency)}</b>
+                  </div>
+                  <div><span>To‘lovning so‘mdagi ekvivalenti</span>
+                    <b>{formatMoneyByCurrency(selectedOrder.fx.uzsEquivalent, "UZS")}</b>
+                  </div>
+                </>
+              )}
 
+              {asArray(selectedOrder.paymentFxMovements).map((payment) => (
+                <div key={payment.id}>
+                  <span>To‘lov · {payment.fxRateDate} · {payment.fxSource || "Saqlanmagan"}</span>
+                  <b>{formatMoneyByCurrency(payment.amount, payment.currency)} = {formatMoneyByCurrency(payment.uzsEquivalent, "UZS")}</b>
+                  <small>1 {payment.currency} = {Number(payment.fxRate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m</small>
+                </div>
+              ))}
               <div>
                 <span>{t("Status")}</span>
                 <b>{t(selectedOrder.status)}</b>
@@ -550,9 +584,12 @@ export default function SalesHistory() {
               </label>
               <label>
                 <span>{t("Currency")}</span>
-                <GlassSelect value={editForm.currency} onChange={(event) => {
-                  try { setEditForm(changeEditCurrency(editForm, editOrder, event.target.value, settingsService.get().exchangeRates)); }
-                  catch (error) { setStatusMessage(error.message); }
+                <GlassSelect value={editForm.currency} onChange={async (event) => {
+                  const nextCurrency = event.target.value;
+                  try {
+                    const rates = await settingsService.getOfficialRateMap();
+                    setEditForm((previous) => changeEditCurrency(previous, editOrder, nextCurrency, rates));
+                  } catch (error) { setEditError(error.message || "Google Finance kursini olib bo‘lmadi"); }
                 }}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
