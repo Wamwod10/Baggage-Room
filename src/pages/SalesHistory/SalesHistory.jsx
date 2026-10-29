@@ -417,7 +417,7 @@ export default function SalesHistory() {
               </div>
               {selectedOrder.fx && (
                 <>
-                  <div><span>CBU rasmiy kursi</span>
+                  <div><span>Google Finance bozor kursi</span>
                     <b>1 {selectedOrder.fx.currency} = {Number(selectedOrder.fx.rate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m</b>
                   </div>
                   <div><span>Kurs sanasi va manbasi</span>
@@ -434,7 +434,7 @@ export default function SalesHistory() {
 
               {asArray(selectedOrder.paymentFxMovements).map((payment) => (
                 <div key={payment.id}>
-                  <span>To‘lov · {payment.fxRateDate} · {payment.fxSource || "CBU"}</span>
+                  <span>To‘lov · {payment.fxRateDate} · {payment.fxSource || "Saqlanmagan"}</span>
                   <b>{formatMoneyByCurrency(payment.amount, payment.currency)} = {formatMoneyByCurrency(payment.uzsEquivalent, "UZS")}</b>
                   <small>1 {payment.currency} = {Number(payment.fxRate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m</small>
                 </div>
@@ -589,7 +589,7 @@ export default function SalesHistory() {
                   try {
                     const rates = await settingsService.getOfficialRateMap();
                     setEditForm((previous) => changeEditCurrency(previous, editOrder, nextCurrency, rates));
-                  } catch (error) { setEditError(error.message || "CBU kursini olib bo‘lmadi"); }
+                  } catch (error) { setEditError(error.message || "Google Finance kursini olib bo‘lmadi"); }
                 }}>
                   <option value="UZS">UZS</option>
                   <option value="USD">USD</option>
