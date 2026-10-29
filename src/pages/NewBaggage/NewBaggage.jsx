@@ -793,8 +793,8 @@ export default function NewBaggage() {
                 {form.currency !== "UZS" && (
                   <small role="status">
                     {displayedFx?.exchangeRate
-                      ? `CBU: 1 ${form.currency} = ${Number(displayedFx.exchangeRate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m · amal qilish: ${displayedFx.fxEffectiveDate}`
-                      : "Markaziy bank kursi yuklanmoqda. Kurs olinmasa buyurtma saqlanmaydi."}
+                      ? `Google Finance: 1 ${form.currency} = ${Number(displayedFx.exchangeRate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })} so‘m · kuzatilgan sana: ${displayedFx.fxEffectiveDate}`
+                      : "Google Finance kursi yuklanmoqda. Kurs olinmasa buyurtma saqlanmaydi."}
                   </small>
                 )}
               </label>
@@ -853,7 +853,7 @@ export default function NewBaggage() {
               <span>{t("To'lovga")}</span>
               <b>{formatMoneyByCurrency(realPaidAmount, form.currency)}</b>
               {form.currency !== "UZS" && exchangeRate > 0 && (
-                <small>CBU bo‘yicha ≈ {Math.round(fromMinorUnits(realPaidAmount, form.currency) * exchangeRate).toLocaleString("uz-UZ")} so‘m</small>
+                <small>Google Finance bo‘yicha ≈ {Math.round(fromMinorUnits(realPaidAmount, form.currency) * exchangeRate).toLocaleString("uz-UZ")} so‘m</small>
               )}
             </div>
           </div>
