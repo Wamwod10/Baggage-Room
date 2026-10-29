@@ -178,7 +178,7 @@ export default function Settings() {
     let alive = true;
     const load = () => settingsService.getOfficialRates()
       .then((data) => { if (alive) { setOfficialRates(data?.rates || null); setRateError(""); } })
-      .catch(() => { if (alive) { setOfficialRates(null); setRateError("Markaziy bank kursi vaqtincha olinmadi. Xorijiy buyurtmalar kurs bo‘lmaguncha saqlanmaydi."); } });
+      .catch(() => { if (alive) { setOfficialRates(null); setRateError("Google Finance kursi olinmadi. Xorijiy buyurtmalar kurs bo‘lmaguncha saqlanmaydi."); } });
     void load();
     const timer = window.setInterval(load, 15 * 60 * 1000);
     return () => { alive = false; window.clearInterval(timer); };
@@ -704,7 +704,7 @@ export default function Settings() {
                 </label>
 
                 <div className="full" role="status">
-                  <strong>Markaziy bank rasmiy kursi (avtomatik)</strong>
+                  <strong>Google Finance bozor kursi (avtomatik)</strong>
                   <small>Har 15 daqiqada yangilanadi. Bu kurs qo‘lda o‘zgartirilmaydi; eski buyurtmalar qayta hisoblanmaydi.</small>
                   {rateError && <small>{rateError}</small>}
                 </div>
@@ -713,7 +713,7 @@ export default function Settings() {
                     <span>1 {currency} / UZS · {officialRates?.[currency]?.effectiveDate || "—"}</span>
                     <input readOnly value={officialRates?.[currency]
                       ? Number(officialRates[currency].rate).toLocaleString("uz-UZ", { maximumFractionDigits: 8 })
-                      : "CBU kursi yuklanmoqda"} />
+                      : "Google Finance kursi yuklanmoqda"} />
                   </label>
                 ))}
 
