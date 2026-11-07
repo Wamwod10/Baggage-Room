@@ -831,9 +831,15 @@ export default function NewBaggage() {
         <div className="panel-footer">
           <div className="panel-totals">
             <div>
-              <span>{t("Hisoblangan")}</span>
-              <b>{formatMoneyByCurrency(calculatedAmount, form.currency)}</b>
+              <span>{t("Hisoblangan")} (UZS)</span>
+              <b>{priceQuote?.key === quoteKey ? formatMoneyByCurrency(originalAmountUZS, "UZS") : "..."}</b>
             </div>
+            {form.currency !== "UZS" && (
+              <div>
+                <span>1 {form.currency} kursi</span>
+                <b>{formatMoneyByCurrency(exchangeRate, "UZS")}</b>
+              </div>
+            )}
             <div>
               <span>{t("Skidka")}</span>
               <b>{formatMoneyByCurrency(discount, form.currency)}</b>
