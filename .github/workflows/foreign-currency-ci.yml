@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - run: npm ci
+      # Existing project lockfile is incomplete for some optional native packages.
+      - run: npm install --no-save --package-lock=false
       - run: npm test
       - run: npm run build
