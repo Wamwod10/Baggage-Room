@@ -1,4 +1,5 @@
 import branchService from "./branchService";
+import { resolveCalculatedAmountUZS } from "../utils/orderTariffUzs";
 
 const statusMap = {
   ACTIVE: "Aktiv",
@@ -164,7 +165,11 @@ const mapOrder = (order) => {
     count: lockers.reduce((total, locker) => total + Number(locker.count || 1), 0),
     size: lockers.map((locker) => `${locker.size}${Number(locker.count || 1) > 1 ? ` x${locker.count}` : ""}`).filter(Boolean).join(", ") || order.size || fallbackText,
     calculatedAmount: order.calculatedAmount,
-    exchangeRate: order.pricingSnapshot?.exchangeRate,
+    calculatedAmountUZS: resolveCalculatedAmountUZS({ ...order, items }),
+    paymentCurrency: order.currency || 'UZS',
+    paymentAmountForeignMinor: order.currency && order.currency !== 'UZS'
+      ? (order.paymentAmountForeignMinor ?? order.realPaidAmount) : null,
+    exchangeRate: Number(order.exchangeRate ?? order.pricingSnapshot?.exchangeRate ?? 1),
     discount: order.discountAmount,
     discountAmount: order.discountAmount,
     finalPrice: order.finalAmount,

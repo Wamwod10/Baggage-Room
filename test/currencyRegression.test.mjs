@@ -25,3 +25,23 @@ test('foreign overtime preserves new TJV and historical pricing rules',async()=>
  assert.equal(calculatePickupOvertime({order,tariffs,actualTime}).amount,32);
  assert.equal(calculatePickupOvertime({order:{...order,pricingSnapshot:{},lockers:[{...order.lockers[0],unitPrice:480}]},tariffs,actualTime}).amount,32);
 });
+
+import { resolveCalculatedAmountUZS } from '../src/utils/orderTariffUzs.js';
+
+test('historical TIA-001252 shows 180000 UZS calc, separate 16 USD payment', () => {
+ const order={currency:'USD',calculatedAmount:1440,realPaidAmount:1600,tariffHours:12,customHours:null,
+  items:[{size:'L',count:1,tariffHours:12}],pricingSnapshot:{exchangeRate:12500,tariffs:{L:{price1h:40000,price12h:180000,price24h:300000}}}};
+ assert.equal(resolveCalculatedAmountUZS(order),180000);
+ assert.equal(fromMinorUnits(order.realPaidAmount,'USD'),16);
+ assert.equal(resolveCalculatedAmountUZS({...order,calculatedAmountUZS:180000}),180000);
+});
+test('TJS and RUB calculations use UZS tariffs without rescaling minor units', () => {
+ const tariffs={S:{price1h:20000,price12h:100000},L:{price1h:40000,price12h:180000}};
+ for(const currency of ['TJS','RUB']) {
+  assert.equal(resolveCalculatedAmountUZS({currency,tariffHours:12,calculatedAmount:25000,
+   items:[{size:'S',count:1},{size:'L',count:2}],pricingSnapshot:{tariffs}}),460000);
+ }
+});
+test('unknown old exchange rate or missing snapshot does not fabricate UZS tariff', () => {
+ assert.equal(resolveCalculatedAmountUZS({currency:'USD',calculatedAmount:1440}),null);
+});

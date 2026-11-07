@@ -760,7 +760,10 @@ export default function ActiveBaggage() {
               <div><span>{t("Status")}</span><b>{t(selectedOrder.status)}</b></div>
               <div><span>{t("Check-in")}</span><b>{formatDateTime(selectedOrder.checkIn)}</b></div>
               <div><span>{t("Check-out")}</span><b>{formatDateTime(selectedOrder.checkOut)}</b></div>
-              <div><span>{t("Original price")}</span><b>{formatCurrency(selectedOrder.originalPrice || selectedOrder.calculatedAmount, selectedOrder.currency)}</b></div>
+              <div><span>{t("Original price")} (UZS)</span><b>{selectedOrder.calculatedAmountUZS == null ? "—" : formatMoneyByCurrency(selectedOrder.calculatedAmountUZS, "UZS")}</b></div>
+              {selectedOrder.currency !== "UZS" && Number(selectedOrder.exchangeRate) > 0 && (
+                <div><span>1 {selectedOrder.currency} kursi</span><b>{formatMoneyByCurrency(selectedOrder.exchangeRate, "UZS")}</b></div>
+              )}
               <div><span>{t("Discount")}</span><b>{formatCurrency(selectedOrder.discount, selectedOrder.currency)}</b></div>
               <div><span>{t("Real paid")}</span><b>{formatCurrency(selectedOrder.realPaidAmount, selectedOrder.currency)}</b></div>
               <div><span>{t("Difference")}</span><b>{formatCurrency(selectedOrder.difference, selectedOrder.currency)}</b></div>
@@ -926,7 +929,7 @@ export default function ActiveBaggage() {
             <div className="pickup-summary">
               <div>
                 <span>{t("Calculated")}</span>
-                <b>{formatCurrency(Number(pickupOrder.calculatedAmount || pickupOrder.finalPrice || 0), pickupOrder.currency)}</b>
+                <b>{pickupOrder.calculatedAmountUZS == null ? "—" : formatMoneyByCurrency(pickupOrder.calculatedAmountUZS, "UZS")}</b>
               </div>
               <div>
                 <span>{t("Overtime")}</span>
