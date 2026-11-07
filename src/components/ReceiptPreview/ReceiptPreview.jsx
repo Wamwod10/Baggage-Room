@@ -4,6 +4,7 @@ import { useTranslation } from "../../i18n/useTranslation";
 import settingsService from "../../services/settingsService";
 import { printReceipt } from "../../utils/printReceipt";
 import { formatMoneyByCurrency } from "../../utils/currency";
+import { resolveCalculatedAmountUZS } from "../../utils/orderTariffUzs";
 import { getPaymentLabel } from "../../utils/paymentLabels";
 import { getReceiptTimestamp } from "../../utils/receiptTime";
 import "./receiptPreview.scss";
@@ -214,16 +215,13 @@ export default function ReceiptPreview({ order, onClose }) {
             </div>
 
             <div className="receipt-row">
-              <span>{t("Base price")}</span>
-              <b>
-                {money(
-                  order.calculatedAmount ||
-                    order.originalPrice ||
-                    order.finalPrice,
-                )}
-              </b>
+              <span>{t("Base price")} (UZS)</span>
+              <b>{resolveCalculatedAmountUZS(order) == null ? "—" : formatMoneyByCurrency(resolveCalculatedAmountUZS(order), "UZS")}</b>
             </div>
 
+            {order.currency !== "UZS" && Number(order.exchangeRate ?? order.pricingSnapshot?.exchangeRate) > 0 && (
+              <div className="receipt-row"><span>1 {order.currency} kursi</span><b>{formatMoneyByCurrency(Number(order.exchangeRate ?? order.pricingSnapshot?.exchangeRate), "UZS")}</b></div>
+            )}
             <div className="receipt-row">
               <span>{t("Discount")}</span>
               <b>{money(order.discount)}</b>
