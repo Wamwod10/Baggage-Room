@@ -421,10 +421,13 @@ export default function SalesHistory() {
               </div>
 
               <div>
-                <span>{t("Base price")}</span>
-                <b>{formatCurrency(selectedOrder, selectedOrder.calculatedAmount || selectedOrder.originalPrice || selectedOrder.finalPrice)}</b>
+                <span>{t("Base price")} (UZS)</span>
+                <b>{selectedOrder.calculatedAmountUZS == null ? "—" : formatMoneyByCurrency(selectedOrder.calculatedAmountUZS, "UZS")}</b>
               </div>
 
+              {selectedOrder.currency !== "UZS" && Number(selectedOrder.exchangeRate) > 0 && (
+                <div><span>1 {selectedOrder.currency} kursi</span><b>{formatMoneyByCurrency(selectedOrder.exchangeRate, "UZS")}</b></div>
+              )}
               <div>
                 <span>{t("Real paid")}</span>
                 <b>{formatCurrency(selectedOrder, selectedOrder.realPaidAmount || selectedOrder.finalPrice)}</b>
