@@ -99,7 +99,7 @@ export default function MonthPicker({ value = "", onChange, label = "Oy bo‘yic
             setPosition(null);
           }
           setOpen((current) => !current);
-        }
+        }}
       >
         <CalendarDays size={17} aria-hidden="true" />
         <span className="month-picker__label">{label}</span>
