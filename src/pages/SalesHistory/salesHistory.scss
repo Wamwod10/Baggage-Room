@@ -1,3 +1,67 @@
+.history-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.history-month-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  min-height: 42px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 650;
+
+  input {
+    border: 0;
+    background: transparent;
+    color: var(--text-main);
+    min-height: 37px;
+    font: inherit;
+    cursor: pointer;
+  }
+}
+.history-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 15px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+.history-clear-month {
+  min-height: 42px;
+  padding: 0 10px;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+@media (max-width: 760px) {
+  .sales-history-page .compact-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .history-header-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
 .history-date-btn {
   height: 42px;
   padding: 0 14px;

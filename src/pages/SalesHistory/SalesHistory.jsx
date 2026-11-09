@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarDays, Edit3, Eye, Search } from "lucide-react";
+import { CalendarDays, Download, Edit3, Eye, Search } from "lucide-react";
 import baggageService from "../../services/baggageService";
+import monthlySalesPdfService, { monthRangeTashkent } from "../../services/monthlySalesPdfService";
 import settingsService from '../../services/settingsService';
 import { changeEditCurrency } from '../../utils/orderFinancialEdit';
 import telegramService from "../../services/telegramService";
@@ -38,11 +39,13 @@ export default function SalesHistory() {
   const branchNames = getBranchNames();
   const [searchParams, setSearchParams] = useSearchParams();
   const orderIdFromUrl = searchParams.get("order");
-  const { effectiveBranch } = useAuth();
+  const { effectiveBranch, isSuperAdmin } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [historyMonth, setHistoryMonth] = useState("");
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [branch, setBranch] = useState("Barcha filiallar");
   const [payment, setPayment] = useState("Payment");
   const [status, setStatus] = useState("Status");
@@ -80,12 +83,13 @@ export default function SalesHistory() {
       branchName: effectiveBranch || (branch === "Barcha filiallar" ? null : branch),
       page,
       limit: 50,
+      ...(monthRangeTashkent(historyMonth) || {}),
       search: debouncedSearch || orderIdFromUrl || "",
       status: status === "Status" ? undefined : status,
       payment: payment === "Payment" ? undefined : payment,
       signal,
     }),
-    [effectiveBranch, branch, page, debouncedSearch, orderIdFromUrl, payment, status, refreshKey],
+    [effectiveBranch, branch, historyMonth, page, debouncedSearch, orderIdFromUrl, payment, status, refreshKey],
     emptyOrdersPage,
   );
 
@@ -129,9 +133,31 @@ export default function SalesHistory() {
 
   const hasActiveFilters =
     Boolean(search.trim()) ||
+    Boolean(historyMonth) ||
     payment !== "Payment" ||
     status !== "Status" ||
     (!effectiveBranch && branch !== "Barcha filiallar");
+
+  const handlePdfExport = async () => {
+    if (!isSuperAdmin || exportingPdf) return;
+    if (!historyMonth) {
+      setStatusMessage("PDF yuklab olish uchun avval oy va yilni tanlang.");
+      return;
+    }
+    setExportingPdf(true);
+    setStatusMessage("");
+    try {
+      await monthlySalesPdfService.downloadMonthlyPdf({
+        month: historyMonth,
+        branchName: effectiveBranch || (branch === "Barcha filiallar" ? null : branch),
+      });
+      setStatusMessage(`${historyMonth} oyining savdo tarixi PDF faylga saqlandi.`);
+    } catch (error) {
+      setStatusMessage(error?.message || "PDF yuklashda xatolik yuz berdi.");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   const handleRefresh = (event) => {
     animateButtonIcon(event);
@@ -328,14 +354,44 @@ export default function SalesHistory() {
           <p>{t("Orderlar, paymentlar, statuslar va pickup history")}</p>
         </div>
 
-        <button
-          className="history-date-btn"
-          type="button"
-          onClick={handleRefresh}
-        >
-          <CalendarDays size={17} />
-          {t("Refresh local data")}
-        </button>
+        <div className="history-header-actions">
+          <label className="history-month-control">
+            <span>Oy bo‘yicha</span>
+            <input
+              type="month"
+              value={historyMonth}
+              onChange={(event) => { setHistoryMonth(event.target.value); setPage(1); }}
+              aria-label="Savdo tarixi uchun oy va yil"
+            />
+          </label>
+          {historyMonth && (
+            <button type="button" className="history-clear-month" onClick={() => { setHistoryMonth(""); setPage(1); }}>
+              Barcha oylar
+            </button>
+          )}
+          {isSuperAdmin && (
+            <LoadingButton
+              type="button"
+              className="history-pdf-btn"
+              loading={exportingPdf}
+              loadingLabel="PDF tayyorlanmoqda..."
+              onClick={handlePdfExport}
+              disabled={!historyMonth}
+              title={historyMonth ? "Tanlangan oyning barcha buyurtmalarini PDF formatida saqlash" : "PDF uchun oy tanlang"}
+            >
+              <Download size={17} />
+              PDF yuklab olish
+            </LoadingButton>
+          )}
+          <button
+            className="history-date-btn"
+            type="button"
+            onClick={handleRefresh}
+          >
+            <CalendarDays size={17} />
+            {t("Refresh local data")}
+          </button>
+        </div>
       </div>
 
       {statusMessage && <div className="history-status-message">{statusMessage}</div>}
