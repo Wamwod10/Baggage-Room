@@ -18,12 +18,6 @@ export default function MonthPicker({ value = "", onChange, label = "Oy bo‘yic
 
   useEffect(() => {
     if (!open) return undefined;
-    setYear(getMonthParts(value)?.year || getMonthParts(nowKey)?.year || 2026);
-    return undefined;
-  }, [open, value, nowKey]);
-
-  useEffect(() => {
-    if (!open) return undefined;
 
     const closeOutside = (event) => {
       if (!triggerRef.current?.contains(event.target) && !panelRef.current?.contains(event.target)) {
@@ -99,7 +93,13 @@ export default function MonthPicker({ value = "", onChange, label = "Oy bo‘yic
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? popoverId : undefined}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (!open) {
+            setYear(getMonthParts(value)?.year || getMonthParts(nowKey)?.year || 2026);
+            setPosition(null);
+          }
+          setOpen((current) => !current);
+        }
       >
         <CalendarDays size={17} aria-hidden="true" />
         <span className="month-picker__label">{label}</span>
