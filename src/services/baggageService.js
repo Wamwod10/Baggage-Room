@@ -33,6 +33,8 @@ const baggageService = {
     page = 1,
     limit = 50,
     search = "",
+    dateFrom,
+    dateTo,
     status,
     statuses,
     payment,
