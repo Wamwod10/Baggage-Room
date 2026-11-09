@@ -13,6 +13,7 @@ import StateBlock from "../../components/StateBlock/StateBlock";
 import { TableSkeleton } from "../../components/Skeleton/Skeleton";
 import GlassSelect from "../../components/GlassSelect/GlassSelect";
 import LoadingButton from "../../components/LoadingButton/LoadingButton";
+import MonthPicker from "../../components/MonthPicker/MonthPicker";
 import usePageResource from "../../hooks/usePageResource";
 import { useTranslation } from "../../i18n/useTranslation";
 import { animateButtonIcon } from "../../utils/animateButtonIcon";
@@ -355,20 +356,11 @@ export default function SalesHistory() {
         </div>
 
         <div className="history-header-actions">
-          <label className="history-month-control">
-            <span>Oy bo‘yicha</span>
-            <input
-              type="month"
-              value={historyMonth}
-              onChange={(event) => { setHistoryMonth(event.target.value); setPage(1); }}
-              aria-label="Savdo tarixi uchun oy va yil"
-            />
-          </label>
-          {historyMonth && (
-            <button type="button" className="history-clear-month" onClick={() => { setHistoryMonth(""); setPage(1); }}>
-              Barcha oylar
-            </button>
-          )}
+          <MonthPicker
+            value={historyMonth}
+            onChange={(nextMonth) => { setHistoryMonth(nextMonth); setPage(1); }}
+            label="Oy bo‘yicha"
+          />
           {isSuperAdmin && (
             <LoadingButton
               type="button"

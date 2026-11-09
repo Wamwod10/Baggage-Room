@@ -6,3 +6,5 @@ import "./pickupPayment.test.mjs";
 import "./orderFinancialEdit.test.mjs";
 
 import './currencyRegression.test.mjs';
+
+import "./monthPicker.test.mjs";
